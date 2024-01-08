@@ -1,0 +1,23 @@
+{
+  "name": "stake-token",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "prettier ./",
+    "lint:fix": "npm run lint -- --write"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bgd-labs/stake-token.git"
+  },
+  "keywords": [],
+  "author": "BGD labs",
+  "license": "BUSL-1.1",
+  "bugs": {
+    "url": "https://github.com/bgd-labs/stake-token/issues"
+  },
+  "homepage": "https://github.com/bgd-labs/stake-token#readme",
+  "devDependencies": {
+    "prettier": "2.8.7",
+    "prettier-plugin-solidity": "1.1.3"
+  }
+}
