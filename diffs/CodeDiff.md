@@ -1,6 +1,6 @@
 ```diff
 diff --git a/tmp/EtherscanFlattened.sol b/tmp/NewFlattened.sol
-index 5320452..c8a0414 100644
+index 5320452..f50a6b8 100644
 --- a/tmp/EtherscanFlattened.sol
 +++ b/tmp/NewFlattened.sol
 @@ -1,7 +1,236 @@
@@ -3738,7 +3738,7 @@ index 5320452..c8a0414 100644
    }
  
    /**
-@@ -2319,54 +3120,678 @@ abstract contract EIP712 is IERC5267 {
+@@ -2319,54 +3120,674 @@ abstract contract EIP712 is IERC5267 {
     *
     * NOTE: By default this function reads _version which is an immutable value.
     * It only reads from storage if necessary (in case the value is too large to fit in a ShortString).
@@ -3755,8 +3755,7 @@ index 5320452..c8a0414 100644
  
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/Nonces.sol)
 +
- /**
-- * @title VersionedInitializable
++/**
 + * @dev Provides tracking nonces for addresses. Nonces will only increment.
 + */
 +abstract contract Nonces {
@@ -3804,7 +3803,7 @@ index 5320452..c8a0414 100644
 +
 +// @dev with addition of Initializable, so this implementation can be used only behind a proxy !!!
 +
-+// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
++// OpenZeppelin Contracts (last updated v5.0.0) (utils/Context.sol)
 +
 +/**
 + * @dev Provides information about the current execution context, including the
@@ -3813,15 +3812,7 @@ index 5320452..c8a0414 100644
 + * manner, since when dealing with meta-transactions the account sending and
 + * paying for execution may not be the actual sender (as far as an application
 + * is concerned).
-  *
-- * @dev Helper contract to support initializer functions. To use it, replace
-- * the constructor with a function that has the `initializer` modifier.
-- * WARNING: Unlike constructors, initializer functions must be manually
-- * invoked. This applies both to deploying an Initializable contract, as well
-- * as extending an Initializable contract via inheritance.
-- * WARNING: When used with inheritance, manual care must be taken to not invoke
-- * a parent initializer twice, or ensure that all initializers are idempotent,
-- * because this is not dealt with automatically as with constructors.
++ *
 + * This contract is only required for intermediate, library-like contracts.
 + */
 +abstract contract Context {
@@ -3831,10 +3822,6 @@ index 5320452..c8a0414 100644
 +
 +  function _msgData() internal view virtual returns (bytes calldata) {
 +    return msg.data;
-+  }
-+
-+  function _contextSuffixLength() internal view virtual returns (uint256) {
-+    return 0;
 +  }
 +}
 +
@@ -4010,13 +3997,22 @@ index 5320452..c8a0414 100644
 +  FULL_POWER_DELEGATED
 +}
 +
-+/**
+ /**
+- * @title VersionedInitializable
 + * @dev Implementation of the {IERC20} interface.
   *
-- * @author Aave, inspired by the OpenZeppelin Initializable contract
+- * @dev Helper contract to support initializer functions. To use it, replace
+- * the constructor with a function that has the `initializer` modifier.
+- * WARNING: Unlike constructors, initializer functions must be manually
+- * invoked. This applies both to deploying an Initializable contract, as well
+- * as extending an Initializable contract via inheritance.
+- * WARNING: When used with inheritance, manual care must be taken to not invoke
+- * a parent initializer twice, or ensure that all initializers are idempotent,
+- * because this is not dealt with automatically as with constructors.
 + * This implementation is agnostic to the way tokens are created. This means
 + * that a supply mechanism has to be added in a derived contract using {_mint}.
-+ *
+  *
+- * @author Aave, inspired by the OpenZeppelin Initializable contract
 + * TIP: For a detailed writeup see our guide
 + * https://forum.openzeppelin.com/t/how-to-implement-erc20-supply-mechanisms/226[How
 + * to implement supply mechanisms].
@@ -4033,7 +4029,8 @@ index 5320452..c8a0414 100644
 + * This allows applications to reconstruct the allowance for all accounts just
 + * by listening to said events. Other implementations of the EIP may not emit
 + * these events, as it isn't required by the specification.
-+ */
+  */
+-abstract contract VersionedInitializable {
 +abstract contract ERC20 is Context, Initializable, IERC20, IERC20Metadata, IERC20Errors {
 +  struct DelegationAwareBalance {
 +    uint104 balance; // maximum is 10T of 18 decimal asset
@@ -4057,11 +4054,13 @@ index 5320452..c8a0414 100644
 +    _disableInitializers();
 +  }
 +
-+  /**
+   /**
+-   * @dev Indicates that the contract has been initialized.
 +   * @dev Sets the values for {name} and {symbol}.
 +   *
 +   * All two of these values are only be set once during the first initialization
-+   */
+    */
+-  uint256 internal lastInitializedRevision = 0;
 +  function _initializeMetadata(
 +    string calldata name_,
 +    string calldata symbol_
@@ -4069,14 +4068,19 @@ index 5320452..c8a0414 100644
 +    _name = name_;
 +    _symbol = symbol_;
 +  }
-+
-+  /**
+ 
+   /**
+-   * @dev Modifier to use in the initializer function of a contract.
 +   * @dev Returns the name of the token.
-+   */
+    */
+-  modifier initializer() {
+-    uint256 revision = getRevision();
+-    require(revision > lastInitializedRevision, 'Contract instance has already been initialized');
 +  function name() public view virtual returns (string memory) {
 +    return _name;
 +  }
-+
+ 
+-    lastInitializedRevision = revision;
 +  /**
 +   * @dev Returns the symbol of the token, usually a shorter version of the
 +   * name.
@@ -4084,7 +4088,8 @@ index 5320452..c8a0414 100644
 +  function symbol() public view virtual returns (string memory) {
 +    return _symbol;
 +  }
-+
+ 
+-    _;
 +  /**
 +   * @dev Returns the number of decimals used to get its user representation.
 +   * For example, if `decimals` equals `2`, a balance of `505` tokens should
@@ -4100,15 +4105,20 @@ index 5320452..c8a0414 100644
 +   */
 +  function decimals() public view virtual returns (uint8) {
 +    return 18;
-+  }
-+
+   }
+ 
+-  /// @dev returns the revision number of the contract.
+-  /// Needs to be defined in the inherited class as a constant.
+-  function getRevision() internal pure virtual returns (uint256);
 +  /**
 +   * @dev See {IERC20-totalSupply}.
 +   */
 +  function totalSupply() public view virtual returns (uint256) {
 +    return _totalSupply;
 +  }
-+
+ 
+-  // Reserved storage space to allow for layout changes in the future.
+-  uint256[50] private ______gap;
 +  /**
 +   * @dev See {IERC20-balanceOf}.
 +   */
@@ -4346,8 +4356,7 @@ index 5320452..c8a0414 100644
 + * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by
 + * presenting a message signed by the account. By not relying on `{IERC20-approve}`, the token holder account doesn't
 + * need to send a transaction, and thus is not required to hold Ether at all.
-  */
--abstract contract VersionedInitializable {
++ */
 +abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712, Nonces {
 +  bytes32 private constant PERMIT_TYPEHASH =
 +    keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)');
@@ -4362,22 +4371,16 @@ index 5320452..c8a0414 100644
 +   */
 +  error ERC2612InvalidSigner(address signer, address owner);
 +
-   /**
--   * @dev Indicates that the contract has been initialized.
++  /**
 +   * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
 +   *
 +   * It's a good idea to use the same `name` that is defined as the ERC20 token name.
-    */
--  uint256 internal lastInitializedRevision = 0;
++   */
 +  constructor(string memory name) EIP712(name, '1') {}
- 
-   /**
--   * @dev Modifier to use in the initializer function of a contract.
++
++  /**
 +   * @inheritdoc IERC20Permit
-    */
--  modifier initializer() {
--    uint256 revision = getRevision();
--    require(revision > lastInitializedRevision, 'Contract instance has already been initialized');
++   */
 +  function permit(
 +    address owner,
 +    address spender,
@@ -4390,13 +4393,11 @@ index 5320452..c8a0414 100644
 +    if (block.timestamp > deadline) {
 +      revert ERC2612ExpiredSignature(deadline);
 +    }
- 
--    lastInitializedRevision = revision;
++
 +    bytes32 structHash = keccak256(
 +      abi.encode(PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline)
 +    );
- 
--    _;
++
 +    bytes32 hash = _hashTypedDataV4(structHash);
 +
 +    address signer = ECDSA.recover(hash, v, r, s);
@@ -4405,11 +4406,8 @@ index 5320452..c8a0414 100644
 +    }
 +
 +    _approve(owner, spender, value);
-   }
- 
--  /// @dev returns the revision number of the contract.
--  /// Needs to be defined in the inherited class as a constant.
--  function getRevision() internal pure virtual returns (uint256);
++  }
++
 +  /**
 +   * @inheritdoc IERC20Permit
 +   */
@@ -4418,9 +4416,7 @@ index 5320452..c8a0414 100644
 +  ) public view virtual override(IERC20Permit, Nonces) returns (uint256) {
 +    return super.nonces(owner);
 +  }
- 
--  // Reserved storage space to allow for layout changes in the future.
--  uint256[50] private ______gap;
++
 +  /**
 +   * @inheritdoc IERC20Permit
 +   */
@@ -4445,7 +4441,7 @@ index 5320452..c8a0414 100644
  }
  
  /**
-@@ -2382,23 +3807,34 @@ contract AaveDistributionManager {
+@@ -2382,23 +3803,34 @@ contract AaveDistributionManager {
      mapping(address => uint256) users;
    }
  
@@ -4484,7 +4480,7 @@ index 5320452..c8a0414 100644
    /**
     * @dev Configures the distribution of rewards for a list of assets
     * @param assetsConfigInput The list of configurations to apply
-@@ -2575,17 +4011,18 @@ contract AaveDistributionManager {
+@@ -2575,17 +4007,18 @@ contract AaveDistributionManager {
      uint128 lastUpdateTimestamp,
      uint256 totalBalance
    ) internal view returns (uint256) {
@@ -4506,7 +4502,7 @@ index 5320452..c8a0414 100644
        : block.timestamp;
      uint256 timeDelta = currentTimestamp - lastUpdateTimestamp;
      return
-@@ -2604,389 +4041,95 @@ contract AaveDistributionManager {
+@@ -2604,389 +4037,95 @@ contract AaveDistributionManager {
  }
  
  /**
@@ -4958,7 +4954,7 @@ index 5320452..c8a0414 100644
    event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
    event Redeem(address indexed from, address indexed to, uint256 assets, uint256 shares);
    event MaxSlashablePercentageChanged(uint256 newPercentage);
-@@ -2997,6 +4140,40 @@ interface IStakedTokenV3 is IStakedTokenV2 {
+@@ -2997,6 +4136,40 @@ interface IStakedTokenV3 is IStakedTokenV2 {
    event FundsReturned(uint256 amount);
    event SlashingSettled();
  
@@ -4999,7 +4995,7 @@ index 5320452..c8a0414 100644
    /**
     * @dev Allows staking a certain amount of STAKED_TOKEN with gasless approvals (permit)
     * @param amount The amount to be staked
-@@ -3050,12 +4227,6 @@ interface IStakedTokenV3 is IStakedTokenV2 {
+@@ -3050,12 +4223,6 @@ interface IStakedTokenV3 is IStakedTokenV2 {
     */
    function getCooldownSeconds() external view returns (uint256);
  
@@ -5012,7 +5008,7 @@ index 5320452..c8a0414 100644
    /**
     * @dev Setter of cooldown seconds
     * Can only be called by the cooldown admin
-@@ -3182,1240 +4353,7 @@ library PercentageMath {
+@@ -3182,1240 +4349,7 @@ library PercentageMath {
    }
  }
  
@@ -6254,7 +6250,7 @@ index 5320452..c8a0414 100644
    using SafeERC20 for IERC20;
    using PercentageMath for uint256;
    using SafeCast for uint256;
-@@ -4431,8 +4369,18 @@ contract StakedTokenV3 is
+@@ -4431,8 +4365,18 @@ contract StakedTokenV3 is
    // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
    uint256 public immutable LOWER_BOUND;
  
@@ -6275,7 +6271,7 @@ index 5320452..c8a0414 100644
    /// @notice Seconds between starting cooldown and being able to withdraw
    uint256 internal _cooldownSeconds;
    /// @notice The maximum amount of funds that can be slashed at any given time
-@@ -4458,56 +4406,32 @@ contract StakedTokenV3 is
+@@ -4458,56 +4402,32 @@ contract StakedTokenV3 is
    }
  
    constructor(
@@ -6345,7 +6341,7 @@ index 5320452..c8a0414 100644
      InitAdmin[] memory initAdmins = new InitAdmin[](3);
      initAdmins[0] = InitAdmin(SLASH_ADMIN_ROLE, slashingAdmin);
      initAdmins[1] = InitAdmin(COOLDOWN_ADMIN_ROLE, cooldownPauseAdmin);
-@@ -4523,9 +4447,7 @@ contract StakedTokenV3 is
+@@ -4523,9 +4443,7 @@ contract StakedTokenV3 is
    /// @inheritdoc IAaveDistributionManager
    function configureAssets(
      DistributionTypes.AssetConfigInput[] memory assetsConfigInput
@@ -6356,7 +6352,7 @@ index 5320452..c8a0414 100644
      for (uint256 i = 0; i < assetsConfigInput.length; i++) {
        assetsConfigInput[i].totalStaked = totalSupply();
      }
-@@ -4533,26 +4455,26 @@ contract StakedTokenV3 is
+@@ -4533,26 +4451,26 @@ contract StakedTokenV3 is
      _configureAssets(assetsConfigInput);
    }
  
@@ -6389,7 +6385,7 @@ index 5320452..c8a0414 100644
          msg.sender,
          address(this),
          amount,
-@@ -4569,94 +4491,69 @@ contract StakedTokenV3 is
+@@ -4569,94 +4487,69 @@ contract StakedTokenV3 is
      _stake(msg.sender, msg.sender, amount);
    }
  
@@ -6506,7 +6502,7 @@ index 5320452..c8a0414 100644
      require(!inPostSlashingPeriod, 'PREVIOUS_SLASHING_NOT_SETTLED');
      require(amount > 0, 'ZERO_AMOUNT');
      uint256 currentShares = totalSupply();
-@@ -4678,8 +4575,8 @@ contract StakedTokenV3 is
+@@ -4678,8 +4571,8 @@ contract StakedTokenV3 is
      return amount;
    }
  
@@ -6517,7 +6513,7 @@ index 5320452..c8a0414 100644
      require(amount >= LOWER_BOUND, 'AMOUNT_LT_MINIMUM');
      uint256 currentShares = totalSupply();
      require(currentShares >= LOWER_BOUND, 'SHARES_LT_MINIMUM');
-@@ -4690,35 +4587,53 @@ contract StakedTokenV3 is
+@@ -4690,35 +4583,53 @@ contract StakedTokenV3 is
      emit FundsReturned(amount);
    }
  
@@ -6582,7 +6578,7 @@ index 5320452..c8a0414 100644
    }
  
    /**
-@@ -4761,31 +4676,6 @@ contract StakedTokenV3 is
+@@ -4761,31 +4672,6 @@ contract StakedTokenV3 is
      return amountToClaim;
    }
  
@@ -6614,7 +6610,7 @@ index 5320452..c8a0414 100644
    /**
     * @dev Allows staking a specified amount of STAKED_TOKEN
     * @param to The address to receiving the shares
-@@ -4811,10 +4701,10 @@ contract StakedTokenV3 is
+@@ -4811,10 +4697,10 @@ contract StakedTokenV3 is
  
      uint256 sharesToMint = previewStake(amount);
  
@@ -6627,7 +6623,7 @@ index 5320452..c8a0414 100644
      emit Staked(from, to, amount, sharesToMint);
    }
  
-@@ -4845,20 +4735,10 @@ contract StakedTokenV3 is
+@@ -4845,20 +4731,10 @@ contract StakedTokenV3 is
  
      uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
  
@@ -6648,7 +6644,7 @@ index 5320452..c8a0414 100644
      IERC20(STAKED_TOKEN).safeTransfer(to, underlyingToRedeem);
  
      emit Redeem(from, to, underlyingToRedeem, amountToRedeem);
-@@ -4888,81 +4768,68 @@ contract StakedTokenV3 is
+@@ -4888,81 +4764,68 @@ contract StakedTokenV3 is
      return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
    }
  
