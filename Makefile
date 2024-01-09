@@ -18,4 +18,4 @@ git-diff :
 
 
 interface:
-	cast interface --name AggregatedStakeToken -o ./src/contracts/IAggregatedStakeToken.sol ./out/StakeToken.sol/StakeToken.json
+	cast interface --name IAggregatedStakeToken -o ./src/contracts/IAggregatedStakeToken.sol ./out/StakeToken.sol/StakeToken.json
