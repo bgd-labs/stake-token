@@ -2,6 +2,8 @@ etherscan/stkAAVE:aave-token-v3/=etherscan/stkAAVE/StakedAaveV3/lib/aave-token-v
 etherscan/stkAAVE:openzeppelin-contracts/=etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts
 
 ds-test/=lib/forge-std/lib/ds-test/src/
-forge-std/=lib/forge-std/src/
+forge-std/=lib/aave-helpers/lib/forge-std/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 aave-token-v3/=lib/aave-token-v3/src/
+aave-helpers/=lib/aave-helpers/src/
+aave-address-book/=lib/aave-helpers/lib/aave-address-book/src
