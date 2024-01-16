@@ -1,0 +1,27 @@
+diff -ruN .gitignore .gitignore
+--- .gitignore	1970-01-01 02:00:00.000000000 +0200
++++ .gitignore	2024-01-01 12:38:08.000000000 +0200
+@@ -0,0 +1,2 @@
++*
++!.gitignore
+diff -ruN src/contracts/StakeToken.sol src/contracts/StakeToken.sol
+--- src/contracts/StakeToken.sol	2024-01-03 14:12:37.342215011 +0200
++++ src/contracts/StakeToken.sol	2024-01-02 14:46:04.629045800 +0200
+@@ -94,7 +94,7 @@
+     address claimHelper,
+     uint256 maxSlashablePercentage,
+     uint256 cooldownSeconds
+-  ) external virtual initializer {
++  ) external virtual /*initializer*/ {
+     _initializeMetadata(name, symbol);
+ 
+     InitAdmin[] memory initAdmins = new InitAdmin[](3);
+@@ -444,7 +444,7 @@
+     address user,
+     uint256 userBalance,
+     bool updateStorage
+-  ) internal returns (uint256) {
++  ) internal virtual returns (uint256) {
+     uint256 accruedRewards = _updateUserAssetInternal(
+       user,
+       address(this),
