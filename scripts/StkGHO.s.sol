@@ -19,7 +19,7 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 contract DeployStkGHO is EthereumScript {
   function run() external broadcast {
     StakeToken stkTokenImpl = new StakeToken(
-      'stkGHO',
+      'Aave SM',
       IERC20(AaveV3EthereumAssets.GHO_UNDERLYING),
       IERC20(AaveV3EthereumAssets.AAVE_UNDERLYING),
       2 days,
