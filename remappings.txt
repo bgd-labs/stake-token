@@ -7,3 +7,4 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 aave-token-v3/=lib/aave-token-v3/src/
 aave-helpers/=lib/aave-helpers/src/
 aave-address-book/=lib/aave-helpers/lib/aave-address-book/src
+solidity-utils/=lib/aave-helpers/lib/solidity-utils/src

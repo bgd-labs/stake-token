@@ -6,8 +6,8 @@ import {GovernanceV3Ethereum} from 'aave-address-book/GovernanceV3Ethereum.sol';
 import {MiscEthereum} from 'aave-address-book/MiscEthereum.sol';
 import {AaveV3EthereumAssets} from 'aave-address-book/AaveV3Ethereum.sol';
 import {EthereumScript} from 'aave-helpers/ScriptUtils.sol';
-import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import {ITransparentProxyFactory} from 'solidity-utils/contracts/transparent-proxy/interfaces/ITransparentProxyFactory.sol';
 
 /**
  * @dev Deploy Ethereum
@@ -18,15 +18,16 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
  */
 contract DeployStkGHO is EthereumScript {
   function run() external broadcast {
-    StakeToken stkTokenImpl = new StakeToken(
-      'stkGHO',
-      IERC20(AaveV3EthereumAssets.GHO_UNDERLYING),
-      IERC20(AaveV3EthereumAssets.AAVE_UNDERLYING),
-      2 days,
-      MiscEthereum.ECOSYSTEM_RESERVE,
-      GovernanceV3Ethereum.EXECUTOR_LVL_1
-    );
-    new TransparentUpgradeableProxy(
+    // StakeToken stkTokenImpl = new StakeToken(
+    //   'stkGHO',
+    //   IERC20(AaveV3EthereumAssets.GHO_UNDERLYING),
+    //   IERC20(AaveV3EthereumAssets.AAVE_UNDERLYING),
+    //   2 days,
+    //   MiscEthereum.ECOSYSTEM_RESERVE,
+    //   GovernanceV3Ethereum.EXECUTOR_LVL_1
+    // );
+    StakeToken stkTokenImpl = StakeToken(0x50F9d4E28309303F0cdcAc8AF0b569e8b75Ab857);
+    ITransparentProxyFactory(MiscEthereum.TRANSPARENT_PROXY_FACTORY).create(
       address(stkTokenImpl),
       address(MiscEthereum.PROXY_ADMIN),
       abi.encodeWithSelector(
