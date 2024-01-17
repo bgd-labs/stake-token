@@ -13,9 +13,8 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
  * @dev Deploy Ethereum
  * deploy-command: make deploy-ledger contract=scripts/StkGHO.s.sol:DeployStkGHO chain=mainnet
  * verify-command: npx catapulta-verify -b broadcast/StkGHO.s.sol/1/run-latest.json
- * example script according to https://governance.aave.com/t/arfc-upgrade-safety-module-with-stkgho/15635#motivation-2
+ * Params from https://snapshot.org/#/aave.eth/proposal/0x4bc99a842adab6cdd8c7d5c7a787ee4c0056be554fde0d008d53b45b3e795065
  * - 100% slashing is technically not possible without breaking the stk exchangeRate, therfore maxSlashing is set to 99%
- * - 10 days cooldown seems wrong, so it's set to 20 days instead
  */
 contract DeployStkGHO is EthereumScript {
   function run() external broadcast {
@@ -32,7 +31,7 @@ contract DeployStkGHO is EthereumScript {
       address(MiscEthereum.PROXY_ADMIN),
       abi.encodeWithSelector(
         StakeToken.initialize.selector,
-        'Staked GHO',
+        'stk GHO',
         'stkGHO',
         GovernanceV3Ethereum.EXECUTOR_LVL_1,
         GovernanceV3Ethereum.EXECUTOR_LVL_1,
