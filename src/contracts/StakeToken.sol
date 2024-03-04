@@ -349,21 +349,8 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     require(!inPostSlashingPeriod, 'SLASHING_ONGOING');
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
-    uint256 balanceOfTo = balanceOf(to);
-
-    uint256 accruedRewards = _updateUserAssetInternal(
-      to,
-      address(this),
-      balanceOfTo,
-      totalSupply()
-    );
-
-    if (accruedRewards != 0) {
-      stakerRewardsToClaim[to] = stakerRewardsToClaim[to] + accruedRewards;
-      emit RewardsAccrued(to, accruedRewards);
-    }
-
     uint256 sharesToMint = previewStake(amount);
+    require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
 
     _mint(to, sharesToMint.toUint104());
 
