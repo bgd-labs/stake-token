@@ -7,6 +7,7 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
+import {IRewardsController} from './IRewardsController.sol';
 
 import {ERC20Permit} from './ERC20Permit.sol';
 import {AaveDistributionManager} from './AaveDistributionManager.sol';
@@ -42,6 +43,8 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   /// @notice Address to pull from the rewards, needs to have approved this contract
   address public immutable REWARDS_VAULT;
 
+  IRewardsController public immutable REWARDS_CONTROLLER;
+
   mapping(address => uint256) public stakerRewardsToClaim;
   mapping(address => CooldownSnapshot) public stakersCooldowns;
 
@@ -75,7 +78,8 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     IERC20 rewardToken,
     uint256 unstakeWindow,
     address rewardsVault,
-    address emissionManager
+    address emissionManager,
+    IRewardsController rewardsController
   ) ERC20Permit(name) AaveDistributionManager(emissionManager) {
     uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
     LOWER_BOUND = 10 ** decimals;
@@ -83,6 +87,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     REWARD_TOKEN = rewardToken;
     UNSTAKE_WINDOW = unstakeWindow;
     REWARDS_VAULT = rewardsVault;
+    REWARDS_CONTROLLER = rewardsController;
   }
 
   function initialize(
@@ -106,6 +111,12 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     _setMaxSlashablePercentage(maxSlashablePercentage);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
+  }
+
+  function initializeV2() public reinitializer(2) {
+    // stop distribution on internal distributionManager
+    distributionEnd = block.timestamp;
+    emit DistributionEndChanged(block.timestamp);
   }
 
   /// @inheritdoc IAaveDistributionManager
@@ -431,16 +442,17 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   }
 
   function _update(address from, address to, uint256 amount) internal override {
+    uint256 cachedTotalSupply = totalSupply();
     // stake & transfer
     if (to != address(0)) {
       uint256 balanceOfTo = balanceOf(to);
-      _updateCurrentUnclaimedRewards(to, balanceOfTo, true);
+      REWARDS_CONTROLLER.handleAction(to, cachedTotalSupply, balanceOfTo);
     }
     // redeem & transfer
     if (from != address(0) && from != to) {
       uint256 balanceOfFrom = balanceOf(from);
       // Sender
-      _updateCurrentUnclaimedRewards(from, balanceOfFrom, true);
+      REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
       CooldownSnapshot memory previousSenderCooldown = stakersCooldowns[from];
       if (previousSenderCooldown.timestamp != 0) {
         // update to 0 means redeem

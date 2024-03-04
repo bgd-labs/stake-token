@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 import {DistributionTypes} from '../src/contracts/lib/DistributionTypes.sol';
-import {StakeToken} from '../src/contracts/StakeToken.sol';
+import {StakeToken, IRewardsController} from '../src/contracts/StakeToken.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
-import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
+import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
 contract MockERC20 is ERC20 {
   constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
@@ -32,7 +32,8 @@ contract StkTestUtils is Test {
       rewardToken,
       2 days,
       rewardsVault,
-      admin
+      admin,
+      IRewardsController(address(0))
     );
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
@@ -52,6 +53,11 @@ contract StkTestUtils is Test {
           )
         )
       )
+    );
+    vm.prank(address(proxyAdmin));
+    ITransparentUpgradeableProxy(payable(address(stakeToken))).upgradeToAndCall(
+      address(stakeTokenImpl),
+      abi.encodeWithSelector(StakeToken.initializeV2.selector)
     );
     vm.prank(admin);
     stakeToken.setDistributionEnd(block.timestamp + 360 days);
