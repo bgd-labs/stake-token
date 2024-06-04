@@ -29,10 +29,7 @@ contract StkTestUtils is Test {
     stakeTokenImpl = new StakeToken(
       'stkTest',
       underlyingToken,
-      rewardToken,
       2 days,
-      rewardsVault,
-      admin,
       IRewardsController(address(0))
     );
     proxyAdmin = new ProxyAdmin(admin);
@@ -54,13 +51,6 @@ contract StkTestUtils is Test {
         )
       )
     );
-    vm.prank(address(proxyAdmin));
-    ITransparentUpgradeableProxy(payable(address(stakeToken))).upgradeToAndCall(
-      address(stakeTokenImpl),
-      abi.encodeWithSelector(StakeToken.initializeV2.selector)
-    );
-    vm.prank(admin);
-    stakeToken.setDistributionEnd(block.timestamp + 360 days);
     // there's some assumptions about timestamp being non zero
     vm.warp(block.timestamp + 1);
   }
@@ -75,7 +65,7 @@ contract StkTestUtils is Test {
       0 ether, // doesn't matter, probably should be refactored as well
       address(stakeToken) // doesn't make much sense either as it's always the address of the token itself
     );
-    stakeToken.configureAssets(configs);
+    // stakeToken.configureAssets(configs); TODO
     vm.stopPrank();
 
     vm.startPrank(rewardsVault);
