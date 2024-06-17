@@ -15,11 +15,11 @@ contract ERC20Std is StkTestUtils {
   }
 
   function test_name() external {
-    assertEq('Stake Test', stakeToken.name());
+    assertEq('stk-Gyro-ELCP-USDC-GHO-BPT', stakeToken.name());
   }
 
   function test_symbol() external {
-    assertEq('stkTest', stakeToken.symbol());
+    assertEq('stkGyroUsdcGhoBpt', stakeToken.symbol());
   }
 
   // mint

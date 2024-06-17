@@ -136,7 +136,7 @@ contract Slashing is StkTestUtils {
   }
 
   /**
-   * After a slashing is settled cooldown mechanics should revert to defaul
+   * After a slashing is settled cooldown mechanics should revert to default
    */
   function test_redeemAfterSlashingSettled() public {
     address destination = vm.addr(100);
@@ -145,9 +145,11 @@ contract Slashing is StkTestUtils {
     _settleSlashing();
 
     vm.startPrank(USER);
+    stakeToken.cooldown();
+
     vm.expectRevert('INSUFFICIENT_COOLDOWN');
     stakeToken.redeem(USER, 100 ether);
-    stakeToken.cooldown();
+
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
     stakeToken.redeem(USER, 100 ether);
     assertEq(underlyingToken.balanceOf(USER), 80 ether);

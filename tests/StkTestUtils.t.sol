@@ -5,13 +5,10 @@ import 'forge-std/Test.sol';
 import {DistributionTypes} from '../src/contracts/lib/DistributionTypes.sol';
 import {StakeToken} from '../src/contracts/StakeToken.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
+import {AaveV3Ethereum} from 'aave-address-book/AaveV3Ethereum.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
 import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
-
-contract MockERC20 is ERC20 {
-  constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
-}
 
 contract StkTestUtils is Test {
   ERC20 public underlyingToken;
@@ -24,10 +21,16 @@ contract StkTestUtils is Test {
   StakeToken public stakeToken;
 
   function _initializeStkToken(uint256 maxSlashing) internal {
-    underlyingToken = new MockERC20('TestToken', 'TEST');
-    rewardToken = new MockERC20('TestReward', 'REWARD');
+    vm.createSelectFork(vm.rpcUrl('mainnet'), 20112323);
+
+    // Gyroscope USDC-GHO ELCP LP Token
+    underlyingToken = ERC20(0x006D7e2166472F62F0E9E5c95E3a313E01CaeA74);
+
+    // GHO Token
+    rewardToken = ERC20(AaveV3Ethereum.GHO_TOKEN);
+
     stakeTokenImpl = new StakeToken(
-      'stkTest',
+      'stk-Gyro-ELCP-USDC-GHO-BPT',
       underlyingToken,
       rewardToken,
       2 days,
@@ -42,8 +45,8 @@ contract StkTestUtils is Test {
           address(proxyAdmin),
           abi.encodeWithSelector(
             StakeToken.initialize.selector,
-            'Stake Test',
-            'stkTest',
+            'stk-Gyro-ELCP-USDC-GHO-BPT',
+            'stkGyroUsdcGhoBpt',
             admin,
             admin,
             admin,
