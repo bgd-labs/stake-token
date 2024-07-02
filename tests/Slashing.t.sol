@@ -142,7 +142,6 @@ contract Slashing is StkTestUtils {
     address destination = vm.addr(100);
     _stake(100 ether, USER);
     _slash(destination, 20 ether);
-    _settleSlashing();
 
     vm.startPrank(USER);
     vm.expectRevert('INSUFFICIENT_COOLDOWN');
@@ -160,7 +159,6 @@ contract Slashing is StkTestUtils {
     address destination = vm.addr(100);
     _stake(100 ether, USER);
     _slash(destination, 20 ether);
-    _settleSlashing();
 
     address newUser = vm.addr(1000);
     _stake(100 ether, newUser);
@@ -178,45 +176,5 @@ contract Slashing is StkTestUtils {
     stakeToken.setPendingAdmin(stakeToken.SLASH_ADMIN_ROLE(), newUser);
     vm.startPrank(newUser);
     stakeToken.claimRoleAdmin(stakeToken.SLASH_ADMIN_ROLE());
-  }
-
-  /**
-   * The exchangeRate should positively reflect when funds are returned to the stk
-   */
-  function test_returnFunds() public {
-    _stake(100 ether, USER);
-
-    uint256 amount = 100 ether;
-    deal(address(underlyingToken), address(this), amount);
-    underlyingToken.approve(address(stakeToken), amount);
-    stakeToken.returnFunds(amount);
-
-    assertEq(stakeToken.getExchangeRate(), 0.5 ether);
-  }
-
-  /**
-   * Return funds should revert when there are <1 shares
-   */
-  function test_returnFundsSharesLtBound_shouldRevert() public {
-    _stake(1 ether - 1, USER);
-
-    uint256 amount = 100 ether;
-    deal(address(underlyingToken), address(this), amount);
-    underlyingToken.approve(address(stakeToken), amount);
-
-    vm.expectRevert('SHARES_LT_MINIMUM');
-    stakeToken.returnFunds(amount);
-  }
-
-  /**
-   * Return funds should revert when amoutn returned is smaller 1 unit
-   */
-  function test_returnFundsAmountLtBound_shouldRevert() public {
-    uint256 amount = 0.5 ether;
-    deal(address(underlyingToken), address(this), amount);
-    underlyingToken.approve(address(stakeToken), amount);
-
-    vm.expectRevert('AMOUNT_LT_MINIMUM');
-    stakeToken.returnFunds(amount);
   }
 }

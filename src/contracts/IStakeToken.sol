@@ -93,18 +93,6 @@ interface IStakeToken is IAaveDistributionManager {
   function slash(address destination, uint256 amount) external returns (uint256);
 
   /**
-   * @dev Settles an ongoing slashing event
-   */
-  function settleSlashing() external;
-
-  /**
-   * @dev Pulls STAKE_TOKEN and distributes them amongst current stakers by altering the exchange rate.
-   * This method is permissionless and intended to be used after a slashing event to return potential excess funds.
-   * @param amount amount of STAKE_TOKEN to pull.
-   */
-  function returnFunds(uint256 amount) external;
-
-  /**
    * @dev Getter of the cooldown seconds
    * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
    */
