@@ -12,11 +12,12 @@ import {IRewardsController} from './IRewardsController.sol';
 import {ERC20Permit} from './ERC20Permit.sol';
 import {RoleManager} from './RoleManager.sol';
 import {IStakeToken} from './IStakeToken.sol';
+import {AaveDistributionManager} from './AaveDistributionManager.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 import {DistributionTypes} from './lib/DistributionTypes.sol';
 
-contract StakeToken is ERC20Permit, RoleManager, IStakeToken {
+contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStakeToken {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;

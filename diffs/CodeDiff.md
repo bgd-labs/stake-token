@@ -1,6 +1,6 @@
 ```diff
 diff --git a/tmp/EtherscanFlattened.sol b/tmp/NewFlattened.sol
-index 5943c4f..f4ef4d8 100644
+index 5943c4f..51eb00c 100644
 --- a/tmp/EtherscanFlattened.sol
 +++ b/tmp/NewFlattened.sol
 @@ -1,8 +1,8 @@
@@ -2798,7 +2798,7 @@ index 5943c4f..f4ef4d8 100644
    }
  
    /**
-@@ -2393,17 +2727,343 @@ library SafeCast {
+@@ -2393,17 +2727,361 @@ library SafeCast {
     * Requirements:
     *
     * - input must be less than or equal to maxInt256.
@@ -2857,6 +2857,24 @@ index 5943c4f..f4ef4d8 100644
 +      return uint256(n >= 0 ? n : -n);
 +    }
 +  }
++}
++
++// src/contracts/AaveDistributionManager.sol
++
++/**
++ * @title AaveDistributionManager
++ * @notice Accounting contract to manage multiple staking distributions
++ * @author Aave
++ */
++contract AaveDistributionManager {
++  struct AssetData {
++    uint128 emissionPerSecond;
++    uint128 lastUpdateTimestamp;
++    uint256 index;
++    mapping(address => uint256) users;
++  }
++  mapping(address => AssetData) private DEPRECATED_assets;
++  uint256 private DEPRECATED_distributionEnd;
 +}
 +
 +// src/contracts/IRewardsController.sol
@@ -3146,7 +3164,7 @@ index 5943c4f..f4ef4d8 100644
  
  /**
   * @title RoleManager
-@@ -2481,56 +3141,73 @@ contract RoleManager {
+@@ -2481,56 +3159,73 @@ contract RoleManager {
    }
  }
  
@@ -3255,7 +3273,7 @@ index 5943c4f..f4ef4d8 100644
   */
  interface IERC20Metadata is IERC20 {
    /**
-@@ -2549,9 +3226,9 @@ interface IERC20Metadata is IERC20 {
+@@ -2549,9 +3244,9 @@ interface IERC20Metadata is IERC20 {
    function decimals() external view returns (uint8);
  }
  
@@ -3267,7 +3285,7 @@ index 5943c4f..f4ef4d8 100644
  
  // | string  | 0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA   |
  // | length  | 0x                                                              BB |
-@@ -2587,7 +3264,7 @@ type ShortString is bytes32;
+@@ -2587,7 +3282,7 @@ type ShortString is bytes32;
   */
  library ShortStrings {
    // Used as an identifier for strings longer than 31 bytes.
@@ -3276,7 +3294,7 @@ index 5943c4f..f4ef4d8 100644
      0x00000000000000000000000000000000000000000000000000000000000000FF;
  
    error StringTooLong(string str);
-@@ -2643,7 +3320,7 @@ library ShortStrings {
+@@ -2643,7 +3338,7 @@ library ShortStrings {
        return toShortString(value);
      } else {
        StorageSlot.getStringSlot(store).value = value;
@@ -3285,7 +3303,7 @@ index 5943c4f..f4ef4d8 100644
      }
    }
  
-@@ -2654,7 +3331,7 @@ library ShortStrings {
+@@ -2654,7 +3349,7 @@ library ShortStrings {
      ShortString value,
      string storage store
    ) internal pure returns (string memory) {
@@ -3294,7 +3312,7 @@ index 5943c4f..f4ef4d8 100644
        return toString(value);
      } else {
        return store;
-@@ -2662,7 +3339,8 @@ library ShortStrings {
+@@ -2662,7 +3357,8 @@ library ShortStrings {
    }
  
    /**
@@ -3304,7 +3322,7 @@ index 5943c4f..f4ef4d8 100644
     *
     * WARNING: This will return the "byte length" of the string. This may not reflect the actual length in terms of
     * actual characters as the UTF-8 encoding of a single character can span over multiple bytes.
-@@ -2671,7 +3349,7 @@ library ShortStrings {
+@@ -2671,7 +3367,7 @@ library ShortStrings {
      ShortString value,
      string storage store
    ) internal view returns (uint256) {
@@ -3313,7 +3331,7 @@ index 5943c4f..f4ef4d8 100644
        return byteLength(value);
      } else {
        return bytes(store).length;
-@@ -2679,427 +3357,16 @@ library ShortStrings {
+@@ -2679,427 +3375,16 @@ library ShortStrings {
    }
  }
  
@@ -3745,7 +3763,7 @@ index 5943c4f..f4ef4d8 100644
  
    /**
     * @dev The `value` string doesn't fit in the specified `length`.
-@@ -3122,7 +3389,7 @@ library Strings {
+@@ -3122,7 +3407,7 @@ library Strings {
          ptr--;
          /// @solidity memory-safe-assembly
          assembly {
@@ -3754,7 +3772,7 @@ index 5943c4f..f4ef4d8 100644
          }
          value /= 10;
          if (value == 0) break;
-@@ -3156,7 +3423,7 @@ library Strings {
+@@ -3156,7 +3441,7 @@ library Strings {
      buffer[0] = '0';
      buffer[1] = 'x';
      for (uint256 i = 2 * length + 1; i > 1; --i) {
@@ -3763,7 +3781,7 @@ index 5943c4f..f4ef4d8 100644
        localValue >>= 4;
      }
      if (localValue != 0) {
-@@ -3166,10 +3433,11 @@ library Strings {
+@@ -3166,10 +3451,11 @@ library Strings {
    }
  
    /**
@@ -3777,7 +3795,7 @@ index 5943c4f..f4ef4d8 100644
    }
  
    /**
-@@ -3180,9 +3448,9 @@ library Strings {
+@@ -3180,9 +3466,9 @@ library Strings {
    }
  }
  
@@ -3789,7 +3807,7 @@ index 5943c4f..f4ef4d8 100644
  
  /**
   * @title SafeERC20
-@@ -3196,52 +3464,74 @@ library Strings {
+@@ -3196,52 +3482,74 @@ library Strings {
  library SafeERC20 {
    using Address for address;
  
@@ -3898,7 +3916,7 @@ index 5943c4f..f4ef4d8 100644
      }
    }
  
-@@ -3253,918 +3543,143 @@ library SafeERC20 {
+@@ -3253,918 +3561,143 @@ library SafeERC20 {
     */
    function _callOptionalReturn(IERC20 token, bytes memory data) private {
      // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
@@ -4906,7 +4924,7 @@ index 5943c4f..f4ef4d8 100644
   *
   * This contract implements the EIP 712 domain separator ({_domainSeparatorV4}) that is used as part of the encoding
   * scheme, and the final step of the encoding to obtain the message digest that is then signed via ECDSA
-@@ -4177,17 +3692,15 @@ abstract contract BaseDelegation is IGovernancePowerDelegationToken {
+@@ -4177,17 +3710,15 @@ abstract contract BaseDelegation is IGovernancePowerDelegationToken {
   * https://docs.metamask.io/guide/signing-data.html[`eth_signTypedDataV4` in MetaMask].
   *
   * NOTE: In the upgradeable version of this contract, the cached values will correspond to the address, and the domain
@@ -4927,7 +4945,7 @@ index 5943c4f..f4ef4d8 100644
      keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)');
  
    // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
-@@ -4201,6 +3714,8 @@ abstract contract EIP712 is IERC5267 {
+@@ -4201,6 +3732,8 @@ abstract contract EIP712 is IERC5267 {
  
    ShortString private immutable _name;
    ShortString private immutable _version;
@@ -4936,7 +4954,7 @@ index 5943c4f..f4ef4d8 100644
  
    /**
     * @dev Initializes the domain separator and parameter caches.
-@@ -4214,11 +3729,9 @@ abstract contract EIP712 is IERC5267 {
+@@ -4214,11 +3747,9 @@ abstract contract EIP712 is IERC5267 {
     * NOTE: These parameters cannot be changed except through a xref:learn::upgrading-smart-contracts.adoc[smart
     * contract upgrade].
     */
@@ -4950,7 +4968,7 @@ index 5943c4f..f4ef4d8 100644
      _hashedName = keccak256(bytes(name));
      _hashedVersion = keccak256(bytes(version));
  
-@@ -4240,7 +3753,7 @@ abstract contract EIP712 is IERC5267 {
+@@ -4240,7 +3771,7 @@ abstract contract EIP712 is IERC5267 {
  
    function _buildDomainSeparator() private view returns (bytes32) {
      return
@@ -4959,7 +4977,7 @@ index 5943c4f..f4ef4d8 100644
    }
  
    /**
-@@ -4259,13 +3772,11 @@ abstract contract EIP712 is IERC5267 {
+@@ -4259,13 +3790,11 @@ abstract contract EIP712 is IERC5267 {
     * ```
     */
    function _hashTypedDataV4(bytes32 structHash) internal view virtual returns (bytes32) {
@@ -4975,7 +4993,7 @@ index 5943c4f..f4ef4d8 100644
     */
    function eip712Domain()
      public
-@@ -4297,13 +3808,10 @@ abstract contract EIP712 is IERC5267 {
+@@ -4297,13 +3826,10 @@ abstract contract EIP712 is IERC5267 {
     *
     * NOTE: By default this function reads _name which is an immutable value.
     * It only reads from storage if necessary (in case the value is too large to fit in a ShortString).
@@ -4990,7 +5008,7 @@ index 5943c4f..f4ef4d8 100644
    }
  
    /**
-@@ -4311,176 +3819,433 @@ abstract contract EIP712 is IERC5267 {
+@@ -4311,176 +3837,433 @@ abstract contract EIP712 is IERC5267 {
     *
     * NOTE: By default this function reads _version which is an immutable value.
     * It only reads from storage if necessary (in case the value is too large to fit in a ShortString).
@@ -5564,11 +5582,11 @@ index 5943c4f..f4ef4d8 100644
 -  IAaveDistributionManager,
 -  BaseDelegation
 -{
-+contract StakeToken is ERC20Permit, RoleManager, IStakeToken {
++contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStakeToken {
    using SafeERC20 for IERC20;
    using PercentageMath for uint256;
    using SafeCast for uint256;
-@@ -4496,8 +4261,16 @@ contract StakedTokenV3 is
+@@ -4496,8 +4279,16 @@ contract StakedTokenV3 is
    // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
    uint256 public immutable LOWER_BOUND;
  
@@ -5587,7 +5605,7 @@ index 5943c4f..f4ef4d8 100644
    /// @notice Seconds between starting cooldown and being able to withdraw
    uint256 internal _cooldownSeconds;
    /// @notice The maximum amount of funds that can be slashed at any given time
-@@ -4505,7 +4278,7 @@ contract StakedTokenV3 is
+@@ -4505,7 +4296,7 @@ contract StakedTokenV3 is
    /// @notice Mirror of latest snapshot value for cheaper access
    uint216 internal _currentExchangeRate;
    /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
@@ -5596,7 +5614,7 @@ index 5943c4f..f4ef4d8 100644
  
    modifier onlySlashingAdmin() {
      require(msg.sender == getAdmin(SLASH_ADMIN_ROLE), 'CALLER_NOT_SLASHING_ADMIN');
-@@ -4523,56 +4296,29 @@ contract StakedTokenV3 is
+@@ -4523,56 +4314,29 @@ contract StakedTokenV3 is
    }
  
    constructor(
@@ -5665,7 +5683,7 @@ index 5943c4f..f4ef4d8 100644
      InitAdmin[] memory initAdmins = new InitAdmin[](3);
      initAdmins[0] = InitAdmin(SLASH_ADMIN_ROLE, slashingAdmin);
      initAdmins[1] = InitAdmin(COOLDOWN_ADMIN_ROLE, cooldownPauseAdmin);
-@@ -4585,39 +4331,26 @@ contract StakedTokenV3 is
+@@ -4585,39 +4349,26 @@ contract StakedTokenV3 is
      _updateExchangeRate(INITIAL_EXCHANGE_RATE);
    }
  
@@ -5711,7 +5729,7 @@ index 5943c4f..f4ef4d8 100644
          msg.sender,
          address(this),
          amount,
-@@ -4634,95 +4367,43 @@ contract StakedTokenV3 is
+@@ -4634,95 +4385,43 @@ contract StakedTokenV3 is
      _stake(msg.sender, msg.sender, amount);
    }
  
@@ -5826,7 +5844,7 @@ index 5943c4f..f4ef4d8 100644
      require(amount > 0, 'ZERO_AMOUNT');
      uint256 currentShares = totalSupply();
      uint256 balance = previewRedeem(currentShares);
-@@ -4734,7 +4415,6 @@ contract StakedTokenV3 is
+@@ -4734,7 +4433,6 @@ contract StakedTokenV3 is
      }
      require(balance - amount >= LOWER_BOUND, 'REMAINING_LT_MINIMUM');
  
@@ -5834,7 +5852,7 @@ index 5943c4f..f4ef4d8 100644
      _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
  
      STAKED_TOKEN.safeTransfer(destination, amount);
-@@ -4743,47 +4423,40 @@ contract StakedTokenV3 is
+@@ -4743,47 +4441,40 @@ contract StakedTokenV3 is
      return amount;
    }
  
@@ -5902,7 +5920,7 @@ index 5943c4f..f4ef4d8 100644
    }
  
    /**
-@@ -4806,80 +4479,21 @@ contract StakedTokenV3 is
+@@ -4806,80 +4497,21 @@ contract StakedTokenV3 is
      emit CooldownSecondsChanged(cooldownSeconds);
    }
  
@@ -5986,7 +6004,7 @@ index 5943c4f..f4ef4d8 100644
      emit Staked(from, to, amount, sharesToMint);
    }
  
-@@ -4893,37 +4507,24 @@ contract StakedTokenV3 is
+@@ -4893,37 +4525,24 @@ contract StakedTokenV3 is
      require(amount != 0, 'INVALID_ZERO_AMOUNT');
  
      CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
@@ -6033,7 +6051,7 @@ index 5943c4f..f4ef4d8 100644
      IERC20(STAKED_TOKEN).safeTransfer(to, underlyingToRedeem);
  
      emit Redeem(from, to, underlyingToRedeem, amountToRedeem);
-@@ -4953,81 +4554,39 @@ contract StakedTokenV3 is
+@@ -4953,81 +4572,39 @@ contract StakedTokenV3 is
      return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
    }
  
