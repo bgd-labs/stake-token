@@ -191,4 +191,13 @@ interface IStakeToken is IAaveDistributionManager {
     uint256 claimAmount,
     uint256 redeemAmount
   ) external;
+
+  /**
+   * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
+   *
+   * - SHOULD include any compounding that occurs from yield.
+   * - MUST be inclusive of any fees that are charged against assets in the Vault.
+   * - MUST NOT revert.
+   */
+  function totalAssets() external returns (uint256);
 }

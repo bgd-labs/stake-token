@@ -54,7 +54,7 @@ contract ERC20Std is StkTestUtils {
     assertEq(stakeToken.allowance(address(this), USER), amount);
   }
 
-  function test_resetApprocal(uint256 amount) public {
+  function test_resetApproval(uint256 amount) public {
     test_approve(amount);
     assertTrue(stakeToken.approve(USER, 0));
     assertEq(stakeToken.allowance(address(this), USER), 0);
