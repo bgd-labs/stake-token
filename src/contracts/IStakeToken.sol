@@ -127,29 +127,6 @@ interface IStakeToken {
    * @param amount Amount of shares to redeem
    */
   function redeemOnBehalf(address from, address to, uint256 amount) external;
-<<<<<<< HEAD
-
-  /**
-   * @dev Claims an `amount` of `REWARD_TOKEN` and redeems to the provided address
-   * @param to Address to claim and redeem to
-   * @param claimAmount Amount to claim
-   * @param redeemAmount Amount to redeem
-   */
-  function claimRewardsAndRedeem(address to, uint256 claimAmount, uint256 redeemAmount) external;
-
-  /**
-   * @dev Claims an `amount` of `REWARD_TOKEN` and redeems the `redeemAmount` to an address. Only the claim helper contract is allowed to call this function
-   * @param from The address of the from
-   * @param to Address to claim and redeem to
-   * @param claimAmount Amount to claim
-   * @param redeemAmount Amount to redeem
-   */
-  function claimRewardsAndRedeemOnBehalf(
-    address from,
-    address to,
-    uint256 claimAmount,
-    uint256 redeemAmount
-  ) external;
 
   /**
    * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
