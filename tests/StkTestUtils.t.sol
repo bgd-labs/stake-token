@@ -101,10 +101,4 @@ contract StkTestUtils is Test {
     stakeToken.slash(destination, amount);
     vm.stopPrank();
   }
-
-  function _settleSlashing() internal {
-    vm.startPrank(admin);
-    stakeToken.settleSlashing();
-    vm.stopPrank();
-  }
 }

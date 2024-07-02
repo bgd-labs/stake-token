@@ -52,7 +52,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
   /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
-  bool public inPostSlashingPeriod;
+  bool private DEPRECATED_inPostSlashingPeriod;
 
   modifier onlySlashingAdmin() {
     require(msg.sender == getAdmin(SLASH_ADMIN_ROLE), 'CALLER_NOT_SLASHING_ADMIN');
@@ -218,7 +218,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
 
   /// @inheritdoc IStakeToken
   function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
-    require(!inPostSlashingPeriod, 'PREVIOUS_SLASHING_NOT_SETTLED');
     require(amount > 0, 'ZERO_AMOUNT');
     uint256 currentShares = totalSupply();
     uint256 balance = previewRedeem(currentShares);
@@ -230,31 +229,12 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     }
     require(balance - amount >= LOWER_BOUND, 'REMAINING_LT_MINIMUM');
 
-    inPostSlashingPeriod = true;
     _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
 
     STAKED_TOKEN.safeTransfer(destination, amount);
 
     emit Slashed(destination, amount);
     return amount;
-  }
-
-  /// @inheritdoc IStakeToken
-  function returnFunds(uint256 amount) external {
-    require(amount >= LOWER_BOUND, 'AMOUNT_LT_MINIMUM');
-    uint256 currentShares = totalSupply();
-    require(currentShares >= LOWER_BOUND, 'SHARES_LT_MINIMUM');
-    uint256 assets = previewRedeem(currentShares);
-    _updateExchangeRate(_getExchangeRate(assets + amount, currentShares));
-
-    STAKED_TOKEN.safeTransferFrom(msg.sender, address(this), amount);
-    emit FundsReturned(amount);
-  }
-
-  /// @inheritdoc IStakeToken
-  function settleSlashing() external onlySlashingAdmin {
-    inPostSlashingPeriod = false;
-    emit SlashingSettled();
   }
 
   /// @inheritdoc IStakeToken
@@ -346,7 +326,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
    * @param amount The amount of assets to be staked
    */
   function _stake(address from, address to, uint256 amount) internal {
-    require(!inPostSlashingPeriod, 'SLASHING_ONGOING');
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     uint256 sharesToMint = previewStake(amount);
@@ -369,19 +348,16 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
-    if (!inPostSlashingPeriod) {
-      require(
-        (block.timestamp >= cooldownSnapshot.timestamp + _cooldownSeconds),
-        'INSUFFICIENT_COOLDOWN'
-      );
-      require(
-        (block.timestamp - (cooldownSnapshot.timestamp + _cooldownSeconds) <= UNSTAKE_WINDOW),
-        'UNSTAKE_WINDOW_FINISHED'
-      );
-    }
+    require(
+      (block.timestamp >= cooldownSnapshot.timestamp + _cooldownSeconds),
+      'INSUFFICIENT_COOLDOWN'
+    );
+    require(
+      (block.timestamp - (cooldownSnapshot.timestamp + _cooldownSeconds) <= UNSTAKE_WINDOW),
+      'UNSTAKE_WINDOW_FINISHED'
+    );
 
-    uint256 balanceOfFrom = balanceOf(from);
-    uint256 maxRedeemable = inPostSlashingPeriod ? balanceOfFrom : cooldownSnapshot.amount;
+    uint256 maxRedeemable = cooldownSnapshot.amount;
     require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE');
 
     uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
