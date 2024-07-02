@@ -12,8 +12,8 @@ import {StkTestUtils} from './StkTestUtils.t.sol';
 contract Rewards is StkTestUtils {
   uint256 public emissionPerDay = 1e18;
 
-  function setUp() public {
-    _initializeStkToken(3000);
+  function setUp() public override {
+    super.setUp();
     uint256 emissionPerSecond = emissionPerDay / (60 * 60 * 24);
     _setEmission(emissionPerSecond);
   }

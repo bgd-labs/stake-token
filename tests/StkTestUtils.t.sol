@@ -26,7 +26,7 @@ contract StkTestUtils is Test {
   ProxyAdmin public proxyAdmin;
   StakeToken public stakeToken;
 
-  function _initializeStkToken(uint256 maxSlashing) internal {
+  function setUp() public virtual {
     underlyingToken = new MockERC20('TestToken', 'TEST');
     rewardToken = new MockERC20('TestReward', 'REWARD');
     RewardsController controller = new RewardsController();
@@ -53,7 +53,6 @@ contract StkTestUtils is Test {
             admin,
             admin,
             admin,
-            maxSlashing,
             15 days
           )
         )

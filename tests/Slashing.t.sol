@@ -10,10 +10,6 @@ import {StkTestUtils} from './StkTestUtils.t.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 contract Slashing is StkTestUtils {
-  function setUp() public {
-    _initializeStkToken(3000);
-  }
-
   /**
    * Slashing below 1 unit of assets should be impossible
    */

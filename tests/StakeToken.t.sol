@@ -10,10 +10,6 @@ import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IE
 import {StkTestUtils} from './StkTestUtils.t.sol';
 
 contract StakeTokenTest is StkTestUtils {
-  function setUp() public {
-    _initializeStkToken(3000);
-  }
-
   function test_totalAssets() public {
     uint64 stakeAmount = 10 ether;
     uint64 slashAmount = 1 ether;
