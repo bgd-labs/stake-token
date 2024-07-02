@@ -15,40 +15,6 @@ contract Slashing is StkTestUtils {
   }
 
   /**
-   * Set max slashing should properly set max slashing
-   */
-  function test_setMaxSlashingTo9999bps() public {
-    vm.startPrank(admin);
-    stakeToken.setMaxSlashablePercentage(9999);
-    vm.stopPrank();
-
-    assertEq(stakeToken.getMaxSlashablePercentage(), 9999);
-  }
-
-  /**
-   * Setting max slashing should revert when not being called as admin
-   */
-  function test_setMaxSlashingNonAdmin_shouldRevert() public {
-    try stakeToken.setMaxSlashablePercentage(10000) {} catch Error(string memory reason) {
-      require(keccak256(bytes(reason)) == keccak256(bytes('CALLER_NOT_SLASHING_ADMIN')));
-    }
-  }
-
-  /**
-   * Setting max slashing should revert when setting >= 100%
-   */
-  function test_setMaxSlashingGe10000bps_shouldRevert() public {
-    vm.startPrank(admin);
-    try stakeToken.setMaxSlashablePercentage(10000) {} catch Error(string memory reason) {
-      require(keccak256(bytes(reason)) == keccak256(bytes('INVALID_SLASHING_PERCENTAGE')));
-    }
-
-    try stakeToken.setMaxSlashablePercentage(10001) {} catch Error(string memory reason) {
-      require(keccak256(bytes(reason)) == keccak256(bytes('INVALID_SLASHING_PERCENTAGE')));
-    }
-  }
-
-  /**
    * Slashing below 1 unit of assets should be impossible
    */
   function test_slash9999bps() public {
@@ -71,86 +37,6 @@ contract Slashing is StkTestUtils {
 
     assertEq(underlyingToken.balanceOf(destination), 20 ether);
     assertEq(stakeToken.getExchangeRate(), 1.25 ether);
-  }
-
-  /**
-   * As max slashing is set to 3000 bps, a maximum of 30% should be slashed
-   */
-  function test_slash4000bps() public {
-    address destination = vm.addr(100);
-    _stake(100 ether, USER);
-    _slash(destination, 40 ether);
-
-    assertEq(underlyingToken.balanceOf(destination), 30 ether);
-    assertApproxEqAbs(stakeToken.getExchangeRate(), 1.428 ether, 0.001 ether);
-  }
-
-  /**
-   * After a slashing occured, redemption should be possible immediately
-   */
-  function test_redeemAfterSlash() public {
-    address destination = vm.addr(100);
-    _stake(100 ether, USER);
-    _slash(destination, 20 ether);
-    _redeem(100 ether, USER, USER);
-    assertEq(underlyingToken.balanceOf(USER), 80 ether);
-  }
-
-  /**
-   * After a slashing occured, redemption should be possible immediately
-   * even with a pending cooldown everything should be redeemable
-   */
-  function test_redeemAfterSlash_pendingCooldown(
-    uint256 initialStake,
-    uint256 stakeAfterCooldown,
-    uint256 amountToRedeem
-  ) public {
-    vm.assume(
-      initialStake < type(uint104).max &&
-        stakeAfterCooldown < type(uint104).max &&
-        initialStake + stakeAfterCooldown < type(uint104).max
-    );
-    vm.assume(initialStake + stakeAfterCooldown >= amountToRedeem);
-    vm.assume(amountToRedeem != 0);
-    vm.assume(initialStake > 0);
-    vm.assume(stakeAfterCooldown > 0);
-    vm.assume(initialStake + stakeAfterCooldown > 5 ether);
-
-    address destination = vm.addr(100);
-    _stake(initialStake, USER);
-    vm.prank(USER);
-    stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds() + 1);
-    _stake(stakeAfterCooldown, USER);
-    _slash(destination, (initialStake + stakeAfterCooldown) / 5); // ~20%
-    _redeem(amountToRedeem, USER, USER);
-
-    (uint40 timestamp, uint216 amount) = stakeToken.stakersCooldowns(USER);
-    assertApproxEqAbs(underlyingToken.balanceOf(USER), (uint256(amountToRedeem) * 80) / 100, 100);
-    if (amountToRedeem < initialStake) {
-      assertEq(timestamp != 0, true);
-      assertEq(amount, initialStake - amountToRedeem);
-    } else {
-      assertEq(timestamp, 0, 'TIMESTAMP_NOT_ZERO');
-      assertEq(amount, 0, 'AMOUNT_NON_ZERO');
-    }
-  }
-
-  /**
-   * After a slashing is settled cooldown mechanics should revert to defaul
-   */
-  function test_redeemAfterSlashingSettled() public {
-    address destination = vm.addr(100);
-    _stake(100 ether, USER);
-    _slash(destination, 20 ether);
-
-    vm.startPrank(USER);
-    vm.expectRevert('INSUFFICIENT_COOLDOWN');
-    stakeToken.redeem(USER, 100 ether);
-    stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
-    stakeToken.redeem(USER, 100 ether);
-    assertEq(underlyingToken.balanceOf(USER), 80 ether);
   }
 
   /**

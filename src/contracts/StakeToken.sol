@@ -26,6 +26,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
 
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
+  uint256 public constant MAX_SLASHABLE_PERCENTAGE = 9999;
 
   /// @notice lower bound to prevent spam & avoid exchangeRate issues
   // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
@@ -47,7 +48,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   /// @notice Seconds between starting cooldown and being able to withdraw
   uint256 internal _cooldownSeconds;
   /// @notice The maximum amount of funds that can be slashed at any given time
-  uint256 internal _maxSlashablePercentage;
+  uint256 private DEPRECATED_maxSlashablePercentage;
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
   /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
@@ -84,13 +85,11 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     address slashingAdmin,
     address cooldownPauseAdmin,
     address claimHelper,
-    uint256 maxSlashablePercentage,
     uint256 cooldownSeconds
   ) external virtual initializer {
     _initializeMetadata(name, symbol);
     _transferOwnership(slashingAdmin);
     _setSlashingAdmin(slashingAdmin);
-    _setMaxSlashablePercentage(maxSlashablePercentage);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
@@ -241,7 +240,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     uint256 currentShares = totalSupply();
     uint256 balance = previewRedeem(currentShares);
 
-    uint256 maxSlashable = balance.percentMul(_maxSlashablePercentage);
+    uint256 maxSlashable = balance.percentMul(MAX_SLASHABLE_PERCENTAGE);
 
     if (amount > maxSlashable) {
       amount = maxSlashable;
@@ -254,16 +253,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
 
     emit Slashed(destination, amount);
     return amount;
-  }
-
-  /// @inheritdoc IStakeToken
-  function setMaxSlashablePercentage(uint256 percentage) external onlySlashingAdmin {
-    _setMaxSlashablePercentage(percentage);
-  }
-
-  /// @inheritdoc IStakeToken
-  function getMaxSlashablePercentage() external view returns (uint256) {
-    return _maxSlashablePercentage;
   }
 
   /// @inheritdoc IStakeToken
@@ -297,17 +286,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     });
 
     emit Cooldown(from, amount);
-  }
-
-  /**
-   * @dev sets the max slashable percentage
-   * @param percentage must be strictly lower 100% as otherwise the exchange rate calculation would result in 0 division
-   */
-  function _setMaxSlashablePercentage(uint256 percentage) internal {
-    require(percentage < PercentageMath.PERCENTAGE_FACTOR, 'INVALID_SLASHING_PERCENTAGE');
-
-    _maxSlashablePercentage = percentage;
-    emit MaxSlashablePercentageChanged(percentage);
   }
 
   /**
