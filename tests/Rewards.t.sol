@@ -139,12 +139,19 @@ contract Rewards is StkTestUtils {
     // warp to the exact end
     vm.warp(block.timestamp + timePassed);
     uint256 rewardsBeforeEmissionEnd = stakeToken.getTotalRewardsBalance(user);
+
     // warp another time
     vm.warp(block.timestamp + timePassed);
     uint256 rewardsAfterEmissionEnd = stakeToken.getTotalRewardsBalance(user);
 
     // rewards should stay equal
     assertEq(rewardsBeforeEmissionEnd, rewardsAfterEmissionEnd);
+
+    // setting a new emission end should not retroactively emit rewards
+    vm.warp(block.timestamp + timePassed);
+    vm.prank(admin);
+    stakeToken.setDistributionEnd(block.timestamp);
+    assertEq(rewardsBeforeEmissionEnd, stakeToken.getTotalRewardsBalance(user));
   }
 
   function test_distributionEndInPast_shouldRevert() public {

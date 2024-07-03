@@ -119,6 +119,14 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     _configureAssets(assetsConfigInput);
   }
 
+  function setDistributionEnd(uint256 newDistributionEnd) external onlyEmissionManager {
+    require(newDistributionEnd >= block.timestamp, 'END_MUST_BE_GE_NOW');
+    AssetData storage assetConfig = assets[address(this)];
+    _updateAssetStateInternal(address(this), assetConfig, totalSupply());
+    distributionEnd = newDistributionEnd;
+    emit DistributionEndChanged(newDistributionEnd);
+  }
+
   /// @inheritdoc IStakeToken
   function previewStake(uint256 assets) public view returns (uint256) {
     return (assets * _currentExchangeRate) / EXCHANGE_RATE_UNIT;
