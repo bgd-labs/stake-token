@@ -37,13 +37,6 @@ contract AaveDistributionManager {
     EMISSION_MANAGER = emissionManager;
   }
 
-  function setDistributionEnd(uint256 newDistributionEnd) external onlyEmissionManager {
-    require(newDistributionEnd >= block.timestamp, 'END_MUST_BE_GE_NOW');
-
-    distributionEnd = newDistributionEnd;
-    emit DistributionEndChanged(newDistributionEnd);
-  }
-
   /**
    * @dev Configures the distribution of rewards for a list of assets
    * @param assetsConfigInput The list of configurations to apply
