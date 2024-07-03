@@ -32,7 +32,8 @@ contract StkTestUtils is Test {
       rewardToken,
       2 days,
       rewardsVault,
-      admin
+      admin,
+      address(0) // RewardsController
     );
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
