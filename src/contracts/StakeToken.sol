@@ -7,6 +7,7 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
+import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
 import {ERC20Permit} from './ERC20Permit.sol';
 import {AaveDistributionManager} from './AaveDistributionManager.sol';
@@ -17,7 +18,7 @@ import {IRewardsController} from './IRewardsController.sol';
 import {PercentageMath} from './lib/PercentageMath.sol';
 import {DistributionTypes} from './lib/DistributionTypes.sol';
 
-contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken {
+contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescuable {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
@@ -98,6 +99,10 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken {
   // compatibility for RewardsController
   function scaledTotalSupply() external returns (uint256) {
     return totalSupply();
+  }
+
+  function whoCanRescue() public view override returns (address) {
+    return owner();
   }
 
   /// @inheritdoc IAaveDistributionManager
