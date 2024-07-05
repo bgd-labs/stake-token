@@ -10,7 +10,6 @@ import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensi
 
 import {ERC20Permit} from './ERC20Permit.sol';
 import {AaveDistributionManager} from './AaveDistributionManager.sol';
-import {RoleManager} from './RoleManager.sol';
 import {IStakeToken} from './IStakeToken.sol';
 import {IAaveDistributionManager} from './IAaveDistributionManager.sol';
 import {IRewardsController} from './IRewardsController.sol';
@@ -18,15 +17,12 @@ import {IRewardsController} from './IRewardsController.sol';
 import {PercentageMath} from './lib/PercentageMath.sol';
 import {DistributionTypes} from './lib/DistributionTypes.sol';
 
-contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStakeToken {
+contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
   using SafeCast for uint104;
 
-  uint256 public constant SLASH_ADMIN_ROLE = 0;
-  uint256 public constant COOLDOWN_ADMIN_ROLE = 1;
-  uint256 public constant CLAIM_HELPER_ROLE = 2;
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
@@ -56,18 +52,10 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
   bool private DEPRECATED_inPostSlashingPeriod;
 
+  address internal slashingAdmin;
+
   modifier onlySlashingAdmin() {
-    require(msg.sender == getAdmin(SLASH_ADMIN_ROLE), 'CALLER_NOT_SLASHING_ADMIN');
-    _;
-  }
-
-  modifier onlyCooldownAdmin() {
-    require(msg.sender == getAdmin(COOLDOWN_ADMIN_ROLE), 'CALLER_NOT_COOLDOWN_ADMIN');
-    _;
-  }
-
-  modifier onlyClaimHelper() {
-    require(msg.sender == getAdmin(CLAIM_HELPER_ROLE), 'CALLER_NOT_CLAIM_HELPER');
+    require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
     _;
   }
 
@@ -99,14 +87,8 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     uint256 cooldownSeconds
   ) external virtual initializer {
     _initializeMetadata(name, symbol);
-
-    InitAdmin[] memory initAdmins = new InitAdmin[](3);
-    initAdmins[0] = InitAdmin(SLASH_ADMIN_ROLE, slashingAdmin);
-    initAdmins[1] = InitAdmin(COOLDOWN_ADMIN_ROLE, cooldownPauseAdmin);
-    initAdmins[2] = InitAdmin(CLAIM_HELPER_ROLE, claimHelper);
-
-    _initAdmins(initAdmins);
-
+    _transferOwnership(slashingAdmin);
+    _setSlashingAdmin(slashingAdmin);
     _setMaxSlashablePercentage(maxSlashablePercentage);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
@@ -129,12 +111,21 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     _configureAssets(assetsConfigInput);
   }
 
-  function setDistributionEnd(uint256 newDistributionEnd) external onlyEmissionManager {
+  function setDistributionEnd(uint256 newDistributionEnd) external onlyOwner {
     require(newDistributionEnd >= block.timestamp, 'END_MUST_BE_GE_NOW');
     AssetData storage assetConfig = assets[address(this)];
     _updateAssetStateInternal(address(this), assetConfig, totalSupply());
     distributionEnd = newDistributionEnd;
     emit DistributionEndChanged(newDistributionEnd);
+  }
+
+  function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
+    _setSlashingAdmin(newSlashingAdmin);
+  }
+
+  function _setSlashingAdmin(address newSlashingAdmin) internal {
+    slashingAdmin = newSlashingAdmin;
+    emit SlashingAdminChanged(newSlashingAdmin);
   }
 
   /// @inheritdoc IStakeToken
@@ -179,7 +170,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   }
 
   /// @inheritdoc IStakeToken
-  function cooldownOnBehalfOf(address from) external onlyClaimHelper {
+  function cooldownOnBehalfOf(address from) external onlyOwner {
     _cooldown(from);
   }
 
@@ -189,7 +180,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   }
 
   /// @inheritdoc IStakeToken
-  function redeemOnBehalf(address from, address to, uint256 amount) external onlyClaimHelper {
+  function redeemOnBehalf(address from, address to, uint256 amount) external onlyOwner {
     _redeem(from, to, amount.toUint104());
   }
 
@@ -203,7 +194,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     address from,
     address to,
     uint256 amount
-  ) external onlyClaimHelper returns (uint256) {
+  ) external onlyOwner returns (uint256) {
     return _claimRewards(from, to, amount);
   }
 
@@ -219,7 +210,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
     address to,
     uint256 claimAmount,
     uint256 redeemAmount
-  ) external onlyClaimHelper {
+  ) external onlyOwner {
     _claimRewards(from, to, claimAmount);
     _redeem(from, to, redeemAmount.toUint104());
   }
@@ -271,7 +262,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, RoleManager, IStake
   }
 
   /// @inheritdoc IStakeToken
-  function setCooldownSeconds(uint256 cooldownSeconds) external onlyCooldownAdmin {
+  function setCooldownSeconds(uint256 cooldownSeconds) external onlyOwner {
     _setCooldownSeconds(cooldownSeconds);
   }
 
