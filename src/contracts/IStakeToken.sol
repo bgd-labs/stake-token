@@ -107,19 +107,6 @@ interface IStakeToken is IAaveDistributionManager {
   function setCooldownSeconds(uint256 cooldownSeconds) external;
 
   /**
-   * @dev Getter of the max slashable percentage of the total staked amount.
-   * @return percentage the maximum slashable percentage
-   */
-  function getMaxSlashablePercentage() external view returns (uint256);
-
-  /**
-   * @dev Setter of max slashable percentage of the total staked amount.
-   * Can only be called by the slashing admin
-   * @param percentage the new maximum slashable percentage
-   */
-  function setMaxSlashablePercentage(uint256 percentage) external;
-
-  /**
    * @dev returns the exact amount of shares that would be received for the provided number of assets
    * @param assets the number of assets to stake
    * @return uint256 shares the number of shares that would be received

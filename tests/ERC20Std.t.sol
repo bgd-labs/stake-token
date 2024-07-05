@@ -10,10 +10,6 @@ import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IE
 import {StkTestUtils} from './StkTestUtils.t.sol';
 
 contract ERC20Std is StkTestUtils {
-  function setUp() public {
-    _initializeStkToken(3000);
-  }
-
   function test_name() external {
     assertEq('Stake Test', stakeToken.name());
   }

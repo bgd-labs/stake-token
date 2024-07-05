@@ -11,10 +11,6 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 import {StkTestUtils} from './StkTestUtils.t.sol';
 
 contract Cooldown is StkTestUtils {
-  function setUp() public {
-    _initializeStkToken(3000);
-  }
-
   /**
    * cooldown should activate for a given block.timestamp and cooldown the currently held amount
    */

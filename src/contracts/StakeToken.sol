@@ -27,10 +27,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
-  /// @notice lower bound to prevent spam & avoid exchangeRate issues
-  // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
-  uint256 public immutable LOWER_BOUND;
-
   IERC20 public immutable STAKED_TOKEN;
   IERC20 public immutable REWARD_TOKEN;
 
@@ -47,13 +43,17 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   /// @notice Seconds between starting cooldown and being able to withdraw
   uint256 internal _cooldownSeconds;
   /// @notice The maximum amount of funds that can be slashed at any given time
-  uint256 internal _maxSlashablePercentage;
+  uint256 private DEPRECATED_maxSlashablePercentage;
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
   /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
   bool private DEPRECATED_inPostSlashingPeriod;
 
+  // TODO: might instead use ACL to allow multiple slashing admins etc
   address internal slashingAdmin;
+
+  /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
+  uint256 public minAssetsRemaining;
 
   modifier onlySlashingAdmin() {
     require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
@@ -70,7 +70,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     IRewardsController rewardsController
   ) ERC20Permit(name) AaveDistributionManager(emissionManager) {
     uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
-    LOWER_BOUND = 10 ** decimals;
     STAKED_TOKEN = stakedToken;
     REWARD_TOKEN = rewardToken;
     UNSTAKE_WINDOW = unstakeWindow;
@@ -84,15 +83,14 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     address slashingAdmin,
     address cooldownPauseAdmin,
     address claimHelper,
-    uint256 maxSlashablePercentage,
     uint256 cooldownSeconds
   ) external virtual initializer {
     _initializeMetadata(name, symbol);
     _transferOwnership(slashingAdmin);
     _setSlashingAdmin(slashingAdmin);
-    _setMaxSlashablePercentage(maxSlashablePercentage);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
+    minAssetsRemaining = 10 ** decimals();
   }
 
   // TODO: reconsider as might not be needed with custom deployment
@@ -231,23 +229,22 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   }
 
   ///@inheritdoc IStakeToken
-  function totalAssets() external view returns (uint256) {
-    return STAKED_TOKEN.balanceOf(address(this));
+  function totalAssets() public view returns (uint256) {
+    uint256 currentShares = totalSupply();
+    return previewRedeem(currentShares);
   }
 
   /// @inheritdoc IStakeToken
   function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
-    uint256 currentShares = totalSupply();
-    uint256 balance = previewRedeem(currentShares);
-
-    uint256 maxSlashable = balance.percentMul(_maxSlashablePercentage);
-
+    uint256 maxSlashable = getMaxSlashable();
+    require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
     if (amount > maxSlashable) {
       amount = maxSlashable;
     }
-    require(balance - amount >= LOWER_BOUND, 'REMAINING_LT_MINIMUM');
 
+    uint256 currentShares = totalSupply();
+    uint256 balance = previewRedeem(currentShares);
     _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
 
     STAKED_TOKEN.safeTransfer(destination, amount);
@@ -256,14 +253,10 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     return amount;
   }
 
-  /// @inheritdoc IStakeToken
-  function setMaxSlashablePercentage(uint256 percentage) external onlySlashingAdmin {
-    _setMaxSlashablePercentage(percentage);
-  }
-
-  /// @inheritdoc IStakeToken
-  function getMaxSlashablePercentage() external view returns (uint256) {
-    return _maxSlashablePercentage;
+  function getMaxSlashable() public returns (uint256) {
+    uint256 currentAssets = totalAssets();
+    uint256 cachedMin = minAssetsRemaining;
+    return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
   }
 
   /// @inheritdoc IStakeToken
@@ -297,17 +290,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     });
 
     emit Cooldown(from, amount);
-  }
-
-  /**
-   * @dev sets the max slashable percentage
-   * @param percentage must be strictly lower 100% as otherwise the exchange rate calculation would result in 0 division
-   */
-  function _setMaxSlashablePercentage(uint256 percentage) internal {
-    require(percentage < PercentageMath.PERCENTAGE_FACTOR, 'INVALID_SLASHING_PERCENTAGE');
-
-    _maxSlashablePercentage = percentage;
-    emit MaxSlashablePercentageChanged(percentage);
   }
 
   /**
