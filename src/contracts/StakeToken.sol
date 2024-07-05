@@ -26,11 +26,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
 
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
-  uint256 public constant MAX_SLASHABLE_PERCENTAGE = 9999;
-
-  /// @notice lower bound to prevent spam & avoid exchangeRate issues
-  // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
-  uint256 public immutable LOWER_BOUND;
 
   IERC20 public immutable STAKED_TOKEN;
   IERC20 public immutable REWARD_TOKEN;
@@ -54,7 +49,11 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
   bool private DEPRECATED_inPostSlashingPeriod;
 
+  // TODO: might instead use ACL to allow multiple slashing admins etc
   address internal slashingAdmin;
+
+  /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
+  uint256 public minAssetsRemaining;
 
   modifier onlySlashingAdmin() {
     require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
@@ -71,7 +70,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     IRewardsController rewardsController
   ) ERC20Permit(name) AaveDistributionManager(emissionManager) {
     uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
-    LOWER_BOUND = 10 ** decimals;
     STAKED_TOKEN = stakedToken;
     REWARD_TOKEN = rewardToken;
     UNSTAKE_WINDOW = unstakeWindow;
@@ -92,6 +90,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     _setSlashingAdmin(slashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
+    minAssetsRemaining = 10 ** decimals();
   }
 
   // TODO: reconsider as might not be needed with custom deployment
@@ -230,29 +229,34 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   }
 
   ///@inheritdoc IStakeToken
-  function totalAssets() external view returns (uint256) {
-    return STAKED_TOKEN.balanceOf(address(this));
+  function totalAssets() public view returns (uint256) {
+    uint256 currentShares = totalSupply();
+    return previewRedeem(currentShares);
   }
 
   /// @inheritdoc IStakeToken
   function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
-    uint256 currentShares = totalSupply();
-    uint256 balance = previewRedeem(currentShares);
-
-    uint256 maxSlashable = balance.percentMul(MAX_SLASHABLE_PERCENTAGE);
-
+    uint256 maxSlashable = getMaxSlashable();
+    require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
     if (amount > maxSlashable) {
       amount = maxSlashable;
     }
-    require(balance - amount >= LOWER_BOUND, 'REMAINING_LT_MINIMUM');
 
+    uint256 currentShares = totalSupply();
+    uint256 balance = previewRedeem(currentShares);
     _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
 
     STAKED_TOKEN.safeTransfer(destination, amount);
 
     emit Slashed(destination, amount);
     return amount;
+  }
+
+  function getMaxSlashable() public returns (uint256) {
+    uint256 currentAssets = totalAssets();
+    uint256 cachedMin = minAssetsRemaining;
+    return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
   }
 
   /// @inheritdoc IStakeToken

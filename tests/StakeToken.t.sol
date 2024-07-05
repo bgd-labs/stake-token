@@ -17,6 +17,6 @@ contract StakeTokenTest is StkTestUtils {
     _stake(stakeAmount, USER);
     assertEq(stakeToken.totalAssets(), stakeAmount, 'WRONG_AMOUNT_STAKED');
     _slash(USER, slashAmount);
-    assertEq(stakeToken.totalAssets(), stakeAmount - slashAmount);
+    assertApproxEqAbs(stakeToken.totalAssets(), stakeAmount - slashAmount, 10);
   }
 }
