@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 import 'forge-std/Test.sol';
 import {DistributionTypes} from '../src/contracts/lib/DistributionTypes.sol';
 import {StakeToken} from '../src/contracts/StakeToken.sol';
+import {IRewardsController} from '../src/contracts/IRewardsController.sol';
+import {EmissionManager} from 'aave-v3-periphery/contracts/rewards/EmissionManager.sol';
+import {RewardsController} from 'aave-v3-periphery/contracts/rewards/RewardsController.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
@@ -26,13 +29,16 @@ contract StkTestUtils is Test {
   function _initializeStkToken(uint256 maxSlashing) internal {
     underlyingToken = new MockERC20('TestToken', 'TEST');
     rewardToken = new MockERC20('TestReward', 'REWARD');
+    RewardsController controller = new RewardsController();
+    EmissionManager manager = new EmissionManager(address(controller), admin);
     stakeTokenImpl = new StakeToken(
       'stkTest',
       underlyingToken,
       rewardToken,
       2 days,
       rewardsVault,
-      admin
+      admin,
+      IRewardsController(address(controller))
     );
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
