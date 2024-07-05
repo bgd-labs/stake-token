@@ -10,15 +10,13 @@ import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensi
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
 import {ERC20Permit} from './ERC20Permit.sol';
-import {AaveDistributionManager} from './AaveDistributionManager.sol';
 import {IStakeToken} from './IStakeToken.sol';
-import {IAaveDistributionManager} from './IAaveDistributionManager.sol';
 import {IRewardsController} from './IRewardsController.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 import {DistributionTypes} from './lib/DistributionTypes.sol';
 
-contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescuable {
+contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
@@ -28,13 +26,10 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
   IERC20 public immutable STAKED_TOKEN;
-  IERC20 public immutable REWARD_TOKEN;
 
   /// @notice Seconds available to redeem once the cooldown period is fulfilled
   uint256 public immutable UNSTAKE_WINDOW;
 
-  /// @notice Address to pull from the rewards, needs to have approved this contract
-  address public immutable REWARDS_VAULT;
   IRewardsController public immutable REWARDS_CONTROLLER;
 
   mapping(address => uint256) public stakerRewardsToClaim;
@@ -42,12 +37,8 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
 
   /// @notice Seconds between starting cooldown and being able to withdraw
   uint256 internal _cooldownSeconds;
-  /// @notice The maximum amount of funds that can be slashed at any given time
-  uint256 private DEPRECATED_maxSlashablePercentage;
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
-  /// @notice Flag determining if there's an ongoing slashing event that needs to be settled
-  bool private DEPRECATED_inPostSlashingPeriod;
 
   // TODO: might instead use ACL to allow multiple slashing admins etc
   address internal slashingAdmin;
@@ -63,31 +54,24 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   constructor(
     string memory name,
     IERC20 stakedToken,
-    IERC20 rewardToken,
     uint256 unstakeWindow,
-    address rewardsVault,
-    address emissionManager,
     IRewardsController rewardsController
-  ) ERC20Permit(name) AaveDistributionManager(emissionManager) {
+  ) ERC20Permit(name) {
     uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
     STAKED_TOKEN = stakedToken;
-    REWARD_TOKEN = rewardToken;
     UNSTAKE_WINDOW = unstakeWindow;
-    REWARDS_VAULT = rewardsVault;
     REWARDS_CONTROLLER = rewardsController;
   }
 
   function initialize(
     string calldata name,
     string calldata symbol,
-    address slashingAdmin,
-    address cooldownPauseAdmin,
-    address claimHelper,
+    address newSlashingAdmin,
     uint256 cooldownSeconds
   ) external virtual initializer {
     _initializeMetadata(name, symbol);
-    _transferOwnership(slashingAdmin);
-    _setSlashingAdmin(slashingAdmin);
+    _transferOwnership(newSlashingAdmin);
+    _setSlashingAdmin(newSlashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
     minAssetsRemaining = 10 ** decimals();
@@ -95,31 +79,12 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
 
   // TODO: reconsider as might not be needed with custom deployment
   // compatibility for RewardsController
-  function scaledTotalSupply() external returns (uint256) {
+  function scaledTotalSupply() external view returns (uint256) {
     return totalSupply();
   }
 
   function whoCanRescue() public view override returns (address) {
     return owner();
-  }
-
-  /// @inheritdoc IAaveDistributionManager
-  function configureAssets(
-    DistributionTypes.AssetConfigInput[] memory assetsConfigInput
-  ) external onlyEmissionManager {
-    for (uint256 i = 0; i < assetsConfigInput.length; i++) {
-      assetsConfigInput[i].totalStaked = totalSupply();
-    }
-
-    _configureAssets(assetsConfigInput);
-  }
-
-  function setDistributionEnd(uint256 newDistributionEnd) external onlyOwner {
-    require(newDistributionEnd >= block.timestamp, 'END_MUST_BE_GE_NOW');
-    AssetData storage assetConfig = assets[address(this)];
-    _updateAssetStateInternal(address(this), assetConfig, totalSupply());
-    distributionEnd = newDistributionEnd;
-    emit DistributionEndChanged(newDistributionEnd);
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -188,37 +153,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   }
 
   /// @inheritdoc IStakeToken
-  function claimRewards(address to, uint256 amount) external {
-    _claimRewards(msg.sender, to, amount);
-  }
-
-  /// @inheritdoc IStakeToken
-  function claimRewardsOnBehalf(
-    address from,
-    address to,
-    uint256 amount
-  ) external onlyOwner returns (uint256) {
-    return _claimRewards(from, to, amount);
-  }
-
-  /// @inheritdoc IStakeToken
-  function claimRewardsAndRedeem(address to, uint256 claimAmount, uint256 redeemAmount) external {
-    _claimRewards(msg.sender, to, claimAmount);
-    _redeem(msg.sender, to, redeemAmount.toUint104());
-  }
-
-  /// @inheritdoc IStakeToken
-  function claimRewardsAndRedeemOnBehalf(
-    address from,
-    address to,
-    uint256 claimAmount,
-    uint256 redeemAmount
-  ) external onlyOwner {
-    _claimRewards(from, to, claimAmount);
-    _redeem(from, to, redeemAmount.toUint104());
-  }
-
-  /// @inheritdoc IStakeToken
   function getExchangeRate() public view returns (uint216) {
     return _currentExchangeRate;
   }
@@ -253,7 +187,7 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     return amount;
   }
 
-  function getMaxSlashable() public returns (uint256) {
+  function getMaxSlashable() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     uint256 cachedMin = minAssetsRemaining;
     return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
@@ -267,18 +201,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   /// @inheritdoc IStakeToken
   function getCooldownSeconds() external view returns (uint256) {
     return _cooldownSeconds;
-  }
-
-  /// @inheritdoc IStakeToken
-  function getTotalRewardsBalance(address staker) external view returns (uint256) {
-    DistributionTypes.UserStakeInput[]
-      memory userStakeInputs = new DistributionTypes.UserStakeInput[](1);
-    userStakeInputs[0] = DistributionTypes.UserStakeInput({
-      underlyingAsset: address(this),
-      stakedByUser: balanceOf(staker),
-      totalStaked: totalSupply()
-    });
-    return stakerRewardsToClaim[staker] + _getUnclaimedRewards(staker, userStakeInputs);
   }
 
   function _cooldown(address from) internal {
@@ -299,26 +221,6 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
     _cooldownSeconds = cooldownSeconds;
     emit CooldownSecondsChanged(cooldownSeconds);
-  }
-
-  /**
-   * @dev claims the rewards for a specified address to a specified address
-   * @param from The address of the from from which to claim
-   * @param to Address to receive the rewards
-   * @param amount Amount to claim
-   * @return amount claimed
-   */
-  function _claimRewards(address from, address to, uint256 amount) internal returns (uint256) {
-    require(amount != 0, 'INVALID_ZERO_AMOUNT');
-    uint256 newTotalRewards = _updateCurrentUnclaimedRewards(from, balanceOf(from), false);
-
-    uint256 amountToClaim = (amount > newTotalRewards) ? newTotalRewards : amount;
-    require(amountToClaim != 0, 'INVALID_ZERO_AMOUNT');
-
-    stakerRewardsToClaim[from] = newTotalRewards - amountToClaim;
-    REWARD_TOKEN.safeTransferFrom(REWARDS_VAULT, to, amountToClaim);
-    emit RewardsClaimed(from, to, amountToClaim);
-    return amountToClaim;
   }
 
   /**
@@ -396,49 +298,17 @@ contract StakeToken is ERC20Permit, AaveDistributionManager, IStakeToken, Rescua
     return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
   }
 
-  /**
-   * @dev Updates the user state related with his accrued rewards
-   * @param user Address of the user
-   * @param userBalance The current balance of the user
-   * @param updateStorage Boolean flag used to update or not the stakerRewardsToClaim of the user
-   * @return The unclaimed rewards that were added to the total accrued
-   */
-  function _updateCurrentUnclaimedRewards(
-    address user,
-    uint256 userBalance,
-    bool updateStorage
-  ) internal returns (uint256) {
-    uint256 accruedRewards = _updateUserAssetInternal(
-      user,
-      address(this),
-      userBalance,
-      totalSupply()
-    );
-    uint256 unclaimedRewards = stakerRewardsToClaim[user] + accruedRewards;
-
-    if (accruedRewards != 0) {
-      if (updateStorage) {
-        stakerRewardsToClaim[user] = unclaimedRewards;
-      }
-      emit RewardsAccrued(user, accruedRewards);
-    }
-
-    return unclaimedRewards;
-  }
-
   function _update(address from, address to, uint256 amount) internal override {
     uint256 cachedTotalSupply = totalSupply();
     // stake & transfer
     if (to != address(0)) {
       uint256 balanceOfTo = balanceOf(to);
-      _updateCurrentUnclaimedRewards(to, balanceOfTo, true);
       REWARDS_CONTROLLER.handleAction(to, cachedTotalSupply, balanceOfTo);
     }
     // redeem & transfer
     if (from != address(0) && from != to) {
       uint256 balanceOfFrom = balanceOf(from);
       // Sender
-      _updateCurrentUnclaimedRewards(from, balanceOfFrom, true);
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
       CooldownSnapshot memory previousSenderCooldown = stakersCooldowns[from];
       if (previousSenderCooldown.timestamp != 0) {
