@@ -22,6 +22,7 @@ interface IStakeToken is IAaveDistributionManager {
   event ExchangeRateChanged(uint216 exchangeRate);
   event FundsReturned(uint256 amount);
   event SlashingSettled();
+  event SlashingAdminChanged(address newAdmin);
 
   /**
    * @dev Allows staking a specified amount of STAKED_TOKEN

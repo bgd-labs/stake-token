@@ -7,6 +7,7 @@ import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {StkTestUtils} from './StkTestUtils.t.sol';
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 contract Slashing is StkTestUtils {
   function setUp() public {
@@ -167,14 +168,11 @@ contract Slashing is StkTestUtils {
 
   function test_changeSlashingAdmin() public {
     address newUser = vm.addr(1000);
-    try stakeToken.setPendingAdmin(stakeToken.SLASH_ADMIN_ROLE(), newUser) {} catch Error(
-      string memory reason
-    ) {
-      require(keccak256(bytes(reason)) == keccak256(bytes('CALLER_NOT_ROLE_ADMIN')));
-    }
+    vm.expectRevert(
+      abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this))
+    );
+    stakeToken.setSlashingAdmin(newUser);
     vm.startPrank(admin);
-    stakeToken.setPendingAdmin(stakeToken.SLASH_ADMIN_ROLE(), newUser);
-    vm.startPrank(newUser);
-    stakeToken.claimRoleAdmin(stakeToken.SLASH_ADMIN_ROLE());
+    stakeToken.setSlashingAdmin(newUser);
   }
 }

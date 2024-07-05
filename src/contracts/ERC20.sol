@@ -8,11 +8,11 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
-import {Context} from 'openzeppelin-contracts/contracts/utils/Context.sol';
 import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
-import {Initializable} from 'openzeppelin-contracts/contracts/proxy/utils/Initializable.sol';
+import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {DelegationMode} from 'aave-token-v3/DelegationAwareBalance.sol';
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -37,7 +37,7 @@ import {DelegationMode} from 'aave-token-v3/DelegationAwareBalance.sol';
  * by listening to said events. Other implementations of the EIP may not emit
  * these events, as it isn't required by the specification.
  */
-abstract contract ERC20 is Context, Initializable, IERC20, IERC20Metadata, IERC20Errors {
+abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
   struct DelegationAwareBalance {
     uint104 balance; // maximum is 10T of 18 decimal asset
     uint72 delegatedPropositionBalance;
@@ -68,7 +68,7 @@ abstract contract ERC20 is Context, Initializable, IERC20, IERC20Metadata, IERC2
   function _initializeMetadata(
     string calldata name_,
     string calldata symbol_
-  ) internal initializer {
+  ) internal onlyInitializing {
     _name = name_;
     _symbol = symbol_;
   }
