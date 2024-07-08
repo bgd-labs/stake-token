@@ -41,8 +41,6 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
   uint256 public minAssetsRemaining;
 
-  uint256 internal _decimals;
-
   modifier onlySlashingAdmin() {
     require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
     _;
@@ -53,7 +51,6 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     IERC20 stakedToken,
     IRewardsController rewardsController
   ) ERC20Permit(name) {
-    uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
     STAKED_TOKEN = stakedToken;
     REWARDS_CONTROLLER = rewardsController;
   }
