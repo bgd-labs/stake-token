@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import {DistributionTypes} from '../src/contracts/lib/DistributionTypes.sol';
 import {StakeToken} from '../src/contracts/StakeToken.sol';
 import {IRewardsController} from '../src/contracts/IRewardsController.sol';
 import {EmissionManager} from 'aave-v3-periphery/contracts/rewards/EmissionManager.sol';
@@ -34,10 +33,7 @@ contract StkTestUtils is Test {
     stakeTokenImpl = new StakeToken(
       'stkTest',
       underlyingToken,
-      rewardToken,
       2 days,
-      rewardsVault,
-      admin,
       IRewardsController(address(controller))
     );
     proxyAdmin = new ProxyAdmin(admin);
@@ -51,36 +47,12 @@ contract StkTestUtils is Test {
             'Stake Test',
             'stkTest',
             admin,
-            admin,
-            admin,
             15 days
           )
         )
       )
     );
     vm.prank(admin);
-    stakeToken.setDistributionEnd(block.timestamp + 360 days);
-    // there's some assumptions about timestamp being non zero
-    vm.warp(block.timestamp + 1);
-  }
-
-  function _setEmission(uint256 emissionPerSecond) internal {
-    vm.startPrank(admin);
-    DistributionTypes.AssetConfigInput[] memory configs = new DistributionTypes.AssetConfigInput[](
-      1
-    );
-    configs[0] = DistributionTypes.AssetConfigInput(
-      uint128(uint256(emissionPerSecond)),
-      0 ether, // doesn't matter, probably should be refactored as well
-      address(stakeToken) // doesn't make much sense either as it's always the address of the token itself
-    );
-    stakeToken.configureAssets(configs);
-    vm.stopPrank();
-
-    vm.startPrank(rewardsVault);
-    rewardToken.approve(address(stakeToken), type(uint256).max);
-    deal(address(rewardToken), rewardsVault, emissionPerSecond * 360 days * 3);
-    vm.stopPrank();
   }
 
   function _stake(uint256 amount, address user) internal {
