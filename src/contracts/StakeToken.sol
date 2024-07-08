@@ -27,15 +27,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   IRewardsController public immutable REWARDS_CONTROLLER;
 
   struct StakeTokenStorage {
-    mapping(address => uint256) stakerRewardsToClaim;
-    mapping(address => CooldownSnapshot) stakersCooldowns;
+    mapping(address => CooldownSnapshot) _stakersCooldowns;
     SmConfig _smConfig;
     /// @notice Mirror of latest snapshot value for cheaper access
     uint216 _currentExchangeRate;
     // TODO: might instead use ACL to allow multiple slashing admins etc
-    address slashingAdmin;
+    address _slashingAdmin;
     /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
-    uint256 minAssetsRemaining;
+    uint256 _minAssetsRemaining;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -44,7 +43,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   modifier onlySlashingAdmin() {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    require(msg.sender == $.slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
+    require(msg.sender == $._slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
     _;
   }
 
@@ -74,7 +73,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    $.minAssetsRemaining = 10 ** decimals();
+    $._minAssetsRemaining = 10 ** decimals();
   }
 
   function decimals() public view override returns (uint8) {
@@ -113,7 +112,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   function _setSlashingAdmin(address newSlashingAdmin) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $.slashingAdmin = newSlashingAdmin;
+    $._slashingAdmin = newSlashingAdmin;
     emit SlashingAdminChanged(newSlashingAdmin);
   }
 
@@ -216,7 +215,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   function getMaxSlashable() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    uint256 cachedMin = $.minAssetsRemaining;
+    uint256 cachedMin = $._minAssetsRemaining;
     return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
   }
 
@@ -235,7 +234,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     uint256 amount = balanceOf(from);
     require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $.stakersCooldowns[from] = CooldownSnapshot({
+    $._stakersCooldowns[from] = CooldownSnapshot({
       timestamp: uint40(block.timestamp),
       amount: uint216(amount)
     });
@@ -282,7 +281,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $.stakersCooldowns[from];
+    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[from];
     SmConfig memory cachedSmConfig = $._smConfig;
     require(
       (block.timestamp >= cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds),
@@ -346,22 +345,22 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
       // Sender
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
       StakeTokenStorage storage $ = _getStakeTokenStorage();
-      CooldownSnapshot memory previousSenderCooldown = $.stakersCooldowns[from];
+      CooldownSnapshot memory previousSenderCooldown = $._stakersCooldowns[from];
       if (previousSenderCooldown.timestamp != 0) {
         // update to 0 means redeem
         // this is based on the assumption that erc20 forbids transfer to 0
         if (to == address(0)) {
           if (previousSenderCooldown.amount <= amount) {
-            delete $.stakersCooldowns[from];
+            delete $._stakersCooldowns[from];
           } else {
-            $.stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
+            $._stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
           }
         } else {
           uint256 balanceAfter = balanceOfFrom - amount;
           if (balanceAfter == 0) {
-            delete $.stakersCooldowns[from];
+            delete $._stakersCooldowns[from];
           } else if (balanceAfter < previousSenderCooldown.amount) {
-            $.stakersCooldowns[from].amount = uint216(balanceAfter);
+            $._stakersCooldowns[from].amount = uint216(balanceAfter);
           }
         }
       }
