@@ -39,7 +39,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant StakeTokenStorageLocation =
-    0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00; // TODO: use correct slot
+    0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
   modifier onlySlashingAdmin() {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
@@ -51,6 +51,11 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     assembly {
       $.slot := StakeTokenStorageLocation
     }
+  }
+
+  function stakersCooldowns(address user) public view returns (CooldownSnapshot memory) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._stakersCooldowns[user];
   }
 
   constructor(string memory name, IRewardsController rewardsController) ERC20Permit(name) {

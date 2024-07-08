@@ -22,15 +22,15 @@ contract Cooldown is StkTestUtils {
 
     vm.startPrank(user);
     stakeToken.cooldown();
-    (uint40 cooldownBefore, uint216 cooldownAmountBefore) = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownBefore, block.timestamp);
-    assertEq(cooldownAmountBefore, amountToStake);
+    IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.stakersCooldowns(user);
+    assertEq(snapshotBefore.timestamp, block.timestamp);
+    assertEq(snapshotBefore.amount, amountToStake);
 
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
     _redeem(amountToRedeem, user, user);
 
-    (, uint216 cooldownAmountAfterRedeem) = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownAmountAfterRedeem, amountToStake - amountToRedeem);
+    IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.stakersCooldowns(user);
+    assertEq(snapshotAfter.amount, amountToStake - amountToRedeem);
   }
 
   function test_cooldownNoIncreaseInAmount(
@@ -47,16 +47,16 @@ contract Cooldown is StkTestUtils {
     vm.startPrank(user);
     stakeToken.cooldown();
 
-    (uint40 cooldownBefore, uint216 cooldownAmountBefore) = stakeToken.stakersCooldowns(user);
+    IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.stakersCooldowns(user);
 
     // increase amount
     _stake(amountToTopUp, user);
 
-    (uint40 cooldownAfter, uint216 cooldownAmountAfter) = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownBefore, cooldownAfter);
-    assertEq(cooldownAmountBefore, cooldownAmountAfter);
-    assertEq(cooldownAfter, block.timestamp);
-    assertEq(cooldownAmountAfter, amountToStake);
+    IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.stakersCooldowns(user);
+    assertEq(snapshotBefore.timestamp, snapshotAfter.timestamp);
+    assertEq(snapshotBefore.amount, snapshotAfter.amount);
+    assertEq(snapshotAfter.timestamp, block.timestamp);
+    assertEq(snapshotAfter.amount, amountToStake);
   }
 
   function test_cooldownOnTransfer(
@@ -77,36 +77,30 @@ contract Cooldown is StkTestUtils {
     vm.startPrank(user);
     stakeToken.cooldown();
 
-    (uint40 cooldownBefore, uint216 cooldownAmountBefore) = stakeToken.stakersCooldowns(user);
+    IStakeToken.CooldownSnapshot memory snapshot0 = stakeToken.stakersCooldowns(user);
 
     // Receiving token should not affect the amount
     _stake(amountToStakeOther, otherUser);
     vm.prank(otherUser);
     stakeToken.transfer(user, amountToStakeOther);
-    (uint40 cooldownAfterReceive, uint216 cooldownAmountAfterReceive) = stakeToken.stakersCooldowns(
-      user
-    );
-    assertEq(cooldownBefore, cooldownAfterReceive, 'MISMATCH_BEFORE_COOLDOWN');
-    assertEq(cooldownAmountBefore, cooldownAmountAfterReceive, 'MISMATCH_BEFORE_COOLDOWN_AMOUNT');
+    IStakeToken.CooldownSnapshot memory snapshot1 = stakeToken.stakersCooldowns(user);
+    assertEq(snapshot0.timestamp, snapshot1.timestamp, 'MISMATCH_BEFORE_COOLDOWN');
+    assertEq(snapshot0.amount, snapshot1.amount, 'MISMATCH_BEFORE_COOLDOWN_AMOUNT');
 
     // Sending token should not affect the amount as long as balance > amount
     vm.prank(user);
     stakeToken.transfer(otherUser, amountToStakeOther);
-    (uint40 cooldownAfterSent1, uint216 cooldownAmountAfterSent1) = stakeToken.stakersCooldowns(
-      user
-    );
-    assertEq(cooldownBefore, cooldownAfterSent1, 'MISMATCH_COOLDOWN');
-    assertEq(cooldownAmountBefore, cooldownAmountAfterSent1, 'MISMATCH_COOLDOWN_AMOUNT');
+    IStakeToken.CooldownSnapshot memory snapshot2 = stakeToken.stakersCooldowns(user);
+    assertEq(snapshot0.timestamp, snapshot2.timestamp, 'MISMATCH_COOLDOWN');
+    assertEq(snapshot0.amount, snapshot2.amount, 'MISMATCH_COOLDOWN_AMOUNT');
 
     // Sending token should decrease the cooldown amount when balance <= amount
     vm.startPrank(user);
     stakeToken.transfer(otherUser, amountToStake);
     vm.stopPrank();
-    (uint40 cooldownAfterSent2, uint216 cooldownAmountAfterSent2) = stakeToken.stakersCooldowns(
-      user
-    );
-    assertEq(cooldownAfterSent2, 0, 'MISMATCH_AFTER_COOLDOWN');
-    assertEq(cooldownAmountAfterSent2, 0, 'MISMATCH_AFTER_COOLDOWN_AMOUNT');
+    IStakeToken.CooldownSnapshot memory snapshot3 = stakeToken.stakersCooldowns(user);
+    assertEq(snapshot3.timestamp, 0, 'MISMATCH_AFTER_COOLDOWN');
+    assertEq(snapshot3.amount, 0, 'MISMATCH_AFTER_COOLDOWN_AMOUNT');
   }
 
   function test_cooldownInsufficient_shouldRevert(
@@ -174,8 +168,10 @@ contract Cooldown is StkTestUtils {
     vm.prank(user);
     stakeToken.cooldown();
     _stake(amountToTopUp, user);
-    (, uint216 cooldownAmountAfterSecondStake) = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownAmountAfterSecondStake, amountToStake, 'STAKE_SHOULD_NOT_ALTER_COOLDOWN');
+    IStakeToken.CooldownSnapshot memory snapshotAfterSecondStake = stakeToken.stakersCooldowns(
+      user
+    );
+    assertEq(snapshotAfterSecondStake.amount, amountToStake, 'STAKE_SHOULD_NOT_ALTER_COOLDOWN');
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
     _redeem(amountToUnstake, user, destination);
 
