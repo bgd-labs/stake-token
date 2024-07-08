@@ -49,7 +49,6 @@ contract StkTestUtils is Test {
         )
       )
     );
-    vm.prank(admin);
   }
 
   function _stake(uint256 amount, address user) internal {
