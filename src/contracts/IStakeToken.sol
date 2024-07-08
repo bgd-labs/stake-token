@@ -7,6 +7,14 @@ interface IStakeToken {
     uint216 amount;
   }
 
+  struct CooldownConfig {
+    /// @notice Seconds available to redeem once the cooldown period is fulfilled
+    uint32 unstakeWindowSeconds;
+    /// @notice Seconds between starting cooldown and being able to withdraw
+    uint32 cooldownSeconds;
+    // reserved for future use
+  }
+
   event Cooldown(address indexed user, uint256 amount);
 
   event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
@@ -15,6 +23,7 @@ interface IStakeToken {
   event Slashed(address indexed destination, uint256 amount);
   event SlashingExitWindowDurationChanged(uint256 windowSeconds);
   event CooldownSecondsChanged(uint256 cooldownSeconds);
+  event UnstakeWindowChanged(uint256 unstakeWindow);
   event ExchangeRateChanged(uint216 exchangeRate);
   event FundsReturned(uint256 amount);
   event SlashingSettled();

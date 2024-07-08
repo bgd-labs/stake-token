@@ -139,7 +139,8 @@ contract Cooldown is StkTestUtils {
   ) public {
     vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
     vm.assume(
-      secondsAfterCooldownActivation > stakeToken.getCooldownSeconds() + stakeToken.UNSTAKE_WINDOW()
+      secondsAfterCooldownActivation >
+        stakeToken.getCooldownSeconds() + stakeToken.getUnstakeWindow()
     );
     vm.assume(user != address(proxyAdmin) && user != address(0) && destination != address(0));
 

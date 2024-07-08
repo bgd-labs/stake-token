@@ -33,7 +33,6 @@ contract StkTestUtils is Test {
     stakeTokenImpl = new StakeToken(
       'stkTest',
       underlyingToken,
-      2 days,
       IRewardsController(address(controller))
     );
     proxyAdmin = new ProxyAdmin(admin);
@@ -47,7 +46,8 @@ contract StkTestUtils is Test {
             'Stake Test',
             'stkTest',
             admin,
-            15 days
+            15 days,
+            2 days
           )
         )
       )
