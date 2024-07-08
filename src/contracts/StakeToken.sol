@@ -26,16 +26,12 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   IERC20 public immutable STAKED_TOKEN;
 
-  /// @notice Seconds available to redeem once the cooldown period is fulfilled
-  uint256 public immutable UNSTAKE_WINDOW;
-
   IRewardsController public immutable REWARDS_CONTROLLER;
 
   mapping(address => uint256) public stakerRewardsToClaim;
   mapping(address => CooldownSnapshot) public stakersCooldowns;
 
-  /// @notice Seconds between starting cooldown and being able to withdraw
-  uint256 internal _cooldownSeconds;
+  CooldownConfig internal _cooldownConfig;
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
 
@@ -53,12 +49,10 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   constructor(
     string memory name,
     IERC20 stakedToken,
-    uint256 unstakeWindow,
     IRewardsController rewardsController
   ) ERC20Permit(name) {
     uint256 decimals = IERC20Metadata(address(stakedToken)).decimals();
     STAKED_TOKEN = stakedToken;
-    UNSTAKE_WINDOW = unstakeWindow;
     REWARDS_CONTROLLER = rewardsController;
   }
 
@@ -66,12 +60,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     string calldata name,
     string calldata symbol,
     address newSlashingAdmin,
-    uint256 cooldownSeconds
+    uint256 cooldownSeconds,
+    uint256 unstakeWindow
   ) external virtual initializer {
     _initializeMetadata(name, symbol);
     _transferOwnership(newSlashingAdmin);
     _setSlashingAdmin(newSlashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
+    _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
     minAssetsRemaining = 10 ** decimals();
   }
@@ -84,6 +80,19 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   function whoCanRescue() public view override returns (address) {
     return owner();
+  }
+
+  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
+    _setUnstakeWindow(newUnstakeWindow);
+  }
+
+  function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
+    _cooldownConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    emit UnstakeWindowChanged(newUnstakeWindow);
+  }
+
+  function getUnstakeWindow() external view returns (uint256) {
+    return _cooldownConfig.unstakeWindowSeconds;
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -199,7 +208,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function getCooldownSeconds() external view returns (uint256) {
-    return _cooldownSeconds;
+    return _cooldownConfig.cooldownSeconds;
   }
 
   function _cooldown(address from) internal {
@@ -218,7 +227,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
    * @param cooldownSeconds the new amount of cooldown seconds
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
-    _cooldownSeconds = cooldownSeconds;
+    _cooldownConfig.cooldownSeconds = cooldownSeconds.toUint32();
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
@@ -250,12 +259,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
+    CooldownConfig memory cachedCooldownConfig = _cooldownConfig;
     require(
-      (block.timestamp >= cooldownSnapshot.timestamp + _cooldownSeconds),
+      (block.timestamp >= cooldownSnapshot.timestamp + cachedCooldownConfig.cooldownSeconds),
       'INSUFFICIENT_COOLDOWN'
     );
     require(
-      (block.timestamp - (cooldownSnapshot.timestamp + _cooldownSeconds) <= UNSTAKE_WINDOW),
+      (block.timestamp - (cooldownSnapshot.timestamp + cachedCooldownConfig.cooldownSeconds) <=
+        cachedCooldownConfig.unstakeWindowSeconds),
       'UNSTAKE_WINDOW_FINISHED'
     );
 
