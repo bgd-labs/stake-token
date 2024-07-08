@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import {DistributionTypes} from '../src/contracts/lib/DistributionTypes.sol';
 import {StakeToken} from '../src/contracts/StakeToken.sol';
 import {IRewardsController} from '../src/contracts/IRewardsController.sol';
 import {EmissionManager} from 'aave-v3-periphery/contracts/rewards/EmissionManager.sol';

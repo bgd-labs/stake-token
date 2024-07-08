@@ -14,7 +14,6 @@ import {IStakeToken} from './IStakeToken.sol';
 import {IRewardsController} from './IRewardsController.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
-import {DistributionTypes} from './lib/DistributionTypes.sol';
 
 contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   using SafeERC20 for IERC20;
