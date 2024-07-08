@@ -24,14 +24,12 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
-  IERC20 public immutable STAKED_TOKEN;
-
   IRewardsController public immutable REWARDS_CONTROLLER;
 
   mapping(address => uint256) public stakerRewardsToClaim;
   mapping(address => CooldownSnapshot) public stakersCooldowns;
 
-  CooldownConfig internal _cooldownConfig;
+  SmConfig internal _smConfig;
   /// @notice Mirror of latest snapshot value for cheaper access
   uint216 internal _currentExchangeRate;
 
@@ -46,22 +44,19 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     _;
   }
 
-  constructor(
-    string memory name,
-    IERC20 stakedToken,
-    IRewardsController rewardsController
-  ) ERC20Permit(name) {
-    STAKED_TOKEN = stakedToken;
+  constructor(string memory name, IRewardsController rewardsController) ERC20Permit(name) {
     REWARDS_CONTROLLER = rewardsController;
   }
 
   function initialize(
+    address stakedToken,
     string calldata name,
     string calldata symbol,
     address newSlashingAdmin,
     uint256 cooldownSeconds,
     uint256 unstakeWindow
   ) external virtual initializer {
+    _smConfig.stakedToken = stakedToken;
     _initializeMetadata(name, symbol);
     _transferOwnership(newSlashingAdmin);
     _setSlashingAdmin(newSlashingAdmin);
@@ -72,7 +67,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   }
 
   function decimals() public view override returns (uint8) {
-    return IERC20Metadata(address(STAKED_TOKEN)).decimals();
+    return IERC20Metadata(_smConfig.stakedToken).decimals();
   }
 
   // TODO: reconsider as might not be needed with custom deployment
@@ -90,12 +85,12 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _cooldownConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    _smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function getUnstakeWindow() external view returns (uint256) {
-    return _cooldownConfig.unstakeWindowSeconds;
+    return _smConfig.unstakeWindowSeconds;
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -126,7 +121,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     bytes32 s
   ) external {
     try
-      IERC20Permit(address(STAKED_TOKEN)).permit(
+      IERC20Permit(_smConfig.stakedToken).permit(
         msg.sender,
         address(this),
         amount,
@@ -192,7 +187,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     uint256 balance = previewRedeem(currentShares);
     _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
 
-    STAKED_TOKEN.safeTransfer(destination, amount);
+    IERC20(_smConfig.stakedToken).safeTransfer(destination, amount);
 
     emit Slashed(destination, amount);
     return amount;
@@ -211,7 +206,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function getCooldownSeconds() external view returns (uint256) {
-    return _cooldownConfig.cooldownSeconds;
+    return _smConfig.cooldownSeconds;
   }
 
   function _cooldown(address from) internal {
@@ -230,12 +225,12 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
    * @param cooldownSeconds the new amount of cooldown seconds
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
-    _cooldownConfig.cooldownSeconds = cooldownSeconds.toUint32();
+    _smConfig.cooldownSeconds = cooldownSeconds.toUint32();
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
   /**
-   * @dev Allows staking a specified amount of STAKED_TOKEN
+   * @dev Allows staking a specified amount of stakedToken
    * @param to The address to receiving the shares
    * @param amount The amount of assets to be staked
    */
@@ -247,7 +242,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
     _mint(to, sharesToMint.toUint104());
 
-    STAKED_TOKEN.safeTransferFrom(from, address(this), amount);
+    IERC20(_smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
 
     emit Staked(from, to, amount, sharesToMint);
   }
@@ -262,14 +257,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
-    CooldownConfig memory cachedCooldownConfig = _cooldownConfig;
+    SmConfig memory cachedSmConfig = _smConfig;
     require(
-      (block.timestamp >= cooldownSnapshot.timestamp + cachedCooldownConfig.cooldownSeconds),
+      (block.timestamp >= cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds),
       'INSUFFICIENT_COOLDOWN'
     );
     require(
-      (block.timestamp - (cooldownSnapshot.timestamp + cachedCooldownConfig.cooldownSeconds) <=
-        cachedCooldownConfig.unstakeWindowSeconds),
+      (block.timestamp - (cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds) <=
+        cachedSmConfig.unstakeWindowSeconds),
       'UNSTAKE_WINDOW_FINISHED'
     );
 
@@ -282,7 +277,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
     _burn(from, amountToRedeem.toUint104());
 
-    IERC20(STAKED_TOKEN).safeTransfer(to, underlyingToRedeem);
+    IERC20(cachedSmConfig.stakedToken).safeTransfer(to, underlyingToRedeem);
 
     emit Redeem(from, to, underlyingToRedeem, amountToRedeem);
   }
