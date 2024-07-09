@@ -26,6 +26,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   IRewardsController public immutable REWARDS_CONTROLLER;
 
+  /// @custom:storage-location erc7201:aave.storage.StakeToken
   struct StakeTokenStorage {
     mapping(address => CooldownSnapshot) _stakersCooldowns;
     SmConfig _smConfig;
