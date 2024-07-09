@@ -61,6 +61,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   constructor(IRewardsController rewardsController) {
     REWARDS_CONTROLLER = rewardsController;
+    _disableInitializers();
   }
 
   function initialize(
