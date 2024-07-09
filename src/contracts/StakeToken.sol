@@ -59,7 +59,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return $._stakersCooldowns[user];
   }
 
-  constructor(string memory name, IRewardsController rewardsController) {
+  constructor(IRewardsController rewardsController) {
     REWARDS_CONTROLLER = rewardsController;
   }
 
@@ -73,7 +73,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   ) external virtual initializer {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
-    __ERC20_init(name, symbol);
+    __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
     __Ownable_init(newSlashingAdmin);
     __EIP712_init(string(abi.encodePacked('stk', name)), '1');
     _setSlashingAdmin(newSlashingAdmin);
