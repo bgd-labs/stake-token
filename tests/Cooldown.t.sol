@@ -160,6 +160,7 @@ contract Cooldown is StkTestUtils {
     vm.assume(
       user != address(proxyAdmin) &&
         user != address(0) &&
+        user != address(stakeToken) &&
         destination != address(0) &&
         destination != address(stakeToken)
     );
