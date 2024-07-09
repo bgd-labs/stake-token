@@ -13,6 +13,7 @@ import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {DelegationMode} from 'aave-token-v3/DelegationAwareBalance.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
+import {ContextUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -37,7 +38,14 @@ import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/a
  * by listening to said events. Other implementations of the EIP may not emit
  * these events, as it isn't required by the specification.
  */
-abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
+abstract contract ERC20Upgradeable is
+  Initializable,
+  ContextUpgradeable,
+  OwnableUpgradeable,
+  IERC20,
+  IERC20Metadata,
+  IERC20Errors
+{
   struct DelegationAwareBalance {
     uint104 balance; // maximum is 10T of 18 decimal asset
     uint72 delegatedPropositionBalance;
@@ -45,39 +53,50 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
     DelegationMode delegationMode;
   }
 
-  mapping(address => DelegationAwareBalance) internal _balances;
+  /// @custom:storage-location erc7201:openzeppelin.storage.ERC20
+  struct ERC20Storage {
+    mapping(address account => DelegationAwareBalance) _balances;
+    mapping(address account => mapping(address spender => uint256)) _allowances;
+    uint256 _totalSupply;
+    string _name;
+    string _symbol;
+  }
 
-  mapping(address account => mapping(address spender => uint256)) private _allowances;
+  // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC20")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant ERC20StorageLocation =
+    0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00;
 
-  uint256 private _totalSupply;
-
-  string private _name;
-  string private _symbol;
-
-  constructor() {
-    // @note using default oz version of Initializable with this call,
-    // to make further reviews and audits more simple
-    _disableInitializers();
+  function _getERC20Storage() private pure returns (ERC20Storage storage $) {
+    assembly {
+      $.slot := ERC20StorageLocation
+    }
   }
 
   /**
    * @dev Sets the values for {name} and {symbol}.
    *
-   * All two of these values are only be set once during the first initialization
+   * All two of these values are immutable: they can only be set once during
+   * construction.
    */
-  function _initializeMetadata(
-    string calldata name_,
-    string calldata symbol_
+  function __ERC20_init(string memory name_, string memory symbol_) internal onlyInitializing {
+    __ERC20_init_unchained(name_, symbol_);
+  }
+
+  function __ERC20_init_unchained(
+    string memory name_,
+    string memory symbol_
   ) internal onlyInitializing {
-    _name = name_;
-    _symbol = symbol_;
+    ERC20Storage storage $ = _getERC20Storage();
+    $._name = name_;
+    $._symbol = symbol_;
   }
 
   /**
    * @dev Returns the name of the token.
    */
   function name() public view virtual returns (string memory) {
-    return _name;
+    ERC20Storage storage $ = _getERC20Storage();
+    return $._name;
   }
 
   /**
@@ -85,7 +104,8 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
    * name.
    */
   function symbol() public view virtual returns (string memory) {
-    return _symbol;
+    ERC20Storage storage $ = _getERC20Storage();
+    return $._symbol;
   }
 
   /**
@@ -109,14 +129,16 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
    * @dev See {IERC20-totalSupply}.
    */
   function totalSupply() public view virtual returns (uint256) {
-    return _totalSupply;
+    ERC20Storage storage $ = _getERC20Storage();
+    return $._totalSupply;
   }
 
   /**
    * @dev See {IERC20-balanceOf}.
    */
   function balanceOf(address account) public view virtual returns (uint256) {
-    return _balances[account].balance;
+    ERC20Storage storage $ = _getERC20Storage();
+    return $._balances[account].balance;
   }
 
   /**
@@ -137,7 +159,8 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
    * @dev See {IERC20-allowance}.
    */
   function allowance(address owner, address spender) public view virtual returns (uint256) {
-    return _allowances[owner][spender];
+    ERC20Storage storage $ = _getERC20Storage();
+    return $._allowances[owner][spender];
   }
 
   /**
@@ -159,8 +182,8 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
   /**
    * @dev See {IERC20-transferFrom}.
    *
-   * Emits an {Approval} event indicating the updated allowance. This is not
-   * required by the EIP. See the note at the beginning of {ERC20}.
+   * Skips emitting an {Approval} event indicating an allowance update. This is not
+   * required by the ERC. See {xref-ERC20-_approve-address-address-uint256-bool-}[_approve].
    *
    * NOTE: Does not update the allowance if the current allowance
    * is the maximum `uint256`.
@@ -207,30 +230,31 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
    * Emits a {Transfer} event.
    */
   function _update(address from, address to, uint256 value) internal virtual {
+    ERC20Storage storage $ = _getERC20Storage();
     if (from == address(0)) {
       // Overflow check required: The rest of the code assumes that totalSupply never overflows
       // @dev modified by BGD
-      _totalSupply = SafeCast.toUint104(_totalSupply + value);
+      $._totalSupply += SafeCast.toUint104(value);
     } else {
-      uint104 fromBalance = _balances[from].balance;
+      uint104 fromBalance = $._balances[from].balance;
       if (fromBalance < value) {
         revert ERC20InsufficientBalance(from, fromBalance, value);
       }
       unchecked {
         // Overflow not possible: value <= fromBalance <= totalSupply.
-        _balances[from].balance = fromBalance - uint104(value);
+        $._balances[from].balance = fromBalance - uint104(value);
       }
     }
 
     if (to == address(0)) {
       unchecked {
         // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
-        _totalSupply -= value;
+        $._totalSupply -= value;
       }
     } else {
       unchecked {
         // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
-        _balances[to].balance += uint104(value);
+        $._balances[to].balance += uint104(value);
       }
     }
 
@@ -295,7 +319,8 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
    *
    * Anyone who wishes to continue emitting `Approval` events on the`transferFrom` operation can force the flag to
    * true using the following override:
-   * ```
+   *
+   * ```solidity
    * function _approve(address owner, address spender, uint256 value, bool) internal virtual override {
    *     super._approve(owner, spender, value, true);
    * }
@@ -309,13 +334,14 @@ abstract contract ERC20 is OwnableUpgradeable, IERC20, IERC20Metadata, IERC20Err
     uint256 value,
     bool emitEvent
   ) internal virtual {
+    ERC20Storage storage $ = _getERC20Storage();
     if (owner == address(0)) {
       revert ERC20InvalidApprover(address(0));
     }
     if (spender == address(0)) {
       revert ERC20InvalidSpender(address(0));
     }
-    _allowances[owner][spender] = value;
+    $._allowances[owner][spender] = value;
     if (emitEvent) {
       emit Approval(owner, spender, value);
     }

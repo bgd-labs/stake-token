@@ -9,13 +9,13 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
-import {ERC20Permit} from './ERC20Permit.sol';
+import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
 import {IStakeToken} from './IStakeToken.sol';
 import {IRewardsController} from './IRewardsController.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 
-contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
+contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
@@ -59,7 +59,7 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     return $._stakersCooldowns[user];
   }
 
-  constructor(string memory name, IRewardsController rewardsController) ERC20Permit(name) {
+  constructor(string memory name, IRewardsController rewardsController) {
     REWARDS_CONTROLLER = rewardsController;
   }
 
@@ -73,8 +73,9 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   ) external virtual initializer {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
-    _initializeMetadata(name, symbol);
-    _transferOwnership(newSlashingAdmin);
+    __ERC20_init(name, symbol);
+    __Ownable_init(newSlashingAdmin);
+    __EIP712_init(string(abi.encodePacked('stk', name)), '1');
     _setSlashingAdmin(newSlashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
