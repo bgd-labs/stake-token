@@ -7,11 +7,13 @@ interface IStakeToken {
     uint216 amount;
   }
 
-  struct CooldownConfig {
+  struct SmConfig {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
     uint32 unstakeWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
     uint32 cooldownSeconds;
+    /// @notice The address of the underlying asset
+    address stakedToken;
     // reserved for future use
   }
 

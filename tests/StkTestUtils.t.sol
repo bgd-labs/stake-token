@@ -30,11 +30,7 @@ contract StkTestUtils is Test {
     rewardToken = new MockERC20('TestReward', 'REWARD');
     RewardsController controller = new RewardsController();
     EmissionManager manager = new EmissionManager(address(controller), admin);
-    stakeTokenImpl = new StakeToken(
-      'stkTest',
-      underlyingToken,
-      IRewardsController(address(controller))
-    );
+    stakeTokenImpl = new StakeToken('stkTest', IRewardsController(address(controller)));
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
       address(
@@ -43,6 +39,7 @@ contract StkTestUtils is Test {
           address(proxyAdmin),
           abi.encodeWithSelector(
             StakeToken.initialize.selector,
+            underlyingToken,
             'Stake Test',
             'stkTest',
             admin,
@@ -52,7 +49,6 @@ contract StkTestUtils is Test {
         )
       )
     );
-    vm.prank(admin);
   }
 
   function _stake(uint256 amount, address user) internal {
