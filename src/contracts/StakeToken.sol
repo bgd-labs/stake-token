@@ -26,22 +26,37 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   IRewardsController public immutable REWARDS_CONTROLLER;
 
-  mapping(address => uint256) public stakerRewardsToClaim;
-  mapping(address => CooldownSnapshot) public stakersCooldowns;
+  /// @custom:storage-location erc7201:aave.storage.StakeToken
+  struct StakeTokenStorage {
+    mapping(address => CooldownSnapshot) _stakersCooldowns;
+    SmConfig _smConfig;
+    /// @notice Mirror of latest snapshot value for cheaper access
+    uint216 _currentExchangeRate;
+    // TODO: might instead use ACL to allow multiple slashing admins etc
+    address _slashingAdmin;
+    /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
+    uint256 _minAssetsRemaining;
+  }
 
-  SmConfig internal _smConfig;
-  /// @notice Mirror of latest snapshot value for cheaper access
-  uint216 internal _currentExchangeRate;
-
-  // TODO: might instead use ACL to allow multiple slashing admins etc
-  address internal slashingAdmin;
-
-  /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
-  uint256 public minAssetsRemaining;
+  // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant StakeTokenStorageLocation =
+    0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
   modifier onlySlashingAdmin() {
-    require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    require(msg.sender == $._slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
     _;
+  }
+
+  function _getStakeTokenStorage() private pure returns (StakeTokenStorage storage $) {
+    assembly {
+      $.slot := StakeTokenStorageLocation
+    }
+  }
+
+  function stakersCooldowns(address user) public view returns (CooldownSnapshot memory) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._stakersCooldowns[user];
   }
 
   constructor(string memory name, IRewardsController rewardsController) ERC20Permit(name) {
@@ -56,18 +71,20 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     uint256 cooldownSeconds,
     uint256 unstakeWindow
   ) external virtual initializer {
-    _smConfig.stakedToken = stakedToken;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._smConfig.stakedToken = stakedToken;
     _initializeMetadata(name, symbol);
     _transferOwnership(newSlashingAdmin);
     _setSlashingAdmin(newSlashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    minAssetsRemaining = 10 ** decimals();
+    $._minAssetsRemaining = 10 ** decimals();
   }
 
   function decimals() public view override returns (uint8) {
-    return IERC20Metadata(_smConfig.stakedToken).decimals();
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return IERC20Metadata($._smConfig.stakedToken).decimals();
   }
 
   // TODO: reconsider as might not be needed with custom deployment
@@ -85,12 +102,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function getUnstakeWindow() external view returns (uint256) {
-    return _smConfig.unstakeWindowSeconds;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._smConfig.unstakeWindowSeconds;
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -98,13 +117,15 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   }
 
   function _setSlashingAdmin(address newSlashingAdmin) internal {
-    slashingAdmin = newSlashingAdmin;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._slashingAdmin = newSlashingAdmin;
     emit SlashingAdminChanged(newSlashingAdmin);
   }
 
   /// @inheritdoc IStakeToken
   function previewStake(uint256 assets) public view returns (uint256) {
-    return (assets * _currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
   }
 
   /// @inheritdoc IStakeToken
@@ -120,8 +141,9 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     bytes32 r,
     bytes32 s
   ) external {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
     try
-      IERC20Permit(_smConfig.stakedToken).permit(
+      IERC20Permit($._smConfig.stakedToken).permit(
         msg.sender,
         address(this),
         amount,
@@ -160,12 +182,14 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function getExchangeRate() public view returns (uint216) {
-    return _currentExchangeRate;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._currentExchangeRate;
   }
 
   /// @inheritdoc IStakeToken
   function previewRedeem(uint256 shares) public view returns (uint256) {
-    return (EXCHANGE_RATE_UNIT * shares) / _currentExchangeRate;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
   }
 
   ///@inheritdoc IStakeToken
@@ -186,8 +210,9 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
     uint256 currentShares = totalSupply();
     uint256 balance = previewRedeem(currentShares);
     _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    IERC20(_smConfig.stakedToken).safeTransfer(destination, amount);
+    IERC20($._smConfig.stakedToken).safeTransfer(destination, amount);
 
     emit Slashed(destination, amount);
     return amount;
@@ -195,7 +220,8 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   function getMaxSlashable() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
-    uint256 cachedMin = minAssetsRemaining;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    uint256 cachedMin = $._minAssetsRemaining;
     return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
   }
 
@@ -206,13 +232,15 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function getCooldownSeconds() external view returns (uint256) {
-    return _smConfig.cooldownSeconds;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._smConfig.cooldownSeconds;
   }
 
   function _cooldown(address from) internal {
     uint256 amount = balanceOf(from);
     require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
-    stakersCooldowns[from] = CooldownSnapshot({
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._stakersCooldowns[from] = CooldownSnapshot({
       timestamp: uint40(block.timestamp),
       amount: uint216(amount)
     });
@@ -225,7 +253,8 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
    * @param cooldownSeconds the new amount of cooldown seconds
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
-    _smConfig.cooldownSeconds = cooldownSeconds.toUint32();
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._smConfig.cooldownSeconds = cooldownSeconds.toUint32();
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
@@ -242,7 +271,8 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
 
     _mint(to, sharesToMint.toUint104());
 
-    IERC20(_smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    IERC20($._smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
 
     emit Staked(from, to, amount, sharesToMint);
   }
@@ -256,8 +286,9 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
   function _redeem(address from, address to, uint104 amount) internal {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
-    CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
-    SmConfig memory cachedSmConfig = _smConfig;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[from];
+    SmConfig memory cachedSmConfig = $._smConfig;
     require(
       (block.timestamp >= cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds),
       'INSUFFICIENT_COOLDOWN'
@@ -288,7 +319,8 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
    */
   function _updateExchangeRate(uint216 newExchangeRate) internal virtual {
     require(newExchangeRate != 0, 'ZERO_EXCHANGE_RATE');
-    _currentExchangeRate = newExchangeRate;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._currentExchangeRate = newExchangeRate;
     emit ExchangeRateChanged(newExchangeRate);
   }
 
@@ -318,22 +350,23 @@ contract StakeToken is ERC20Permit, IStakeToken, Rescuable {
       uint256 balanceOfFrom = balanceOf(from);
       // Sender
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
-      CooldownSnapshot memory previousSenderCooldown = stakersCooldowns[from];
+      StakeTokenStorage storage $ = _getStakeTokenStorage();
+      CooldownSnapshot memory previousSenderCooldown = $._stakersCooldowns[from];
       if (previousSenderCooldown.timestamp != 0) {
         // update to 0 means redeem
         // this is based on the assumption that erc20 forbids transfer to 0
         if (to == address(0)) {
           if (previousSenderCooldown.amount <= amount) {
-            delete stakersCooldowns[from];
+            delete $._stakersCooldowns[from];
           } else {
-            stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
+            $._stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
           }
         } else {
           uint256 balanceAfter = balanceOfFrom - amount;
           if (balanceAfter == 0) {
-            delete stakersCooldowns[from];
+            delete $._stakersCooldowns[from];
           } else if (balanceAfter < previousSenderCooldown.amount) {
-            stakersCooldowns[from].amount = uint216(balanceAfter);
+            $._stakersCooldowns[from].amount = uint216(balanceAfter);
           }
         }
       }

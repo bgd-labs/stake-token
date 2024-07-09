@@ -10,6 +10,14 @@ import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IE
 import {StkTestUtils} from './StkTestUtils.t.sol';
 
 contract StakeTokenTest is StkTestUtils {
+  function test_storageSlot() public {
+    assertEq(
+      0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00,
+      keccak256(abi.encode(uint256(keccak256('aave.storage.StakeToken')) - 1)) &
+        ~bytes32(uint256(0xff))
+    );
+  }
+
   function test_totalAssets() public {
     uint64 stakeAmount = 10 ether;
     uint64 slashAmount = 1 ether;
