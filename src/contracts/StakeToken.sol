@@ -30,7 +30,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   struct StakeTokenStorage {
     mapping(address => CooldownSnapshot) _stakersCooldowns;
     SmConfig _smConfig;
-    /// @notice Mirror of latest snapshot value for cheaper access
+    /// @notice Current exchangeRate of the stk
     uint216 _currentExchangeRate;
     // TODO: might instead use ACL to allow multiple slashing admins etc
     address _slashingAdmin;
