@@ -30,7 +30,7 @@ contract StkTestUtils is Test {
     rewardToken = new MockERC20('TestReward', 'REWARD');
     RewardsController controller = new RewardsController();
     EmissionManager manager = new EmissionManager(address(controller), admin);
-    stakeTokenImpl = new StakeToken('stkTest', IRewardsController(address(controller)));
+    stakeTokenImpl = new StakeToken(IRewardsController(address(controller)));
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
       address(

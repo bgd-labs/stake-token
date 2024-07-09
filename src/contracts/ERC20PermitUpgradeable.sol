@@ -6,10 +6,11 @@ pragma solidity ^0.8.20;
 
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {ECDSA} from 'openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol';
-import {EIP712} from 'openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol';
-import {Nonces} from 'openzeppelin-contracts/contracts/utils/Nonces.sol';
+import {EIP712Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/cryptography/EIP712Upgradeable.sol';
+import {NoncesUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/NoncesUpgradeable.sol';
+import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
 
-import {ERC20} from './ERC20.sol';
+import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
@@ -19,7 +20,13 @@ import {ERC20} from './ERC20.sol';
  * presenting a message signed by the account. By not relying on `{IERC20-approve}`, the token holder account doesn't
  * need to send a transaction, and thus is not required to hold Ether at all.
  */
-abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712, Nonces {
+abstract contract ERC20PermitUpgradeable is
+  Initializable,
+  ERC20Upgradeable,
+  IERC20Permit,
+  EIP712Upgradeable,
+  NoncesUpgradeable
+{
   bytes32 private constant PERMIT_TYPEHASH =
     keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)');
 
@@ -36,9 +43,13 @@ abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712, Nonces {
   /**
    * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
    *
-   * It's a good idea to use the same `name` that is defined as the ERC20 token name.
+   * It's a good idea to use the same `name` that is defined as the ERC-20 token name.
    */
-  constructor(string memory name) EIP712(name, '1') {}
+  function __ERC20Permit_init(string memory name) internal onlyInitializing {
+    __EIP712_init_unchained(name, '1');
+  }
+
+  function __ERC20Permit_init_unchained(string memory) internal onlyInitializing {}
 
   /**
    * @inheritdoc IERC20Permit
@@ -75,7 +86,7 @@ abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712, Nonces {
    */
   function nonces(
     address owner
-  ) public view virtual override(IERC20Permit, Nonces) returns (uint256) {
+  ) public view virtual override(IERC20Permit, NoncesUpgradeable) returns (uint256) {
     return super.nonces(owner);
   }
 
