@@ -2,8 +2,11 @@
 pragma solidity ^0.8.0;
 
 interface IStakeToken {
-  struct CooldownSnapshot {
-    uint40 timestamp;
+  struct CooldownSetup {
+    // make more sense to display time from which can be withdrawn, not activation time
+    /// @notice The time after which funds can be redeemed
+    uint32 timestamp;
+    /// @notice The amount of tokens which can be redeemed
     uint216 amount;
   }
 
@@ -11,13 +14,22 @@ interface IStakeToken {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
     uint32 unstakeWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
-    uint32 cooldownSeconds;
+    uint32 defaultCooldownSeconds;
     /// @notice The address of the underlying asset
     address stakedToken;
-    // reserved for future use
+    /// @notice The maximum time available for reduction cooldown period
+    uint32 maxReductionSeconds;
+    /// @notice The maximum fee in BIPS that will be taken when the cooldown period is reduced by maxReductionTime
+    uint216 maxFee;
+    /// @notice The address of treasury
+    address treasury;
   }
 
-  event Cooldown(address indexed user, uint256 amount);
+  event Cooldown(address indexed user, uint256 amount, uint32 timeToRedeem);
+  event FeesSentToTreasury(uint256 amount);
+  event TreasuryChanged(address treasury);
+  event MaxFeeChanged(uint256 maxFee);
+  event MaxReductionSecondsChanged(uint256 maxReductionSeconds);
 
   event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
   event Redeem(address indexed from, address indexed to, uint256 assets, uint256 shares);
@@ -50,6 +62,12 @@ interface IStakeToken {
    * - It can't be called if the user is not staking
    */
   function cooldown() external;
+
+  /**
+   * @dev Activates the cooldown period and reduces it
+   * @param reducedTime Time by which the cooldown will be reduced
+   */
+  function reducedCooldown(uint256 reducedTime) external;
 
   /**
    * @dev Allows staking a certain amount of STAKED_TOKEN with gasless approvals (permit)
@@ -88,9 +106,15 @@ interface IStakeToken {
 
   /**
    * @dev Getter of the cooldown seconds
-   * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
+   * @return defaultCooldownSeconds The amount of seconds between starting the cooldown and being able to redeem by default
    */
-  function getCooldownSeconds() external view returns (uint256);
+  function getDefaultCooldownSeconds() external view returns (uint256);
+
+  /**
+   * @dev Getter of the maximum reduction cooldown seconds
+   * @return maxReductionSeconds The maximum time available for reduction cooldown period
+   */
+  function getMaxReductionSeconds() external view returns (uint256);
 
   /**
    * @dev Setter of cooldown seconds
@@ -98,6 +122,24 @@ interface IStakeToken {
    * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
    */
   function setCooldownSeconds(uint256 cooldownSeconds) external;
+
+  /**
+   * @dev Setter of treasury address
+   * @param treasury new treasury address to set for collecting fast-withdrawal fees
+   */
+  function setTreasury(address treasury) external;
+
+  /**
+   * @dev Setter of max fee
+   * @param maxFee Amount of fees in BPS, which should be paid for max cooldown reduction
+   */
+  function setMaxFee(uint256 maxFee) external;
+
+  /**
+   * @dev Setter of max cooldown reduction time in seconds
+   * @param newMaxReductionTime number of seconds by which the cooldown can be reduced with the payment of fees
+   */
+  function setMaxReductionSeconds(uint256 newMaxReductionTime) external;
 
   /**
    * @dev returns the exact amount of shares that would be received for the provided number of assets

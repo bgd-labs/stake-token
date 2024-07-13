@@ -25,6 +25,10 @@ contract StkTestUtils is Test {
   ProxyAdmin public proxyAdmin;
   StakeToken public stakeToken;
 
+  address public treasury;
+  uint256 public maxFee;
+  uint256 public maxReductionSeconds;
+
   function setUp() public virtual {
     underlyingToken = new MockERC20('TestToken', 'TEST');
     rewardToken = new MockERC20('TestReward', 'REWARD');
@@ -32,6 +36,11 @@ contract StkTestUtils is Test {
     EmissionManager manager = new EmissionManager(address(controller), admin);
     stakeTokenImpl = new StakeToken(IRewardsController(address(controller)));
     proxyAdmin = new ProxyAdmin(admin);
+
+    treasury = address(uint160(uint256(keccak256('treasury'))));
+    maxFee = 200; // 2% in BIPS
+    maxReductionSeconds = 10 days;
+
     stakeToken = StakeToken(
       address(
         new TransparentUpgradeableProxy(
@@ -44,7 +53,10 @@ contract StkTestUtils is Test {
             'stkTest',
             admin,
             15 days,
-            2 days
+            2 days,
+            treasury,
+            maxFee,
+            maxReductionSeconds
           )
         )
       )
