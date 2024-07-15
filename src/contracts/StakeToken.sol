@@ -118,15 +118,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
     require(newUnstakeWindow >= 1 hours, 'TOO_LOW_UNSTAKE_WINDOW');
 
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function getUnstakeWindow() external view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._smConfig.unstakeWindowSeconds;
+    return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -184,7 +182,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function cooldownOnBehalfOf(address from) external onlyOwner {
-    // @audit-info same modif here
+    // @audit-info same modif onlyOwner here
     _cooldown(from);
   }
 
@@ -299,8 +297,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function getDefaultCooldownSeconds() external view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._smConfig.defaultCooldownSeconds;
+    return _getStakeTokenStorage()._smConfig.defaultCooldownSeconds;
   }
 
   /// @inheritdoc IStakeToken
@@ -311,9 +308,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   function getMinCooldownSeconds() public view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-
-    return $._smConfig.minCooldownSeconds;
+    return _getStakeTokenStorage()._smConfig.minCooldownSeconds;
   }
 
   function _cooldown(address from) internal {
@@ -414,7 +409,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     CooldownSetup memory cooldownSetup = $._stakersCooldowns[from];
-    SmConfig memory cachedSmConfig = $._smConfig; // @audit I think this copying is less optimized too, we read/copy 2 slots here, instead of double-time reading the same slot
+    SmConfig memory cachedSmConfig = $._smConfig; // @audit I think this copying is less optimized, we read&copy 2 slots here, instead of double-time reading the same slot
 
     require(block.timestamp >= cooldownSetup.timestamp, 'INSUFFICIENT_COOLDOWN');
     require(
