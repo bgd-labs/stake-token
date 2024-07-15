@@ -27,7 +27,7 @@ contract StkTestUtils is Test {
 
   address public treasury;
   uint256 public maxFee;
-  uint256 public maxReductionSeconds;
+  uint256 public minCooldownSeconds;
 
   function setUp() public virtual {
     underlyingToken = new MockERC20('TestToken', 'TEST');
@@ -39,7 +39,7 @@ contract StkTestUtils is Test {
 
     treasury = address(uint160(uint256(keccak256('treasury'))));
     maxFee = 200; // 2% in BIPS
-    maxReductionSeconds = 10 days;
+    minCooldownSeconds = 5 days;
 
     stakeToken = StakeToken(
       address(
@@ -56,7 +56,7 @@ contract StkTestUtils is Test {
             2 days,
             treasury,
             maxFee,
-            maxReductionSeconds
+            minCooldownSeconds
           )
         )
       )

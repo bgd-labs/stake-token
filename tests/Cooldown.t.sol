@@ -195,6 +195,8 @@ contract Cooldown is StkTestUtils {
     _stake(amountToStake, user);
 
     vm.startPrank(user);
+
+    uint256 maxReductionSeconds = stakeToken.getMaxReductionSeconds();
     stakeToken.reducedCooldown(maxReductionSeconds);
 
     IStakeToken.CooldownSetup memory cooldownBefore = stakeToken.stakersCooldowns(user);
@@ -237,6 +239,7 @@ contract Cooldown is StkTestUtils {
     uint256 balanceTreasuryBefore = underlyingToken.balanceOf(treasury);
     uint256 underlyingFeesToTreasury = stakeToken.previewRedeem(fee);
 
+    uint256 maxReductionSeconds = stakeToken.getMaxReductionSeconds();
     stakeToken.reducedCooldown(maxReductionSeconds);
 
     uint256 totalSupplyAfter = stakeToken.totalSupply();
@@ -254,6 +257,7 @@ contract Cooldown is StkTestUtils {
     address user,
     uint32 reducedTime
   ) public {
+    uint256 maxReductionSeconds = stakeToken.getMaxReductionSeconds();
     uint256 fee = (amountToStake * maxFee * reducedTime) / maxReductionSeconds / 10_000;
 
     vm.assume(amountToStake >= amountToRedeem + fee && amountToRedeem > 0);

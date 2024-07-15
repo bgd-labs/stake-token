@@ -17,10 +17,10 @@ interface IStakeToken {
     uint32 defaultCooldownSeconds;
     /// @notice The address of the underlying asset
     address stakedToken;
-    /// @notice The maximum time available for reduction cooldown period
-    uint32 maxReductionSeconds;
+    /// @notice The minimum cooldown time available for redeeming assets
+    uint32 minCooldownSeconds;
     /// @notice The maximum fee in BIPS that will be taken when the cooldown period is reduced by maxReductionTime
-    uint216 maxFee;
+    uint16 maxFee;
     /// @notice The address of treasury
     address treasury;
   }
@@ -29,7 +29,7 @@ interface IStakeToken {
   event FeesSentToTreasury(uint256 amount);
   event TreasuryChanged(address treasury);
   event MaxFeeChanged(uint256 maxFee);
-  event MaxReductionSecondsChanged(uint256 maxReductionSeconds);
+  event MinCooldownSecondsChanged(uint256 maxReductionSeconds);
 
   event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
   event Redeem(address indexed from, address indexed to, uint256 assets, uint256 shares);
@@ -117,6 +117,12 @@ interface IStakeToken {
   function getMaxReductionSeconds() external view returns (uint256);
 
   /**
+   * @dev Getter of the minimum cooldown seconds possible
+   * @return minCooldownSeconds The minimum cooldown time available
+   */
+  function getMinCooldownSeconds() external view returns (uint256);
+
+  /**
    * @dev Setter of cooldown seconds
    * Can only be called by the cooldown admin
    * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
@@ -136,10 +142,10 @@ interface IStakeToken {
   function setMaxFee(uint256 maxFee) external;
 
   /**
-   * @dev Setter of max cooldown reduction time in seconds
-   * @param newMaxReductionTime number of seconds by which the cooldown can be reduced with the payment of fees
+   * @dev Setter of min cooldown time in seconds
+   * @param newMinCooldownSeconds number of seconds the cooldown can be reduced to with the payment of fees
    */
-  function setMaxReductionSeconds(uint256 newMaxReductionTime) external;
+  function setMinCooldownSeconds(uint256 newMinCooldownSeconds) external;
 
   /**
    * @dev returns the exact amount of shares that would be received for the provided number of assets

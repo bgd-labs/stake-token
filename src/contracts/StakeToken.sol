@@ -21,9 +21,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using SafeCast for uint256;
   using SafeCast for uint104;
 
+  uint16 public constant HUNDRED_PERCENT = 10_000;
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
-  uint216 public constant HUNDRED_PERCENT = 10_000;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
 
@@ -74,7 +74,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 unstakeWindow,
     address treasury,
     uint256 maxFee,
-    uint256 maxReductionSeconds
+    uint256 minCooldownSeconds
   ) external virtual initializer {
     // @pavelvm5 made like this, due to stack-too-deep error, will fix in future, if any args will be added could be useful to rewrite to assembly
     _getStakeTokenStorage()._smConfig.stakedToken = stakedToken;
@@ -91,7 +91,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
-    _setMaxReductionSeconds(maxReductionSeconds);
+    _setMinCooldownSeconds(minCooldownSeconds);
 
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
@@ -274,30 +274,27 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   function _setMaxFee(uint256 newMaxFee) internal {
-    require(newMaxFee.toUint216() <= HUNDRED_PERCENT && newMaxFee > 0, 'INVALID_MAX_FEE_PARAMETER');
+    require(newMaxFee.toUint16() <= HUNDRED_PERCENT && newMaxFee > 0, 'INVALID_MAX_FEE_PARAMETER');
 
-    _getStakeTokenStorage()._smConfig.maxFee = newMaxFee.toUint216();
+    _getStakeTokenStorage()._smConfig.maxFee = newMaxFee.toUint16();
 
     emit MaxFeeChanged(newMaxFee);
   }
 
   /// @inheritdoc IStakeToken
-  function setMaxReductionSeconds(uint256 newMaxReductionTime) external onlyOwner {
-    _setMaxReductionSeconds(newMaxReductionTime);
+  function setMinCooldownSeconds(uint256 newMinCooldownSeconds) external onlyOwner {
+    _setMinCooldownSeconds(newMinCooldownSeconds);
   }
 
-  function _setMaxReductionSeconds(uint256 newMaxReductionSeconds) internal {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    SmConfig memory smConfig = $._smConfig;
-
+  function _setMinCooldownSeconds(uint256 newMinCooldownSeconds) internal {
     require(
-      newMaxReductionSeconds <= smConfig.defaultCooldownSeconds,
-      'INVALID_MAX_REDUCTION_TIME'
+      newMinCooldownSeconds <= _getStakeTokenStorage()._smConfig.defaultCooldownSeconds,
+      'INVALID_MIN_COOLDOWN_SECONDS'
     );
 
-    _getStakeTokenStorage()._smConfig.maxReductionSeconds = newMaxReductionSeconds.toUint32();
+    _getStakeTokenStorage()._smConfig.minCooldownSeconds = newMinCooldownSeconds.toUint32();
 
-    emit MaxReductionSecondsChanged(newMaxReductionSeconds);
+    emit MinCooldownSecondsChanged(newMinCooldownSeconds);
   }
 
   /// @inheritdoc IStakeToken
@@ -310,7 +307,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   function getMaxReductionSeconds() public view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    return $._smConfig.maxReductionSeconds;
+    return $._smConfig.defaultCooldownSeconds - $._smConfig.minCooldownSeconds;
+  }
+
+  function getMinCooldownSeconds() public view returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+
+    return $._smConfig.minCooldownSeconds;
   }
 
   function _cooldown(address from) internal {
@@ -334,13 +337,16 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     SmConfig memory smConfig = $._smConfig;
 
-    require(reductionTime <= smConfig.maxReductionSeconds, 'MAX_REDUCTION_TIME_EXCEEDED');
+    require(
+      reductionTime <= smConfig.defaultCooldownSeconds - smConfig.minCooldownSeconds,
+      'MAX_REDUCTION_TIME_EXCEEDED'
+    );
 
     uint216 amount = balanceOf(from).toUint216();
     require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
 
     uint216 feeAmount = (amount * smConfig.maxFee * reductionTime) /
-      smConfig.maxReductionSeconds /
+      (smConfig.defaultCooldownSeconds - smConfig.minCooldownSeconds) /
       HUNDRED_PERCENT;
 
     uint32 timeToRedeem = (block.timestamp + smConfig.defaultCooldownSeconds - reductionTime)
@@ -371,7 +377,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
+    require(cooldownSeconds >= $._smConfig.minCooldownSeconds, 'INVALID_COOLDOWN_SECONDS');
+
     $._smConfig.defaultCooldownSeconds = cooldownSeconds.toUint32();
+
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
@@ -405,7 +414,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     CooldownSetup memory cooldownSetup = $._stakersCooldowns[from];
-    SmConfig memory cachedSmConfig = $._smConfig;
+    SmConfig memory cachedSmConfig = $._smConfig; // @audit I think this copying is less optimized too, we read/copy 2 slots here, instead of double-time reading the same slot
 
     require(block.timestamp >= cooldownSetup.timestamp, 'INSUFFICIENT_COOLDOWN');
     require(
