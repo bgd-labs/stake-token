@@ -21,6 +21,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using SafeCast for uint256;
   using SafeCast for uint104;
 
+  uint16 public constant HUNDRED_PERCENT = 10_000;
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
@@ -28,7 +29,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @custom:storage-location erc7201:aave.storage.StakeToken
   struct StakeTokenStorage {
-    mapping(address => CooldownSnapshot) _stakersCooldowns;
+    mapping(address => CooldownSetup) _stakersCooldowns;
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
     uint216 _currentExchangeRate;
@@ -54,7 +55,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     }
   }
 
-  function stakersCooldowns(address user) public view returns (CooldownSnapshot memory) {
+  function stakersCooldowns(address user) public view returns (CooldownSetup memory) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._stakersCooldowns[user];
   }
@@ -70,18 +71,29 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     string calldata symbol,
     address newSlashingAdmin,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow
+    uint256 unstakeWindow,
+    address treasury,
+    uint256 maxFee,
+    uint256 minCooldownSeconds
   ) external virtual initializer {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.stakedToken = stakedToken;
+    // @pavelvm5 made like this, due to stack-too-deep error, will fix in future, if any args will be added could be useful to rewrite to assembly
+    _getStakeTokenStorage()._smConfig.stakedToken = stakedToken;
+    _getStakeTokenStorage()._minAssetsRemaining = 10 ** decimals();
+
     __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
     __Ownable_init(newSlashingAdmin);
     __EIP712_init(string(abi.encodePacked('stk', name)), '1');
+
     _setSlashingAdmin(newSlashingAdmin);
+    _setTreasury(treasury);
+
+    _setMaxFee(maxFee);
+
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
+    _setMinCooldownSeconds(minCooldownSeconds);
+
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    $._minAssetsRemaining = 10 ** decimals();
   }
 
   function decimals() public view override returns (uint8) {
@@ -104,14 +116,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    require(newUnstakeWindow >= 1 hours, 'TOO_LOW_UNSTAKE_WINDOW');
+
+    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function getUnstakeWindow() external view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._smConfig.unstakeWindowSeconds;
+    return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
   }
 
   function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
@@ -169,7 +182,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function cooldownOnBehalfOf(address from) external onlyOwner {
+    // @audit-info same modif onlyOwner here
     _cooldown(from);
+  }
+
+  /// @inheritdoc IStakeToken
+  function reducedCooldown(uint256 reductionTime) external {
+    _reducedCooldown(msg.sender, reductionTime.toUint32());
   }
 
   /// @inheritdoc IStakeToken
@@ -179,6 +198,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function redeemOnBehalf(address from, address to, uint256 amount) external onlyOwner {
+    // @audit-info why we have onlyOwner here, it looks like rug, we should set different role here
     _redeem(from, to, amount.toUint104());
   }
 
@@ -232,22 +252,118 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _setCooldownSeconds(cooldownSeconds);
   }
 
+  // TODO: @pavelvm5 wouldn't sort functions here cause it can cause conflicts, but standard is external - first, public ..,  internal, makes easier to understand everything
   /// @inheritdoc IStakeToken
-  function getCooldownSeconds() external view returns (uint256) {
+  function setTreasury(address treasury) external onlyOwner {
+    _setTreasury(treasury);
+  }
+
+  function _setTreasury(address newTreasury) internal {
+    require(newTreasury != address(0), 'INVALID_TREASURY_ADDRESS'); // @audit-info-gas/bytecode-optimization @pavelvm5 propose to change from require(true) to if(false) revert ERROR_NAME(), cause its more optimized
+
+    _getStakeTokenStorage()._smConfig.treasury = newTreasury;
+
+    emit TreasuryChanged(newTreasury);
+  }
+
+  /// @inheritdoc IStakeToken
+  function setMaxFee(uint256 maxFee) external onlyOwner {
+    _setMaxFee(maxFee);
+  }
+
+  function _setMaxFee(uint256 newMaxFee) internal {
+    require(newMaxFee.toUint16() <= HUNDRED_PERCENT && newMaxFee > 0, 'INVALID_MAX_FEE_PARAMETER');
+
+    _getStakeTokenStorage()._smConfig.maxFee = newMaxFee.toUint16();
+
+    emit MaxFeeChanged(newMaxFee);
+  }
+
+  /// @inheritdoc IStakeToken
+  function setMinCooldownSeconds(uint256 newMinCooldownSeconds) external onlyOwner {
+    _setMinCooldownSeconds(newMinCooldownSeconds);
+  }
+
+  function _setMinCooldownSeconds(uint256 newMinCooldownSeconds) internal {
+    require(
+      newMinCooldownSeconds <= _getStakeTokenStorage()._smConfig.defaultCooldownSeconds,
+      'INVALID_MIN_COOLDOWN_SECONDS'
+    );
+
+    _getStakeTokenStorage()._smConfig.minCooldownSeconds = newMinCooldownSeconds.toUint32();
+
+    emit MinCooldownSecondsChanged(newMinCooldownSeconds);
+  }
+
+  /// @inheritdoc IStakeToken
+  function getDefaultCooldownSeconds() external view returns (uint256) {
+    return _getStakeTokenStorage()._smConfig.defaultCooldownSeconds;
+  }
+
+  /// @inheritdoc IStakeToken
+  function getMaxReductionSeconds() public view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._smConfig.cooldownSeconds;
+
+    return $._smConfig.defaultCooldownSeconds - $._smConfig.minCooldownSeconds;
+  }
+
+  function getMinCooldownSeconds() public view returns (uint256) {
+    return _getStakeTokenStorage()._smConfig.minCooldownSeconds;
   }
 
   function _cooldown(address from) internal {
     uint256 amount = balanceOf(from);
+
     require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
+
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._stakersCooldowns[from] = CooldownSnapshot({
-      timestamp: uint40(block.timestamp),
-      amount: uint216(amount)
+
+    uint32 timeToRedeem = (block.timestamp + $._smConfig.defaultCooldownSeconds).toUint32();
+
+    $._stakersCooldowns[from] = CooldownSetup({
+      timestamp: timeToRedeem,
+      amount: amount.toUint216()
     });
 
-    emit Cooldown(from, amount);
+    emit Cooldown(from, amount, timeToRedeem);
+  }
+
+  function _reducedCooldown(address from, uint32 reductionTime) internal {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    SmConfig memory smConfig = $._smConfig;
+
+    require(
+      reductionTime <= smConfig.defaultCooldownSeconds - smConfig.minCooldownSeconds,
+      'MAX_REDUCTION_TIME_EXCEEDED'
+    );
+
+    uint216 amount = balanceOf(from).toUint216();
+    require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
+
+    uint216 feeAmount = (amount * smConfig.maxFee * reductionTime) /
+      (smConfig.defaultCooldownSeconds - smConfig.minCooldownSeconds) /
+      HUNDRED_PERCENT;
+
+    uint32 timeToRedeem = (block.timestamp + smConfig.defaultCooldownSeconds - reductionTime)
+      .toUint32();
+
+    // @pavelvm5 move to internal block, cause it's logically responsible for transferring fees to treasury, don't want to make another internal function
+    {
+      uint256 underlyingForTreasury = previewRedeem(feeAmount);
+
+      _burn(from, feeAmount);
+
+      IERC20(smConfig.stakedToken).safeTransfer(smConfig.treasury, underlyingForTreasury);
+
+      emit FeesSentToTreasury(underlyingForTreasury);
+    }
+
+    $._stakersCooldowns[from] = CooldownSetup({
+      timestamp: timeToRedeem,
+      amount: amount - feeAmount
+    });
+
+    emit Cooldown(from, amount, timeToRedeem);
   }
 
   /**
@@ -256,7 +372,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.cooldownSeconds = cooldownSeconds.toUint32();
+    require(cooldownSeconds >= $._smConfig.minCooldownSeconds, 'INVALID_COOLDOWN_SECONDS');
+
+    $._smConfig.defaultCooldownSeconds = cooldownSeconds.toUint32();
+
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
@@ -271,7 +390,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 sharesToMint = previewStake(amount);
     require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
 
-    _mint(to, sharesToMint.toUint104());
+    _mint(to, sharesToMint);
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     IERC20($._smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
@@ -289,20 +408,17 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[from];
-    SmConfig memory cachedSmConfig = $._smConfig;
+    CooldownSetup memory cooldownSetup = $._stakersCooldowns[from];
+    SmConfig memory cachedSmConfig = $._smConfig; // @audit I think this copying is less optimized, we read&copy 2 slots here, instead of double-time reading the same slot
+
+    require(block.timestamp >= cooldownSetup.timestamp, 'INSUFFICIENT_COOLDOWN');
     require(
-      (block.timestamp >= cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds),
-      'INSUFFICIENT_COOLDOWN'
-    );
-    require(
-      (block.timestamp - (cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds) <=
-        cachedSmConfig.unstakeWindowSeconds),
+      block.timestamp - cooldownSetup.timestamp <= cachedSmConfig.unstakeWindowSeconds,
       'UNSTAKE_WINDOW_FINISHED'
     );
 
-    uint256 maxRedeemable = cooldownSnapshot.amount;
-    require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE');
+    uint256 maxRedeemable = cooldownSetup.amount;
+    require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE'); // @audit-info @pavelvm5 need to check this, I think it's unreachable
 
     uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
 
@@ -329,15 +445,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   /**
    * @dev calculates the exchange rate based on totalAssets and totalShares
    * @dev always rounds up to ensure 100% backing of shares by rounding in favor of the contract
-   * @param totalAssets The total amount of assets staked
-   * @param totalShares The total amount of shares
+   * @param _totalAssets The total amount of assets staked
+   * @param _totalShares The total amount of shares
    * @return exchangeRate as 18 decimal precision uint216
    */
   function _getExchangeRate(
-    uint256 totalAssets,
-    uint256 totalShares
+    uint256 _totalAssets,
+    uint256 _totalShares
   ) internal pure returns (uint216) {
-    return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
+    return (((_totalShares * EXCHANGE_RATE_UNIT) + _totalAssets - 1) / _totalAssets).toUint216(); // @audit-info @pavelvm5 shadow declaration warning here, changed names
   }
 
   function _update(address from, address to, uint256 amount) internal override {
@@ -353,12 +469,14 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
       // Sender
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
       StakeTokenStorage storage $ = _getStakeTokenStorage();
-      CooldownSnapshot memory previousSenderCooldown = $._stakersCooldowns[from];
+      CooldownSetup memory previousSenderCooldown = $._stakersCooldowns[from];
       if (previousSenderCooldown.timestamp != 0) {
         // update to 0 means redeem
         // this is based on the assumption that erc20 forbids transfer to 0
         if (to == address(0)) {
+          // @audit-info  @pavelvm5 can modify this place for optimization, cause sending fees to treasure and burning inside reducedCooldown will go here and this place will be overwritten in any way
           if (previousSenderCooldown.amount <= amount) {
+            // @audit-info @pavelvm5 should be == here, cause we shouldn't be able to redeem more than we have in cooldown, we can add this check
             delete $._stakersCooldowns[from];
           } else {
             $._stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
