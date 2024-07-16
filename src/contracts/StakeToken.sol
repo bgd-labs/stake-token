@@ -36,6 +36,8 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     address _slashingAdmin;
     /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
     uint256 _minAssetsRemaining;
+    /// @notice paused state which can be invoked by the guardian
+    bool _paused;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -45,6 +47,11 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   modifier onlySlashingAdmin() {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     require(msg.sender == $._slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
+    _;
+  }
+
+  modifier notPaused() {
+    require(!getPaused(), 'ONLY_NON_PAUSED');
     _;
   }
 
@@ -82,6 +89,17 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
     $._minAssetsRemaining = 10 ** decimals();
+  }
+
+  function setPaused(bool paused) external onlyOwnerOrGuardian {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._paused = paused;
+    emit Paused(paused);
+  }
+
+  function getPaused() public view returns (bool) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._paused;
   }
 
   function decimals() public view override returns (uint8) {

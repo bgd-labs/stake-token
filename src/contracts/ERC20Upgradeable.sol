@@ -14,6 +14,7 @@ import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol
 import {DelegationMode} from 'aave-token-v3/DelegationAwareBalance.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {ContextUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol';
+import {UpgradableOwnableWithGuardian} from './UpgradableOwnableWithGuardian.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -41,7 +42,7 @@ import {ContextUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/u
 abstract contract ERC20Upgradeable is
   Initializable,
   ContextUpgradeable,
-  OwnableUpgradeable,
+  UpgradableOwnableWithGuardian,
   IERC20,
   IERC20Metadata,
   IERC20Errors
