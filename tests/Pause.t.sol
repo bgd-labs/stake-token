@@ -22,13 +22,27 @@ contract Pause is StkTestUtils {
 
     vm.expectRevert('PAUSED');
     vm.prank(USER);
-    stakeToken.stake(USER, 1 ether);
+    stakeToken.stake(USER, 0);
+  }
+
+  function test_stakeWithPermit_should_revert() external {
+    _setPaused(true);
+
+    vm.expectRevert('PAUSED');
+    vm.prank(USER);
+    stakeToken.stakeWithPermit(0, 0, 0, bytes32(0), bytes32(0));
   }
 
   function test_redeem_should_revert() external {
     _setPaused(true);
     vm.expectRevert('PAUSED');
     _redeem(1 ether, USER, USER);
+  }
+
+  function test_redeemOnBehalf_should_revert() external {
+    _setPaused(true);
+    vm.expectRevert('PAUSED');
+    stakeToken.redeemOnBehalf(USER, USER, 1 ether);
   }
 
   function test_slash_should_revert() external {
