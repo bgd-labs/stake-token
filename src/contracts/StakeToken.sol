@@ -51,7 +51,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   modifier notPaused() {
-    require(!getPaused(), 'ONLY_NON_PAUSED');
+    require(!getPaused(), 'PAUSED');
     _;
   }
 
@@ -149,7 +149,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function stake(address to, uint256 amount) external {
+  function stake(address to, uint256 amount) external notPaused {
     _stake(msg.sender, to, amount);
   }
 
@@ -160,7 +160,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external {
+  ) external notPaused {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     try
       IERC20Permit($._smConfig.stakedToken).permit(
@@ -181,22 +181,22 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function cooldown() external {
+  function cooldown() external notPaused {
     _cooldown(msg.sender);
   }
 
   /// @inheritdoc IStakeToken
-  function cooldownOnBehalfOf(address from) external onlyOwner {
+  function cooldownOnBehalfOf(address from) external notPaused onlyOwner {
     _cooldown(from);
   }
 
   /// @inheritdoc IStakeToken
-  function redeem(address to, uint256 amount) external {
+  function redeem(address to, uint256 amount) external notPaused {
     _redeem(msg.sender, to, amount.toUint104());
   }
 
   /// @inheritdoc IStakeToken
-  function redeemOnBehalf(address from, address to, uint256 amount) external onlyOwner {
+  function redeemOnBehalf(address from, address to, uint256 amount) external notPaused onlyOwner {
     _redeem(from, to, amount.toUint104());
   }
 
@@ -219,7 +219,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
+  function slash(
+    address destination,
+    uint256 amount
+  ) external onlySlashingAdmin notPaused returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
     uint256 maxSlashable = getMaxSlashable();
     require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
