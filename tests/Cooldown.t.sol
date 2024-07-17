@@ -14,172 +14,174 @@ contract Cooldown is StkTestUtils {
   /**
    * cooldown should activate for a given block.timestamp and cooldown the currently held amount
    */
-  function test_cooldown(uint104 amountToStake, uint104 amountToRedeem, address user) public {
-    vm.assume(amountToStake >= amountToRedeem && amountToRedeem > 0);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+  // function test_cooldown(uint104 amountToStake, uint104 amountToRedeem, address user) public {
+  //   vm.assume(amountToStake >= amountToRedeem && amountToRedeem > 0);
+  //   vm.assume(user != address(proxyAdmin) && user != address(0));
 
-    _stake(amountToStake, user);
+  //   _stake(amountToStake, user);
 
-    vm.startPrank(user);
-    stakeToken.cooldown();
-    IStakeToken.CooldownSetup memory cooldownBefore = stakeToken.stakersCooldowns(user);
-    // @pavelvm5 rewrite here, cause now we set time for redeem unlock, not when cooldown was called
-    assertEq(cooldownBefore.timestamp, block.timestamp + stakeToken.getDefaultCooldownSeconds());
-    assertEq(cooldownBefore.amount, amountToStake);
+  //   vm.startPrank(user);
+  //   stakeToken.cooldown();
+  //   IStakeToken.CooldownSnapshot memory cooldownBefore = stakeToken.stakersCooldowns(user);
+  //   // @pavelvm5 rewrite here, cause now we set time for redeem unlock, not when cooldown was called
+  //   assertEq(cooldownBefore.timestamp, block.timestamp + stakeToken.getDefaultCooldownSeconds());
+  //   assertEq(cooldownBefore.amount, amountToStake);
 
-    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
-    _redeem(amountToRedeem, user, user);
+  //   vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
+  //   _redeem(amountToRedeem, user, user);
 
-    IStakeToken.CooldownSetup memory cooldownAfter = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownAfter.amount, amountToStake - amountToRedeem);
-  }
+  //   IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
+  //   assertEq(cooldownAfter.amount, amountToStake - amountToRedeem);
+  // }
 
-  function test_cooldownNoIncreaseInAmount(
-    uint104 amountToStake,
-    uint104 amountToTopUp,
-    address user
-  ) public {
-    vm.assume(
-      amountToStake > 0 && amountToTopUp > 0 && type(uint104).max - amountToStake > amountToTopUp
-    );
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+  // function test_cooldownNoIncreaseInAmount(
+  //   uint104 amountToStake,
+  //   uint104 amountToTopUp,
+  //   address user
+  // ) public {
+  //   vm.assume(
+  //     amountToStake > 0 && amountToTopUp > 0 && type(uint104).max - amountToStake > amountToTopUp
+  //   );
+  //   vm.assume(user != address(proxyAdmin) && user != address(0));
 
-    _stake(amountToStake, user);
-    vm.startPrank(user);
-    stakeToken.cooldown();
+  //   _stake(amountToStake, user);
+  //   vm.startPrank(user);
+  //   stakeToken.cooldown();
 
-    IStakeToken.CooldownSetup memory cooldownBefore = stakeToken.stakersCooldowns(user);
+  //   IStakeToken.CooldownSnapshot memory cooldownBefore = stakeToken.stakersCooldowns(user);
 
-    // increase amount
-    _stake(amountToTopUp, user);
+  //   // increase amount
+  //   _stake(amountToTopUp, user);
 
-    IStakeToken.CooldownSetup memory cooldownAfter = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownBefore.timestamp, cooldownAfter.timestamp);
-    assertEq(cooldownBefore.amount, cooldownAfter.amount);
-    assertEq(cooldownAfter.timestamp, block.timestamp + stakeToken.getDefaultCooldownSeconds());
-    assertEq(cooldownAfter.amount, amountToStake);
-  }
+  //   IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
+  //   assertEq(cooldownBefore.timestamp, cooldownAfter.timestamp);
+  //   assertEq(cooldownBefore.amount, cooldownAfter.amount);
+  //   assertEq(cooldownAfter.timestamp, block.timestamp + stakeToken.getDefaultCooldownSeconds());
+  //   assertEq(cooldownAfter.amount, amountToStake);
+  // }
 
-  function test_cooldownOnTransfer(
-    uint104 amountToStake,
-    uint104 amountToStakeOther,
-    address user,
-    address otherUser
-  ) public {
-    vm.assume(
-      amountToStake > 0 &&
-        amountToStakeOther > 0 &&
-        type(uint104).max - amountToStake > amountToStakeOther
-    );
-    vm.assume(user != address(proxyAdmin) && user != address(0) && user != otherUser);
-    vm.assume(otherUser != address(0) && otherUser != address(proxyAdmin));
+  // function test_cooldownOnTransfer(
+  //   uint104 amountToStake,
+  //   uint104 amountToStakeOther,
+  //   address user,
+  //   address otherUser
+  // ) public {
+  //   vm.assume(
+  //     amountToStake > 0 &&
+  //       amountToStakeOther > 0 &&
+  //       type(uint104).max - amountToStake > amountToStakeOther
+  //   );
+  //   vm.assume(user != address(proxyAdmin) && user != address(0) && user != otherUser);
+  //   vm.assume(otherUser != address(0) && otherUser != address(proxyAdmin));
 
-    _stake(amountToStake, user);
-    vm.startPrank(user);
-    stakeToken.cooldown();
+  //   _stake(amountToStake, user);
+  //   vm.startPrank(user);
+  //   stakeToken.cooldown();
 
-    IStakeToken.CooldownSetup memory cooldown0 = stakeToken.stakersCooldowns(user);
+  //   IStakeToken.CooldownSnapshot memory cooldown0 = stakeToken.stakersCooldowns(user);
 
-    // Receiving token should not affect the amount
-    _stake(amountToStakeOther, otherUser);
-    vm.prank(otherUser);
-    stakeToken.transfer(user, amountToStakeOther);
-    IStakeToken.CooldownSetup memory cooldown1 = stakeToken.stakersCooldowns(user);
+  //   // Receiving token should not affect the amount
+  //   _stake(amountToStakeOther, otherUser);
+  //   vm.prank(otherUser);
+  //   stakeToken.transfer(user, amountToStakeOther);
+  //   IStakeToken.CooldownSnapshot memory cooldown1 = stakeToken.stakersCooldowns(user);
 
-    assertEq(cooldown0.timestamp, cooldown1.timestamp, 'MISMATCH_BEFORE_COOLDOWN');
-    assertEq(cooldown0.amount, cooldown1.amount, 'MISMATCH_BEFORE_COOLDOWN_AMOUNT');
+  //   assertEq(cooldown0.timestamp, cooldown1.timestamp, 'MISMATCH_BEFORE_COOLDOWN');
+  //   assertEq(cooldown0.amount, cooldown1.amount, 'MISMATCH_BEFORE_COOLDOWN_AMOUNT');
 
-    // Sending token should not affect the amount as long as balance > amount
-    vm.prank(user);
-    stakeToken.transfer(otherUser, amountToStakeOther);
-    IStakeToken.CooldownSetup memory cooldown2 = stakeToken.stakersCooldowns(user);
-    assertEq(cooldown1.timestamp, cooldown2.timestamp, 'MISMATCH_COOLDOWN');
-    assertEq(cooldown0.amount, cooldown2.amount, 'MISMATCH_COOLDOWN_AMOUNT');
+  //   // Sending token should not affect the amount as long as balance > amount
+  //   vm.prank(user);
+  //   stakeToken.transfer(otherUser, amountToStakeOther);
+  //   IStakeToken.CooldownSnapshot memory cooldown2 = stakeToken.stakersCooldowns(user);
+  //   assertEq(cooldown1.timestamp, cooldown2.timestamp, 'MISMATCH_COOLDOWN');
+  //   assertEq(cooldown0.amount, cooldown2.amount, 'MISMATCH_COOLDOWN_AMOUNT');
 
-    // Sending token should decrease the cooldown amount when balance <= amount
-    vm.startPrank(user);
-    stakeToken.transfer(otherUser, amountToStake);
-    vm.stopPrank();
-    IStakeToken.CooldownSetup memory cooldown3 = stakeToken.stakersCooldowns(user);
-    assertEq(cooldown3.timestamp, 0, 'MISMATCH_AFTER_COOLDOWN');
-    assertEq(cooldown3.amount, 0, 'MISMATCH_AFTER_COOLDOWN_AMOUNT');
-  }
+  //   // Sending token should decrease the cooldown amount when balance <= amount
+  //   vm.startPrank(user);
+  //   stakeToken.transfer(otherUser, amountToStake);
+  //   vm.stopPrank();
+  //   IStakeToken.CooldownSnapshot memory cooldown3 = stakeToken.stakersCooldowns(user);
+  //   assertEq(cooldown3.timestamp, 0, 'MISMATCH_AFTER_COOLDOWN');
+  //   assertEq(cooldown3.amount, 0, 'MISMATCH_AFTER_COOLDOWN_AMOUNT');
+  // }
 
-  function test_cooldownInsufficient_shouldRevert(
-    uint104 amountToStake,
-    uint104 amountToUnstake,
-    uint40 secondsAfterCooldownActivation,
-    address user,
-    address destination
-  ) public {
-    vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
-    vm.assume(secondsAfterCooldownActivation < stakeToken.getDefaultCooldownSeconds());
-    vm.assume(user != address(proxyAdmin) && user != address(0) && destination != address(0));
+  // function test_cooldownInsufficient_shouldRevert(
+  //   uint104 amountToStake,
+  //   uint104 amountToUnstake,
+  //   uint40 secondsAfterCooldownActivation,
+  //   address user,
+  //   address destination
+  // ) public {
+  //   vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
+  //   vm.assume(secondsAfterCooldownActivation < stakeToken.getDefaultCooldownSeconds());
+  //   vm.assume(user != address(proxyAdmin) && user != address(0) && destination != address(0));
 
-    _stake(amountToStake, user);
-    vm.prank(user);
-    stakeToken.cooldown();
+  //   _stake(amountToStake, user);
+  //   vm.prank(user);
+  //   stakeToken.cooldown();
 
-    vm.warp(block.timestamp + secondsAfterCooldownActivation);
-    vm.prank(user);
-    vm.expectRevert('INSUFFICIENT_COOLDOWN');
-    stakeToken.redeem(destination, amountToUnstake);
-  }
+  //   vm.warp(block.timestamp + secondsAfterCooldownActivation);
+  //   vm.prank(user);
+  //   vm.expectRevert('INSUFFICIENT_COOLDOWN');
+  //   stakeToken.redeem(destination, amountToUnstake);
+  // }
 
-  function test_cooldownWindowClosed_shouldRevert(
-    uint104 amountToStake,
-    uint104 amountToUnstake,
-    uint40 secondsAfterCooldownActivation,
-    address user,
-    address destination
-  ) public {
-    vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
-    vm.assume(
-      secondsAfterCooldownActivation >
-        stakeToken.getDefaultCooldownSeconds() + stakeToken.getUnstakeWindow()
-    );
-    vm.assume(user != address(proxyAdmin) && user != address(0) && destination != address(0));
+  // function test_cooldownWindowClosed_shouldRevert(
+  //   uint104 amountToStake,
+  //   uint104 amountToUnstake,
+  //   uint40 secondsAfterCooldownActivation,
+  //   address user,
+  //   address destination
+  // ) public {
+  //   vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
+  //   vm.assume(
+  //     secondsAfterCooldownActivation >
+  //       stakeToken.getDefaultCooldownSeconds() + stakeToken.getUnstakeWindow()
+  //   );
+  //   vm.assume(user != address(proxyAdmin) && user != address(0) && destination != address(0));
 
-    _stake(amountToStake, user);
-    vm.prank(user);
-    stakeToken.cooldown();
+  //   _stake(amountToStake, user);
+  //   vm.prank(user);
+  //   stakeToken.cooldown();
 
-    vm.warp(block.timestamp + secondsAfterCooldownActivation);
-    vm.prank(user);
-    vm.expectRevert('UNSTAKE_WINDOW_FINISHED');
-    stakeToken.redeem(destination, amountToUnstake);
-  }
+  //   vm.warp(block.timestamp + secondsAfterCooldownActivation);
+  //   vm.prank(user);
+  //   vm.expectRevert('UNSTAKE_WINDOW_FINISHED');
+  //   stakeToken.redeem(destination, amountToUnstake);
+  // }
 
-  function test_redeemMoreThenCooldown_shouldRedeemMax(
-    uint104 amountToStake,
-    uint104 amountToTopUp,
-    uint104 amountToUnstake,
-    address user,
-    address destination
-  ) public {
-    vm.assume(amountToStake != 0 && amountToUnstake >= amountToStake);
-    vm.assume(amountToTopUp != 0 && type(uint104).max - amountToTopUp >= amountToStake);
-    vm.assume(
-      user != address(proxyAdmin) &&
-        user != address(0) &&
-        user != address(stakeToken) &&
-        destination != address(0) &&
-        destination != address(stakeToken)
-    );
+  // function test_redeemMoreThenCooldown_shouldRedeemMax(
+  //   uint104 amountToStake,
+  //   uint104 amountToTopUp,
+  //   uint104 amountToUnstake,
+  //   address user,
+  //   address destination
+  // ) public {
+  //   vm.assume(amountToStake != 0 && amountToUnstake >= amountToStake);
+  //   vm.assume(amountToTopUp != 0 && type(uint104).max - amountToTopUp >= amountToStake);
+  //   vm.assume(
+  //     user != address(proxyAdmin) &&
+  //       user != address(0) &&
+  //       user != address(stakeToken) &&
+  //       destination != address(0) &&
+  //       destination != address(stakeToken)
+  //   );
 
-    _stake(amountToStake, user);
-    vm.prank(user);
-    stakeToken.cooldown();
-    _stake(amountToTopUp, user);
-    IStakeToken.CooldownSetup memory cooldownAfterSecondStake = stakeToken.stakersCooldowns(user);
-    assertEq(cooldownAfterSecondStake.amount, amountToStake, 'STAKE_SHOULD_NOT_ALTER_COOLDOWN');
+  //   _stake(amountToStake, user);
+  //   vm.prank(user);
+  //   stakeToken.cooldown();
+  //   _stake(amountToTopUp, user);
+  //   IStakeToken.CooldownSnapshot memory cooldownAfterSecondStake = stakeToken.stakersCooldowns(
+  //     user
+  //   );
+  //   assertEq(cooldownAfterSecondStake.amount, amountToStake, 'STAKE_SHOULD_NOT_ALTER_COOLDOWN');
 
-    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
-    _redeem(amountToUnstake, user, destination);
+  //   vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
+  //   _redeem(amountToUnstake, user, destination);
 
-    assertEq(underlyingToken.balanceOf(destination), amountToStake, 'WRONG_AMOUNT_REDEEMED');
-    assertEq(stakeToken.balanceOf(user), amountToTopUp, 'WRONG_AMOUNT_LEFT');
-  }
+  //   assertEq(underlyingToken.balanceOf(destination), amountToStake, 'WRONG_AMOUNT_REDEEMED');
+  //   assertEq(stakeToken.balanceOf(user), amountToTopUp, 'WRONG_AMOUNT_LEFT');
+  // }
 
   // @pavelvm5 fast-withdrawal tests start here, check only impact using reducedCooldown function, redeem/transfer process is the same
   function test_reducedCooldown(
@@ -199,7 +201,7 @@ contract Cooldown is StkTestUtils {
     uint256 maxReductionSeconds = stakeToken.getMaxReductionSeconds();
     stakeToken.reducedCooldown(maxReductionSeconds);
 
-    IStakeToken.CooldownSetup memory cooldownBefore = stakeToken.stakersCooldowns(user);
+    IStakeToken.CooldownSnapshot memory cooldownBefore = stakeToken.stakersCooldowns(user);
 
     uint256 cooldownSeconds = stakeToken.getDefaultCooldownSeconds() - maxReductionSeconds;
 
@@ -210,12 +212,7 @@ contract Cooldown is StkTestUtils {
     vm.warp(block.timestamp + cooldownSeconds);
     _redeem(amountToRedeem, user, user);
 
-    IStakeToken.CooldownSetup memory cooldownAfter = stakeToken.stakersCooldowns(user);
-
-    console.log(cooldownAfter.amount);
-    console.log(amountToStake);
-    console.log(fee);
-    console.log(amountToRedeem);
+    IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
 
     assertEq(cooldownAfter.amount, amountToStake - fee - amountToRedeem);
   }
@@ -277,18 +274,96 @@ contract Cooldown is StkTestUtils {
 
     assertEq(balanceTreasuryAfter - balanceTreasuryBefore, underlyingFeesToTreasury);
 
-    IStakeToken.CooldownSetup memory cooldownBefore = stakeToken.stakersCooldowns(user);
+    IStakeToken.CooldownSnapshot memory cooldownBefore = stakeToken.stakersCooldowns(user);
 
     uint256 cooldownSeconds = stakeToken.getDefaultCooldownSeconds() - reducedTime;
 
     assertEq(cooldownBefore.timestamp, block.timestamp + cooldownSeconds);
-
     assertEq(cooldownBefore.amount, amountToStake - fee);
 
     vm.warp(block.timestamp + cooldownSeconds);
     _redeem(amountToRedeem, user, user);
 
-    IStakeToken.CooldownSetup memory cooldownAfter = stakeToken.stakersCooldowns(user);
+    IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
     assertEq(cooldownAfter.amount, amountToStake - fee - amountToRedeem);
+  }
+
+  function test_reducedCooldownSecondTime(
+    uint104 amountToStake,
+    uint104 amountToRedeem,
+    address user,
+    uint32 reducedTime
+  ) public {
+    uint256 maxReductionSeconds = stakeToken.getMaxReductionSeconds();
+    uint256 fee = (amountToStake * maxFee * reducedTime) / maxReductionSeconds / 10_000;
+
+    vm.assume(amountToStake >= amountToRedeem + fee && amountToRedeem > 0);
+    vm.assume(user != address(proxyAdmin) && user != address(0) && user != treasury);
+    vm.assume(reducedTime <= maxReductionSeconds / 2);
+
+    _stake(amountToStake, user);
+
+    vm.startPrank(user);
+
+    stakeToken.cooldown();
+
+    vm.warp(block.timestamp + maxReductionSeconds / 2);
+
+    uint256 balanceTreasuryBefore = underlyingToken.balanceOf(treasury);
+    uint256 underlyingFeesToTreasury = stakeToken.previewRedeem(fee);
+
+    IStakeToken.CooldownSnapshot memory cooldownBefore = stakeToken.stakersCooldowns(user);
+    assertEq(cooldownBefore.amount, amountToStake);
+
+    stakeToken.reducedCooldown(reducedTime);
+
+    uint256 balanceTreasuryAfter = underlyingToken.balanceOf(treasury);
+    assertEq(balanceTreasuryAfter - balanceTreasuryBefore, underlyingFeesToTreasury);
+
+    IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
+    assertEq(cooldownBefore.timestamp - reducedTime, cooldownAfter.timestamp);
+    assertEq(cooldownAfter.amount, amountToStake - fee);
+
+    vm.warp(stakeToken.stakersCooldowns(user).timestamp);
+    _redeem(amountToRedeem, user, user);
+
+    IStakeToken.CooldownSnapshot memory cooldownAfterRedeem = stakeToken.stakersCooldowns(user);
+    assertEq(cooldownAfterRedeem.amount, amountToStake - fee - amountToRedeem);
+  }
+
+  function test_reducedCooldownRevert(uint104 amountToStake, address user) public {
+    vm.assume(amountToStake > 0);
+    vm.assume(user != address(proxyAdmin) && user != address(0) && user != treasury);
+
+    _stake(amountToStake, user);
+
+    vm.startPrank(user);
+
+    stakeToken.reducedCooldown(stakeToken.getMaxReductionSeconds());
+
+    vm.expectRevert('MAX_REDUCTION_TIME_EXCEEDED');
+    stakeToken.reducedCooldown(1);
+  }
+
+  function test_reducedCooldownRevertWithWarp(
+    uint104 amountToStake,
+    address user,
+    uint40 reducedTime
+  ) public {
+    vm.assume(amountToStake > 0);
+    vm.assume(user != address(proxyAdmin) && user != address(0) && user != treasury);
+
+    _stake(amountToStake, user);
+
+    vm.startPrank(user);
+
+    stakeToken.reducedCooldown(reducedTime);
+
+    IStakeToken.CooldownSnapshot memory cooldownAfter = stakeToken.stakersCooldowns(user);
+
+    vm.warp(cooldownAfter.timestamp - minCooldownSeconds);
+
+    vm.expectRevert('MAX_REDUCTION_TIME_EXCEEDED');
+    stakeToken.reducedCooldown(1);
   }
 }

@@ -2,30 +2,29 @@
 pragma solidity ^0.8.0;
 
 interface IStakeToken {
-  struct CooldownSetup {
-    // make more sense to display time from which can be withdrawn, not activation time
+  struct CooldownSnapshot {
     /// @notice The time after which funds can be redeemed
-    uint32 timestamp;
+    uint40 timestamp;
     /// @notice The amount of tokens which can be redeemed
     uint216 amount;
   }
 
   struct SmConfig {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
-    uint32 unstakeWindowSeconds;
+    uint40 unstakeWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
-    uint32 defaultCooldownSeconds;
+    uint40 defaultCooldownSeconds;
     /// @notice The address of the underlying asset
     address stakedToken;
     /// @notice The minimum cooldown time available for redeeming assets
-    uint32 minCooldownSeconds;
+    uint40 minCooldownSeconds;
     /// @notice The maximum fee in BIPS that will be taken when the cooldown period is reduced by maxReductionTime
     uint16 maxFee;
     /// @notice The address of treasury
     address treasury;
   }
 
-  event Cooldown(address indexed user, uint256 amount, uint32 timeToRedeem);
+  event Cooldown(address indexed user, uint256 amount, uint256 timeToRedeem);
   event FeesSentToTreasury(uint256 amount);
   event TreasuryChanged(address treasury);
   event MaxFeeChanged(uint256 maxFee);
