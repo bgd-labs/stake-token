@@ -105,12 +105,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+
+    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint40();
+
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function getUnstakeWindow() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
+
     return $._smConfig.unstakeWindowSeconds;
   }
 
@@ -240,10 +243,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   function _cooldown(address from) internal {
     uint256 amount = balanceOf(from);
+
     require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
+
     StakeTokenStorage storage $ = _getStakeTokenStorage();
+
+    uint40 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint40();
+
     $._stakersCooldowns[from] = CooldownSnapshot({
-      timestamp: uint40(block.timestamp),
+      timestamp: timeForRedemption,
       amount: uint216(amount)
     });
 
@@ -256,7 +264,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    */
   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._smConfig.cooldownSeconds = cooldownSeconds.toUint32();
+
+    $._smConfig.cooldownSeconds = cooldownSeconds.toUint40();
+
     emit CooldownSecondsChanged(cooldownSeconds);
   }
 
@@ -289,15 +299,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
+
     CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[from];
     SmConfig memory cachedSmConfig = $._smConfig;
+
+    require(block.timestamp >= cooldownSnapshot.timestamp, 'INSUFFICIENT_COOLDOWN');
     require(
-      (block.timestamp >= cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds),
-      'INSUFFICIENT_COOLDOWN'
-    );
-    require(
-      (block.timestamp - (cooldownSnapshot.timestamp + cachedSmConfig.cooldownSeconds) <=
-        cachedSmConfig.unstakeWindowSeconds),
+      block.timestamp - cooldownSnapshot.timestamp <= cachedSmConfig.unstakeWindowSeconds,
       'UNSTAKE_WINDOW_FINISHED'
     );
 
@@ -329,15 +337,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   /**
    * @dev calculates the exchange rate based on totalAssets and totalShares
    * @dev always rounds up to ensure 100% backing of shares by rounding in favor of the contract
-   * @param totalAssets The total amount of assets staked
-   * @param totalShares The total amount of shares
+   * @param _totalAssets The total amount of assets staked
+   * @param _totalShares The total amount of shares
    * @return exchangeRate as 18 decimal precision uint216
    */
   function _getExchangeRate(
-    uint256 totalAssets,
-    uint256 totalShares
+    uint256 _totalAssets,
+    uint256 _totalShares
   ) internal pure returns (uint216) {
-    return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
+    return (((_totalShares * EXCHANGE_RATE_UNIT) + _totalAssets - 1) / _totalAssets).toUint216();
   }
 
   function _update(address from, address to, uint256 amount) internal override {

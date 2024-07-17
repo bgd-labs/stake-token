@@ -23,7 +23,7 @@ contract Cooldown is StkTestUtils {
     vm.startPrank(user);
     stakeToken.cooldown();
     IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.stakersCooldowns(user);
-    assertEq(snapshotBefore.timestamp, block.timestamp);
+    assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldownSeconds());
     assertEq(snapshotBefore.amount, amountToStake);
 
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
@@ -55,7 +55,7 @@ contract Cooldown is StkTestUtils {
     IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.stakersCooldowns(user);
     assertEq(snapshotBefore.timestamp, snapshotAfter.timestamp);
     assertEq(snapshotBefore.amount, snapshotAfter.amount);
-    assertEq(snapshotAfter.timestamp, block.timestamp);
+    assertEq(snapshotAfter.timestamp, block.timestamp + stakeToken.getCooldownSeconds());
     assertEq(snapshotAfter.amount, amountToStake);
   }
 

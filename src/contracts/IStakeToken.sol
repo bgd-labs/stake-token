@@ -3,15 +3,17 @@ pragma solidity ^0.8.0;
 
 interface IStakeToken {
   struct CooldownSnapshot {
+    /// @notice Represent the time of unlocking funds for redemption
     uint40 timestamp;
+    /// @notice Amount of tokens available for redeem
     uint216 amount;
   }
 
   struct SmConfig {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
-    uint32 unstakeWindowSeconds;
+    uint40 unstakeWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
-    uint32 cooldownSeconds;
+    uint40 cooldownSeconds;
     /// @notice The address of the underlying asset
     address stakedToken;
     // reserved for future use
