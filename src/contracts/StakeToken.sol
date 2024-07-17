@@ -115,8 +115,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    require(newUnstakeWindow >= 1 hours, 'TOO_LOW_UNSTAKE_WINDOW');
-
     _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint40();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
