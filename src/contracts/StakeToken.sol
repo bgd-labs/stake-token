@@ -36,8 +36,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     address _slashingAdmin;
     /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
     uint256 _minAssetsRemaining;
-    /// @notice paused state which can be invoked by the guardian
-    bool _paused;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -47,11 +45,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   modifier onlySlashingAdmin() {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     require(msg.sender == $._slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
-    _;
-  }
-
-  modifier notPaused() {
-    require(!getPaused(), 'PAUSED');
     _;
   }
 
@@ -92,14 +85,8 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   function setPaused(bool paused) external onlyOwnerOrGuardian {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._paused = paused;
-    emit Paused(paused);
-  }
-
-  function getPaused() public view returns (bool) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._paused;
+    if (paused) _pause();
+    else _unpause();
   }
 
   function decimals() public view override returns (uint8) {
@@ -149,7 +136,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function stake(address to, uint256 amount) external notPaused {
+  function stake(address to, uint256 amount) external whenNotPaused {
     _stake(msg.sender, to, amount);
   }
 
@@ -160,7 +147,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external notPaused {
+  ) external whenNotPaused {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     try
       IERC20Permit($._smConfig.stakedToken).permit(
@@ -181,22 +168,26 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function cooldown() external notPaused {
+  function cooldown() external whenNotPaused {
     _cooldown(msg.sender);
   }
 
   /// @inheritdoc IStakeToken
-  function cooldownOnBehalfOf(address from) external notPaused onlyOwner {
+  function cooldownOnBehalfOf(address from) external whenNotPaused onlyOwner {
     _cooldown(from);
   }
 
   /// @inheritdoc IStakeToken
-  function redeem(address to, uint256 amount) external notPaused {
+  function redeem(address to, uint256 amount) external whenNotPaused {
     _redeem(msg.sender, to, amount.toUint104());
   }
 
   /// @inheritdoc IStakeToken
-  function redeemOnBehalf(address from, address to, uint256 amount) external notPaused onlyOwner {
+  function redeemOnBehalf(
+    address from,
+    address to,
+    uint256 amount
+  ) external whenNotPaused onlyOwner {
     _redeem(from, to, amount.toUint104());
   }
 
@@ -222,7 +213,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   function slash(
     address destination,
     uint256 amount
-  ) external onlySlashingAdmin notPaused returns (uint256) {
+  ) external onlySlashingAdmin whenNotPaused returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
     uint256 maxSlashable = getMaxSlashable();
     require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');

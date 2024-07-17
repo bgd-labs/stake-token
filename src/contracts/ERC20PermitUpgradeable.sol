@@ -10,7 +10,7 @@ import {EIP712Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/ut
 import {NoncesUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/NoncesUpgradeable.sol';
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
 
-import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
+import {ERC20PausableUpgradeable} from './ERC20PausableUpgradeable.sol';
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
@@ -22,7 +22,7 @@ import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
  */
 abstract contract ERC20PermitUpgradeable is
   Initializable,
-  ERC20Upgradeable,
+  ERC20PausableUpgradeable,
   IERC20Permit,
   EIP712Upgradeable,
   NoncesUpgradeable
