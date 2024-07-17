@@ -337,15 +337,16 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   /**
    * @dev calculates the exchange rate based on totalAssets and totalShares
    * @dev always rounds up to ensure 100% backing of shares by rounding in favor of the contract
-   * @param _totalAssets The total amount of assets staked
-   * @param _totalShares The total amount of shares
+   * @param newTotalAssets The total amount of assets staked
+   * @param newTotalShares The total amount of shares
    * @return exchangeRate as 18 decimal precision uint216
    */
   function _getExchangeRate(
-    uint256 _totalAssets,
-    uint256 _totalShares
+    uint256 newTotalAssets,
+    uint256 newTotalShares
   ) internal pure returns (uint216) {
-    return (((_totalShares * EXCHANGE_RATE_UNIT) + _totalAssets - 1) / _totalAssets).toUint216();
+    return
+      (((newTotalShares * EXCHANGE_RATE_UNIT) + newTotalAssets - 1) / newTotalAssets).toUint216();
   }
 
   function _update(address from, address to, uint256 amount) internal override {
