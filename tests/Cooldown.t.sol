@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 import {StakeToken} from '../src/contracts/StakeToken.sol';
-import {IStakeToken} from '../src/contracts/IStakeToken.sol';
+import {IStakeToken} from '../src/contracts/interfaces/IStakeToken.sol';
 
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
