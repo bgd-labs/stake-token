@@ -32,6 +32,7 @@ interface IStakeToken {
   event FundsReturned(uint256 amount);
   event SlashingSettled();
   event SlashingAdminChanged(address newAdmin);
+  event Paused(bool paused);
 
   /**
    * @dev Allows staking a specified amount of STAKED_TOKEN
