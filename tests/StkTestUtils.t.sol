@@ -10,6 +10,9 @@ import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
 import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
+import {IPoolAddressesProvider} from 'aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {MockPoolAddressesProvider} from './utils/MockPoolAddressesProvider.sol';
+import {ACLManager} from 'aave-v3-core/contracts/protocol/configuration/ACLManager.sol';
 
 contract MockERC20 is ERC20 {
   constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
@@ -20,6 +23,7 @@ contract StkTestUtils is Test {
   ERC20 public rewardToken;
   address public constant rewardsVault = address(0x43110);
   address public constant admin = address(0x8000);
+  address public constant slashingAdmin = address(0x9000);
   address public constant USER = address(0x42);
   StakeToken public stakeTokenImpl;
   ProxyAdmin public proxyAdmin;
@@ -30,7 +34,13 @@ contract StkTestUtils is Test {
     rewardToken = new MockERC20('TestReward', 'REWARD');
     RewardsController controller = new RewardsController();
     EmissionManager manager = new EmissionManager(address(controller), admin);
-    stakeTokenImpl = new StakeToken(IRewardsController(address(controller)));
+    MockPoolAddressesProvider mockProvider = new MockPoolAddressesProvider(address(admin));
+    ACLManager aclManager = new ACLManager(IPoolAddressesProvider(address(mockProvider)));
+    mockProvider.setACLManager(address(aclManager));
+    stakeTokenImpl = new StakeToken(
+      IRewardsController(address(controller)),
+      IPoolAddressesProvider(address(mockProvider))
+    );
     proxyAdmin = new ProxyAdmin(admin);
     stakeToken = StakeToken(
       address(
@@ -44,11 +54,15 @@ contract StkTestUtils is Test {
             'stkTest',
             admin,
             15 days,
-            2 days
+            2 days,
+            1 ether
           )
         )
       )
     );
+
+    vm.prank(admin);
+    aclManager.grantRole('SLASHING_ADMIN', slashingAdmin);
   }
 
   function _stake(uint256 amount, address user) internal {
@@ -70,7 +84,7 @@ contract StkTestUtils is Test {
   }
 
   function _slash(address destination, uint256 amount) internal {
-    vm.startPrank(admin);
+    vm.startPrank(slashingAdmin);
     stakeToken.slash(destination, amount);
     vm.stopPrank();
   }
