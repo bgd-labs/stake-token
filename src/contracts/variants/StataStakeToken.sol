@@ -1,17 +1,56 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
+import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
+import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IStaticATokenLM} from 'aave-v3-origin/periphery/contracts/static-a-token/interfaces/IStaticATokenLM.sol';
 import {IRewardsController} from '../interfaces/IRewardsController.sol';
 import {StakeToken} from '../StakeToken.sol';
-import {IStaticATokenLM} from '../interfaces/IStaticATokenLM.sol';
 
 /**
  * A customized version of StakeToken to acoomondate for 4626 stata methods
  */
-contract StataGateway is StakeToken {
-  constructor(IRewardsController rewardsController) StakeToken(rewardsController) {}
+contract StataStakeToken is StakeToken {
+  using SafeERC20 for IERC20;
 
-  // TODO: add methods for direct deposit / withdrawal from aToken/underlying
+  enum Token {
+    UNDERLYING,
+    A_TOKEN,
+    STAKE_TOKEN
+  }
+
+  constructor(
+    IRewardsController rewardsController,
+    IPoolAddressesProvider provider
+  ) StakeToken(rewardsController, provider) {}
+
+  // infinite approve all underlyings
+  function initialize() external virtual {
+    address cachedAsset = asset();
+    IERC20 underlying = IERC20(IStaticATokenLM(cachedAsset).asset());
+    IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
+    SafeERC20.forceApprove(underlying, cachedAsset, type(uint256).max);
+    SafeERC20.forceApprove(underlyingAToken, cachedAsset, type(uint256).max);
+  }
+
+  function stake(address to, uint256 amount, Token inputType) external {
+    if (inputType == Token.UNDERLYING) {
+      address cachedAsset = asset();
+      IERC20 underlying = IERC20(IStaticATokenLM(cachedAsset).asset());
+      IERC20(underlying).safeTransferFrom(msg.sender, address(this), amount);
+      amount = IStaticATokenLM(cachedAsset).deposit(amount, address(this));
+    }
+    else if (inputType == Token.A_TOKEN) {
+      address cachedAsset = asset();
+      IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
+      IERC20(underlyingAToken).safeTransferFrom(msg.sender, address(this), amount);
+      amount = IStaticATokenLM(cachedAsset).deposit(amount, address(this), 0, false);
+    }
+    return _stake(msg.sender, to, amount);
+  }
+
+  function
 
   /**
    * @notice Allows the DAO to claim LM rewards that would otherwise be stuck on the stk.

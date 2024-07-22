@@ -9,8 +9,8 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
-import {IPoolAddressesProvider} from 'aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IAccessControl} from 'aave-v3-core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
+import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
 import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
