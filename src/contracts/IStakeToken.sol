@@ -97,7 +97,7 @@ interface IStakeToken {
 
   /**
    * @dev Setter of cooldown seconds
-   * Can only be called by the cooldown admin
+   * Can only be called by the owner
    * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
    */
   function setCooldownSeconds(uint256 cooldownSeconds) external;
@@ -138,4 +138,25 @@ interface IStakeToken {
    * - MUST NOT revert.
    */
   function totalAssets() external returns (uint256);
+
+  /**
+   * @dev Getter of the currently slashable assets
+   * @return maxSlashableAssets the maximum amount of assets that could be slashed at this moment
+   * - MUST consider minAssetsRemaining
+   */
+  function getMaxSlashableAssets() external view returns (uint256);
+
+  /**
+   * @dev Getter of the minimum assets that must remain on the stake token after a slashing is performed
+   * - MUST consider minAssetsRemaining
+   * @return minAssetsRemaining the minimum of assets that need to stay on the contract after a slashing.
+   */
+  function getMinAssetsRemaining() external view returns (uint256);
+
+  /**
+   * @dev Setter of minimum assets remaining
+   * - MUST only be called by the owner
+   * @param newMinAssetsRemaining the new minimum amount that always needs to remain on the contract after a slashing.
+   */
+  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external;
 }

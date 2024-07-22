@@ -229,6 +229,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return amount;
   }
 
+  /// @inheritdoc IStakeToken
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     StakeTokenStorage storage $ = _getStakeTokenStorage();
@@ -236,12 +237,14 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
   }
 
-  function getMinAssetsRemaining() public view returns (uint256) {
+  /// @inheritdoc IStakeToken
+  function getMinAssetsRemaining() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._minAssetsRemaining;
   }
 
-  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) public onlyOwner {
+  /// @inheritdoc IStakeToken
+  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external onlyOwner {
     _setMinAssetsRemaining(newMinAssetsRemaining);
   }
 
