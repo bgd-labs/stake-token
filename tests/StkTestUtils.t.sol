@@ -10,9 +10,9 @@ import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
 import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
-import {IPoolAddressesProvider} from 'aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
 import {MockPoolAddressesProvider} from './utils/MockPoolAddressesProvider.sol';
-import {ACLManager} from 'aave-v3-core/contracts/protocol/configuration/ACLManager.sol';
+import {ACLManager} from 'aave-v3-origin/core/contracts/protocol/configuration/ACLManager.sol';
 
 contract MockERC20 is ERC20 {
   constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
@@ -32,8 +32,8 @@ contract StkTestUtils is Test {
   function setUp() public virtual {
     underlyingToken = new MockERC20('TestToken', 'TEST');
     rewardToken = new MockERC20('TestReward', 'REWARD');
-    RewardsController controller = new RewardsController();
-    EmissionManager manager = new EmissionManager(address(controller), admin);
+    EmissionManager manager = new EmissionManager(admin);
+    RewardsController controller = new RewardsController(address(manager));
     MockPoolAddressesProvider mockProvider = new MockPoolAddressesProvider(address(admin));
     ACLManager aclManager = new ACLManager(IPoolAddressesProvider(address(mockProvider)));
     mockProvider.setACLManager(address(aclManager));
