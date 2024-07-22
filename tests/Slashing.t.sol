@@ -10,17 +10,31 @@ import {StkTestUtils} from './StkTestUtils.t.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 contract Slashing is StkTestUtils {
-  /**
-   * Slashing below 1 unit of assets should be impossible
-   */
-  function test_slash9999bps() public {
+  function test_slash_shouldRevertWithWrongCaller(address caller) external {
+    vm.assume(caller != address(proxyAdmin) && caller != slashingAdmin);
     address destination = vm.addr(100);
-    _stake(50 ether, USER);
 
-    vm.startPrank(admin);
-    try stakeToken.slash(destination, 45.5 ether) {} catch Error(string memory reason) {
-      require(keccak256(bytes(reason)) == keccak256(bytes('REMAINING_LT_MINIMUM')));
-    }
+    vm.startPrank(caller);
+    vm.expectRevert('CALLER_NOT_SLASHING_ADMIN');
+    stakeToken.slash(destination, type(uint256).max);
+  }
+
+  function test_slash_shouldRevertWithAmountZero() public {
+    address destination = vm.addr(100);
+
+    vm.startPrank(slashingAdmin);
+    vm.expectRevert('ZERO_AMOUNT');
+    stakeToken.slash(destination, 0);
+  }
+
+  function test_slash_shouldRevertWithFundsLteMinimum(uint256 amount) public {
+    vm.assume(amount != 0 && amount <= stakeToken.getMinAssetsRemaining());
+    address destination = vm.addr(100);
+    _stake(amount, USER);
+
+    vm.startPrank(slashingAdmin);
+    vm.expectRevert('ZERO_FUNDS_AVAILABLE');
+    stakeToken.slash(destination, type(uint256).max);
   }
 
   /**
@@ -46,15 +60,5 @@ contract Slashing is StkTestUtils {
     address newUser = vm.addr(1000);
     _stake(100 ether, newUser);
     assertEq(stakeToken.balanceOf(newUser), 125 ether);
-  }
-
-  function test_changeSlashingAdmin() public {
-    address newUser = vm.addr(1000);
-    vm.expectRevert(
-      abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this))
-    );
-    stakeToken.setSlashingAdmin(newUser);
-    vm.startPrank(admin);
-    stakeToken.setSlashingAdmin(newUser);
   }
 }

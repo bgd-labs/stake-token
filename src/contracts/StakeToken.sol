@@ -9,6 +9,8 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
+import {IPoolAddressesProvider} from 'aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IAccessControl} from 'aave-v3-core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
 import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
 import {IStakeToken} from './IStakeToken.sol';
 import {IRewardsController} from './IRewardsController.sol';
@@ -25,6 +27,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
+  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
   /// @custom:storage-location erc7201:aave.storage.StakeToken
   struct StakeTokenStorage {
@@ -32,8 +35,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
     uint216 _currentExchangeRate;
-    // TODO: might instead use ACL to allow multiple slashing admins etc
-    address _slashingAdmin;
     /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
     uint256 _minAssetsRemaining;
   }
@@ -43,8 +44,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
   modifier onlySlashingAdmin() {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    require(msg.sender == $._slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
+    require(
+      IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender),
+      'CALLER_NOT_SLASHING_ADMIN'
+    );
     _;
   }
 
@@ -59,8 +62,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return $._stakersCooldowns[user];
   }
 
-  constructor(IRewardsController rewardsController) {
+  constructor(IRewardsController rewardsController, IPoolAddressesProvider provider) {
     REWARDS_CONTROLLER = rewardsController;
+    ADDRESSES_PROVIDER = provider;
     _disableInitializers();
   }
 
@@ -68,20 +72,20 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     address stakedToken,
     string calldata name,
     string calldata symbol,
-    address newSlashingAdmin,
+    address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow
+    uint256 unstakeWindow,
+    uint256 minAssetsRemaining
   ) external virtual initializer {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
     __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
-    __Ownable_init(newSlashingAdmin);
+    __Ownable_init(owner);
     __EIP712_init(string(abi.encodePacked('stk', name)), '1');
-    _setSlashingAdmin(newSlashingAdmin);
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    $._minAssetsRemaining = 10 ** decimals();
+    _setMinAssetsRemaining(minAssetsRemaining);
   }
 
   function setPaused(bool paused) external onlyOwnerOrGuardian {
@@ -120,16 +124,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
     return $._smConfig.unstakeWindowSeconds;
-  }
-
-  function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
-    _setSlashingAdmin(newSlashingAdmin);
-  }
-
-  function _setSlashingAdmin(address newSlashingAdmin) internal {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._slashingAdmin = newSlashingAdmin;
-    emit SlashingAdminChanged(newSlashingAdmin);
   }
 
   /// @inheritdoc IStakeToken
@@ -218,7 +212,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 amount
   ) external onlySlashingAdmin whenNotPaused returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
-    uint256 maxSlashable = getMaxSlashable();
+    uint256 maxSlashable = getMaxSlashableAssets();
     require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
     if (amount > maxSlashable) {
       amount = maxSlashable;
@@ -235,11 +229,26 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return amount;
   }
 
-  function getMaxSlashable() public view returns (uint256) {
+  function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     uint256 cachedMin = $._minAssetsRemaining;
     return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
+  }
+
+  function getMinAssetsRemaining() public view returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._minAssetsRemaining;
+  }
+
+  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) public onlyOwner {
+    _setMinAssetsRemaining(newMinAssetsRemaining);
+  }
+
+  function _setMinAssetsRemaining(uint256 newMinAssetsRemaining) internal {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    $._minAssetsRemaining = newMinAssetsRemaining;
+    emit MinAssetsRemainingChanged(newMinAssetsRemaining);
   }
 
   /// @inheritdoc IStakeToken
