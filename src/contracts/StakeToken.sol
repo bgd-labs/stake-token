@@ -88,6 +88,11 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _setMinAssetsRemaining(minAssetsRemaining);
   }
 
+  function setPaused(bool paused) external onlyOwnerOrGuardian {
+    if (paused) _pause();
+    else _unpause();
+  }
+
   function decimals() public view override returns (uint8) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return IERC20Metadata($._smConfig.stakedToken).decimals();
@@ -128,7 +133,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function stake(address to, uint256 amount) external {
+  function stake(address to, uint256 amount) external whenNotPaused {
     _stake(msg.sender, to, amount);
   }
 
@@ -139,7 +144,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external {
+  ) external whenNotPaused {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     try
       IERC20Permit($._smConfig.stakedToken).permit(
@@ -160,22 +165,26 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function cooldown() external {
+  function cooldown() external whenNotPaused {
     _cooldown(msg.sender);
   }
 
   /// @inheritdoc IStakeToken
-  function cooldownOnBehalfOf(address from) external onlyOwner {
+  function cooldownOnBehalfOf(address from) external whenNotPaused onlyOwner {
     _cooldown(from);
   }
 
   /// @inheritdoc IStakeToken
-  function redeem(address to, uint256 amount) external {
+  function redeem(address to, uint256 amount) external whenNotPaused {
     _redeem(msg.sender, to, amount.toUint104());
   }
 
   /// @inheritdoc IStakeToken
-  function redeemOnBehalf(address from, address to, uint256 amount) external onlyOwner {
+  function redeemOnBehalf(
+    address from,
+    address to,
+    uint256 amount
+  ) external whenNotPaused onlyOwner {
     _redeem(from, to, amount.toUint104());
   }
 
@@ -198,7 +207,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
+  function slash(
+    address destination,
+    uint256 amount
+  ) external onlySlashingAdmin whenNotPaused returns (uint256) {
     require(amount > 0, 'ZERO_AMOUNT');
     uint256 maxSlashable = getMaxSlashableAssets();
     require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
