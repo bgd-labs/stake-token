@@ -11,6 +11,7 @@ import {StakeToken} from '../StakeToken.sol';
 
 /**
  * A customized version of StakeToken to acoomondate for 4626 stata methods
+ * DISLCAIMER: this code is not yet meant serious, mostly did because wanted to check if i can now setup protocol to test
  */
 contract StataStakeToken is StakeToken {
   using SafeERC20 for IERC20;
@@ -27,7 +28,24 @@ contract StataStakeToken is StakeToken {
   ) StakeToken(rewardsController, provider) {}
 
   // infinite approve all underlyings
-  function initialize() external virtual {
+  function initialize(
+    address stakedToken,
+    string calldata name,
+    string calldata symbol,
+    address owner,
+    uint256 cooldownSeconds,
+    uint256 unstakeWindow,
+    uint256 minAssetsRemaining
+  ) external virtual override initializer {
+    _initialize(
+      stakedToken,
+      name,
+      symbol,
+      owner,
+      cooldownSeconds,
+      unstakeWindow,
+      minAssetsRemaining
+    );
     address cachedAsset = asset();
     IERC20 underlying = IERC20(IERC4626(cachedAsset).asset());
     IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
@@ -41,19 +59,15 @@ contract StataStakeToken is StakeToken {
       IERC20 underlying = IERC20(IERC4626(cachedAsset).asset());
       IERC20(underlying).safeTransferFrom(msg.sender, address(this), amount);
       amount = IERC4626(cachedAsset).deposit(amount, address(this));
-    } else if (inputType == Token.A_TOKEN) {
+      return _stake(msg.sender, to, amount, false);
+    }
+    if (inputType == Token.A_TOKEN) {
       address cachedAsset = asset();
       IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
       IERC20(underlyingAToken).safeTransferFrom(msg.sender, address(this), amount);
       amount = IStaticATokenLM(cachedAsset).deposit(amount, address(this), 0, false);
+      return _stake(msg.sender, to, amount, false);
     }
-    return _stake(msg.sender, to, amount);
-  }
-
-  /**
-   * @notice Allows the DAO to claim LM rewards that would otherwise be stuck on the stk.
-   */
-  function claimStataRewards(address receiver) external onlyOwner {
-    IStaticATokenLM(asset()).claimRewards(receiver, IStaticATokenLM(asset()).rewardTokens());
+    return _stake(msg.sender, to, amount, true);
   }
 }

@@ -7,7 +7,9 @@ libs = ['lib']
 remappings = []
 fs_permissions = [{ access = "write", path = "./reports" }]
 solc_version = '0.8.26'
-via-ir = true
+ffi = true
+# disabled as will break due to aave-origin incompatibility
+# via-ir = true
 
 [fuzz]
 runs = 10000
