@@ -9,11 +9,11 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
 
-import {IPoolAddressesProvider} from 'aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IAccessControl} from 'aave-v3-core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
+import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
 import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
-import {IStakeToken} from './IStakeToken.sol';
-import {IRewardsController} from './IRewardsController.sol';
+import {IStakeToken} from './interfaces/IStakeToken.sol';
+import {IRewardsController} from './interfaces/IRewardsController.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 
@@ -77,6 +77,26 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 unstakeWindow,
     uint256 minAssetsRemaining
   ) external virtual initializer {
+    _initialize(
+      stakedToken,
+      name,
+      symbol,
+      owner,
+      cooldownSeconds,
+      unstakeWindow,
+      minAssetsRemaining
+    );
+  }
+
+  function _initialize(
+    address stakedToken,
+    string calldata name,
+    string calldata symbol,
+    address owner,
+    uint256 cooldownSeconds,
+    uint256 unstakeWindow,
+    uint256 minAssetsRemaining
+  ) internal onlyInitializing {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
     __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
@@ -96,6 +116,11 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   function decimals() public view override returns (uint8) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return IERC20Metadata($._smConfig.stakedToken).decimals();
+  }
+
+  function asset() public view returns (address) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._smConfig.stakedToken;
   }
 
   // TODO: reconsider as might not be needed with custom deployment
@@ -134,7 +159,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IStakeToken
   function stake(address to, uint256 amount) external whenNotPaused {
-    _stake(msg.sender, to, amount);
+    _stake(msg.sender, to, amount, true);
   }
 
   /// @inheritdoc IStakeToken
@@ -161,7 +186,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     } catch (bytes memory) {
       // do nothing
     }
-    _stake(msg.sender, msg.sender, amount);
+    _stake(msg.sender, msg.sender, amount, true);
   }
 
   /// @inheritdoc IStakeToken
@@ -299,7 +324,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    * @param to The address to receiving the shares
    * @param amount The amount of assets to be staked
    */
-  function _stake(address from, address to, uint256 amount) internal {
+  function _stake(address from, address to, uint256 amount, bool pullFunds) internal {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     uint256 sharesToMint = previewStake(amount);
@@ -307,9 +332,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
     _mint(to, sharesToMint.toUint104());
 
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    IERC20($._smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
-
+    if (pullFunds) {
+      StakeTokenStorage storage $ = _getStakeTokenStorage();
+      IERC20($._smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
+    }
     emit Staked(from, to, amount, sharesToMint);
   }
 

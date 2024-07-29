@@ -2,21 +2,18 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import {StakeToken} from '../src/contracts/StakeToken.sol';
-import {IRewardsController} from '../src/contracts/IRewardsController.sol';
 import {EmissionManager} from 'aave-v3-periphery/contracts/rewards/EmissionManager.sol';
 import {RewardsController} from 'aave-v3-periphery/contracts/rewards/RewardsController.sol';
-import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
+import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 // using 4.9 via aave-token-v3 for testing as it makes reasoning about proxyAdmin a bit easier
 import {TransparentUpgradeableProxy} from 'aave-token-v3/../lib/openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {MockPoolAddressesProvider} from './utils/MockPoolAddressesProvider.sol';
 import {ACLManager} from 'aave-v3-origin/core/contracts/protocol/configuration/ACLManager.sol';
-
-contract MockERC20 is ERC20 {
-  constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
-}
+import {MockPoolAddressesProvider} from './utils/MockPoolAddressesProvider.sol';
+import {MockERC20} from './utils/MockERC20.sol';
+import {StakeToken} from '../src/contracts/StakeToken.sol';
+import {IRewardsController} from '../src/contracts/interfaces/IRewardsController.sol';
 
 contract StkTestUtils is Test {
   ERC20 public underlyingToken;
