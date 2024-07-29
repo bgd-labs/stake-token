@@ -81,7 +81,7 @@ contract StataStakeTokenTest is TestnetProcedures {
   }
 
   function test_stakeAToken(uint64 amount) external {
-      vm.assume(amount != 0);
+    vm.assume(amount != 0);
     _dealAToken(amount, address(this));
 
     IERC20Metadata(aToken).approve(address(stakeToken), amount);
@@ -89,8 +89,8 @@ contract StataStakeTokenTest is TestnetProcedures {
   }
 
   function test_stakeStataToken(uint64 amount) external {
-      vm.assume(amount != 0);
-    _dealAToken(amount, address(this));
+    vm.assume(amount != 0);
+    _dealStataToken(amount, address(this));
 
     IERC20Metadata(address(staticATokenLM)).approve(address(stakeToken), amount);
     stakeToken.stake(address(this), amount, StataStakeToken.Token.STATA_TOKEN);
