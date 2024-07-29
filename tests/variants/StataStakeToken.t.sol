@@ -73,15 +73,27 @@ contract StataStakeTokenTest is TestnetProcedures {
   }
 
   function test_stakeUnderlying(uint64 amount) external {
-      vm.assume(amount != 0);
+    vm.assume(amount != 0);
     _dealUnderlying(amount, address(this));
 
     IERC20Metadata(underlying).approve(address(stakeToken), amount);
     stakeToken.stake(address(this), amount, StataStakeToken.Token.UNDERLYING);
   }
 
-  function test_stakeAToken() external {
-    _dealAToken(5 ether, address(this));
+  function test_stakeAToken(uint64 amount) external {
+      vm.assume(amount != 0);
+    _dealAToken(amount, address(this));
+
+    IERC20Metadata(aToken).approve(address(stakeToken), amount);
+    stakeToken.stake(address(this), amount, StataStakeToken.Token.A_TOKEN);
+  }
+
+  function test_stakeStataToken(uint64 amount) external {
+      vm.assume(amount != 0);
+    _dealAToken(amount, address(this));
+
+    IERC20Metadata(address(staticATokenLM)).approve(address(stakeToken), amount);
+    stakeToken.stake(address(this), amount, StataStakeToken.Token.STATA_TOKEN);
   }
 
   function _dealUnderlying(uint256 amount, address user) internal {
@@ -94,5 +106,14 @@ contract StataStakeTokenTest is TestnetProcedures {
     IERC20Metadata(underlying).approve(address(pool), amount);
     vm.prank(user);
     pool.supply(underlying, amount, user, 0);
+  }
+
+  function _dealStataToken(uint256 amount, address user) internal {
+    amount = staticATokenLM.previewMint(amount);
+    deal(underlying, user, amount);
+    vm.prank(user);
+    IERC20Metadata(underlying).approve(address(staticATokenLM), amount);
+    vm.prank(user);
+    staticATokenLM.deposit(amount, user);
   }
 }

@@ -19,7 +19,7 @@ contract StataStakeToken is StakeToken {
   enum Token {
     UNDERLYING,
     A_TOKEN,
-    STAKE_TOKEN
+    STATA_TOKEN
   }
 
   constructor(
