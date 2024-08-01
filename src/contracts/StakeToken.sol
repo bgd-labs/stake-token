@@ -187,46 +187,55 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
 
   ///@inheritdoc IERC4626
   function convertToShares(uint256 assets) external view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    return _convertToShares(assets, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
   function convertToAssets(uint256 shares) external view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
+    return _convertToAssets(shares, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
   function previewDeposit(uint256 assets) external view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    return _convertToShares(assets, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
   function previewMint(uint256 shares) public view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, Math.Rounding.Ceil);
+    return _convertToAssets(shares, Math.Rounding.Ceil);
   }
 
   /// @inheritdoc IStakeToken
   function previewStake(uint256 assets) public view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    return _convertToShares(assets, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
   function previewWithdraw(uint256 assets) public view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return assets.mulDiv($._currentExchangeRate, EXCHANGE_RATE_UNIT, Math.Rounding.Ceil);
+    return _convertToShares(assets, Math.Rounding.Ceil);
   }
 
   /// @inheritdoc IERC4626
   function previewRedeem(
     uint256 shares
   ) public view override(IERC4626, IStakeToken) returns (uint256) {
+    return _convertToAssets(shares, Math.Rounding.Floor);
+  }
+
+  function _convertToAssets(
+    uint256 shares,
+    Math.Rounding rounding
+  ) internal view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
+    return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, rounding);
+  }
+
+  function _convertToShares(
+    uint256 assets,
+    Math.Rounding rounding
+  ) internal view returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return assets.mulDiv($._currentExchangeRate, EXCHANGE_RATE_UNIT, rounding);
   }
 
   ///@inheritdoc IERC4626
