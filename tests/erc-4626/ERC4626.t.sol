@@ -46,6 +46,7 @@ contract Cooldown is StkTestUtils {
     assertEq(allShares, sharesToMint);
   }
 
+  // Due to default 1e18 exchange rate there's no rounding here at all, so I checked these values striclty
   function test_previewFunctions(uint104 assets) public view {
     uint256 shares = stakeToken.convertToShares(assets);
 

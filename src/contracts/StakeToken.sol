@@ -9,17 +9,20 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
+import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
 import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
+
+import {PercentageMath} from './lib/PercentageMath.sol';
+
 import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
 import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 
-import {PercentageMath} from './lib/PercentageMath.sol';
-
 contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable {
+  using Math for uint256;
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
@@ -139,24 +142,23 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   }
 
   ///@inheritdoc IERC4626
-  function maxDeposit(address) external pure override returns (uint256 maxAssets) {
+  function maxDeposit(address) external pure override returns (uint256) {
     return type(uint256).max;
   }
 
   ///@inheritdoc IERC4626
-  function maxMint(address) external pure override returns (uint256 maxShares) {
+  function maxMint(address) external pure override returns (uint256) {
     return type(uint256).max;
   }
 
-  // @pavelvm5 maxWithdraw/Redeem functions are made taking into account limits and timelock restrictions
   ///@inheritdoc IERC4626
-  function maxWithdraw(address owner) external view override returns (uint256 maxAssets) {
+  function maxWithdraw(address owner) external view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return previewRedeem($._stakersCooldowns[owner].amount);
   }
 
   ///@inheritdoc IERC4626
-  function maxRedeem(address owner) external view override returns (uint256 maxShares) {
+  function maxRedeem(address owner) external view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._stakersCooldowns[owner].amount;
   }
@@ -195,17 +197,16 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
   }
 
-  // @pavelvm5 all preview functions are made accoarding to my understanding of ERC-4626 standard
   ///@inheritdoc IERC4626
-  function previewDeposit(uint256 assets) external view override returns (uint256 shares) {
+  function previewDeposit(uint256 assets) external view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
   }
 
   ///@inheritdoc IERC4626
-  function previewMint(uint256 shares) public view override returns (uint256 assets) {
+  function previewMint(uint256 shares) public view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
+    return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, Math.Rounding.Ceil);
   }
 
   /// @inheritdoc IStakeToken
@@ -215,9 +216,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   }
 
   ///@inheritdoc IERC4626
-  function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
+  function previewWithdraw(uint256 assets) public view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    return assets.mulDiv($._currentExchangeRate, EXCHANGE_RATE_UNIT, Math.Rounding.Ceil);
   }
 
   /// @inheritdoc IERC4626
@@ -232,7 +233,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   function deposit(
     uint256 assets,
     address receiver
-  ) external override whenNotPaused returns (uint256 shares) {
+  ) external override whenNotPaused returns (uint256) {
     return _stake(msg.sender, receiver, assets, true);
   }
 
@@ -240,9 +241,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   function mint(
     uint256 shares,
     address receiver
-  ) external override whenNotPaused returns (uint256 assets) {
-    assets = previewMint(shares);
+  ) external override whenNotPaused returns (uint256) {
+    uint256 assets = previewMint(shares);
     _stake(msg.sender, receiver, assets, true);
+    return assets;
   }
 
   /// @inheritdoc IStakeToken
@@ -306,14 +308,16 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     uint256 assets,
     address receiver,
     address owner
-  ) external override returns (uint256 shares) {
-    shares = previewWithdraw(assets);
+  ) external override returns (uint256) {
+    uint256 shares = previewWithdraw(assets);
 
     if (owner != msg.sender) {
       _spendAllowance(owner, msg.sender, shares);
     }
 
     _redeem(owner, receiver, shares.toUint104());
+
+    return shares;
   }
 
   /// @inheritdoc IERC4626
@@ -321,7 +325,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     uint256 shares,
     address receiver,
     address owner
-  ) external override returns (uint256 assets) {
+  ) external override returns (uint256) {
     if (owner != msg.sender) {
       _spendAllowance(owner, msg.sender, shares);
     }
