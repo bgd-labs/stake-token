@@ -21,8 +21,6 @@ interface IStakeToken {
 
   event Cooldown(address indexed user, uint256 amount);
 
-  event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
-  event Redeem(address indexed from, address indexed to, uint256 assets, uint256 shares);
   event MaxSlashablePercentageChanged(uint256 newPercentage);
   event Slashed(address indexed destination, uint256 amount);
   event SlashingExitWindowDurationChanged(uint256 windowSeconds);
