@@ -7,17 +7,22 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
+import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
+import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
 import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
-import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
-import {IStakeToken} from './interfaces/IStakeToken.sol';
-import {IRewardsController} from './interfaces/IRewardsController.sol';
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 
+import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
+import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
+import {IStakeToken} from './interfaces/IStakeToken.sol';
+import {IRewardsController} from './interfaces/IRewardsController.sol';
+
 contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
+  using Math for uint256;
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
@@ -114,21 +119,49 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     else _unpause();
   }
 
-  function decimals() public view override returns (uint8) {
+  function decimals() public view override(IERC20Metadata, ERC20Upgradeable) returns (uint8) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return IERC20Metadata($._smConfig.stakedToken).decimals();
   }
 
-  /// @inheritdoc IStakeToken
-  function asset() public view returns (address) {
+  /// @inheritdoc IERC4626
+  function asset() public view override(IERC4626) returns (address) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._smConfig.stakedToken;
+  }
+
+  ///@inheritdoc IERC4626
+  function totalAssets() public view override(IERC4626) returns (uint256) {
+    uint256 currentShares = totalSupply();
+    return previewRedeem(currentShares);
   }
 
   // TODO: reconsider as might not be needed with custom deployment
   // compatibility for RewardsController
   function scaledTotalSupply() external view returns (uint256) {
     return totalSupply();
+  }
+
+  ///@inheritdoc IERC4626
+  function maxDeposit(address) external pure override returns (uint256) {
+    return type(uint256).max;
+  }
+
+  ///@inheritdoc IERC4626
+  function maxMint(address) external pure override returns (uint256) {
+    return type(uint256).max;
+  }
+
+  ///@inheritdoc IERC4626
+  function maxWithdraw(address owner) external view override returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return previewRedeem($._stakersCooldowns[owner].amount);
+  }
+
+  ///@inheritdoc IERC4626
+  function maxRedeem(address owner) external view override returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return $._stakersCooldowns[owner].amount;
   }
 
   function whoCanRescue() public view override returns (address) {
@@ -153,10 +186,73 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return $._smConfig.unstakeWindowSeconds;
   }
 
+  ///@inheritdoc IERC4626
+  function convertToShares(uint256 assets) external view override returns (uint256) {
+    return _convertToShares(assets, Math.Rounding.Floor);
+  }
+
+  ///@inheritdoc IERC4626
+  function convertToAssets(uint256 shares) external view override returns (uint256) {
+    return _convertToAssets(shares, Math.Rounding.Floor);
+  }
+
+  ///@inheritdoc IERC4626
+  function previewDeposit(uint256 assets) external view override returns (uint256) {
+    return _convertToShares(assets, Math.Rounding.Floor);
+  }
+
+  ///@inheritdoc IERC4626
+  function previewMint(uint256 shares) public view override returns (uint256) {
+    return _convertToAssets(shares, Math.Rounding.Ceil);
+  }
+
   /// @inheritdoc IStakeToken
   function previewStake(uint256 assets) public view returns (uint256) {
+    return _convertToShares(assets, Math.Rounding.Floor);
+  }
+
+  ///@inheritdoc IERC4626
+  function previewWithdraw(uint256 assets) public view override returns (uint256) {
+    return _convertToShares(assets, Math.Rounding.Ceil);
+  }
+
+  /// @inheritdoc IERC4626
+  function previewRedeem(uint256 shares) public view override returns (uint256) {
+    return _convertToAssets(shares, Math.Rounding.Floor);
+  }
+
+  function _convertToAssets(
+    uint256 shares,
+    Math.Rounding rounding
+  ) internal view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (assets * $._currentExchangeRate) / EXCHANGE_RATE_UNIT;
+    return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, rounding);
+  }
+
+  function _convertToShares(
+    uint256 assets,
+    Math.Rounding rounding
+  ) internal view returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    return assets.mulDiv($._currentExchangeRate, EXCHANGE_RATE_UNIT, rounding);
+  }
+
+  ///@inheritdoc IERC4626
+  function deposit(
+    uint256 assets,
+    address receiver
+  ) external override whenNotPaused returns (uint256) {
+    return _stake(msg.sender, receiver, assets, true);
+  }
+
+  ///@inheritdoc IERC4626
+  function mint(
+    uint256 shares,
+    address receiver
+  ) external override whenNotPaused returns (uint256) {
+    uint256 assets = previewMint(shares);
+    _stake(msg.sender, receiver, assets, true);
+    return assets;
   }
 
   /// @inheritdoc IStakeToken
@@ -215,22 +311,40 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _redeem(from, to, amount.toUint104());
   }
 
+  /// @inheritdoc IERC4626
+  function withdraw(
+    uint256 assets,
+    address receiver,
+    address owner
+  ) external override returns (uint256) {
+    uint256 shares = previewWithdraw(assets);
+
+    if (owner != msg.sender) {
+      _spendAllowance(owner, msg.sender, shares);
+    }
+
+    _redeem(owner, receiver, shares.toUint104());
+
+    return shares;
+  }
+
+  /// @inheritdoc IERC4626
+  function redeem(
+    uint256 shares,
+    address receiver,
+    address owner
+  ) external override returns (uint256) {
+    if (owner != msg.sender) {
+      _spendAllowance(owner, msg.sender, shares);
+    }
+
+    return _redeem(owner, receiver, shares.toUint104());
+  }
+
   /// @inheritdoc IStakeToken
   function getExchangeRate() public view returns (uint216) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._currentExchangeRate;
-  }
-
-  /// @inheritdoc IStakeToken
-  function previewRedeem(uint256 shares) public view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return (EXCHANGE_RATE_UNIT * shares) / $._currentExchangeRate;
-  }
-
-  ///@inheritdoc IStakeToken
-  function totalAssets() public view returns (uint256) {
-    uint256 currentShares = totalSupply();
-    return previewRedeem(currentShares);
   }
 
   /// @inheritdoc IStakeToken
@@ -326,10 +440,15 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    * @param to The address to receiving the shares
    * @param amount The amount of assets to be staked
    */
-  function _stake(address from, address to, uint256 amount, bool pullFunds) internal {
+  function _stake(
+    address from,
+    address to,
+    uint256 amount,
+    bool pullFunds
+  ) internal returns (uint256 sharesToMint) {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
-    uint256 sharesToMint = previewStake(amount);
+    sharesToMint = previewStake(amount);
     require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
 
     _mint(to, sharesToMint.toUint104());
@@ -338,7 +457,8 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
       StakeTokenStorage storage $ = _getStakeTokenStorage();
       IERC20($._smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
     }
-    emit Staked(from, to, amount, sharesToMint);
+
+    emit Deposit(from, to, amount, sharesToMint);
   }
 
   /**
@@ -347,7 +467,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    * @param to Address to redeem to
    * @param amount Amount to redeem
    */
-  function _redeem(address from, address to, uint104 amount) internal {
+  function _redeem(address from, address to, uint104 amount) internal returns (uint256 assets) {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
@@ -366,13 +486,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
     uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
 
-    uint256 underlyingToRedeem = previewRedeem(amountToRedeem);
+    assets = previewRedeem(amountToRedeem);
 
     _burn(from, amountToRedeem.toUint104());
 
-    IERC20(cachedSmConfig.stakedToken).safeTransfer(to, underlyingToRedeem);
+    IERC20(cachedSmConfig.stakedToken).safeTransfer(to, assets);
 
-    emit Redeem(from, to, underlyingToRedeem, amountToRedeem);
+    emit Withdraw(msg.sender, to, from, assets, amountToRedeem);
   }
 
   /**

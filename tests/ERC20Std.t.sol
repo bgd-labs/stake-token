@@ -9,6 +9,8 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
 import {StkTestUtils} from './StkTestUtils.t.sol';
 
+// @pavelvm5 in this file shares are messed with assets, so I think we should fix these tests in future
+// cause they are not valid + add more complex tests with slashing to find out the order of error
 contract ERC20Std is StkTestUtils {
   function test_name() external {
     assertEq('Stake Test', stakeToken.name());
@@ -22,8 +24,8 @@ contract ERC20Std is StkTestUtils {
   function test_stake(uint104 amount) public {
     vm.assume(amount > 0);
     _stake(amount, USER);
-    assertEq(stakeToken.totalSupply(), amount);
-    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(USER));
+    assertEq(stakeToken.totalAssets(), amount);
+    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(USER));
   }
 
   // burn
@@ -33,15 +35,15 @@ contract ERC20Std is StkTestUtils {
     address destination = vm.addr(100);
 
     _stake(amountStaked, USER);
-    assertEq(stakeToken.balanceOf(USER), amountStaked);
+    assertEq(stakeToken.balanceOf(USER), stakeToken.convertToShares(amountStaked));
 
     vm.prank(USER);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
     _redeem(amountRedeemed, USER, destination);
 
-    assertEq(stakeToken.totalSupply(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(USER), amountStaked - amountRedeemed);
+    assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
+    assertEq(stakeToken.balanceOf(USER), stakeToken.convertToAssets(amountStaked - amountRedeemed));
     assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
   }
 

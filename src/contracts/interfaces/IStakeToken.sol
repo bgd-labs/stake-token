@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-interface IStakeToken {
+import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
+
+interface IStakeToken is IERC4626 {
   struct CooldownSnapshot {
     /// @notice Represent the time of unlocking funds for redemption
     uint40 timestamp;
@@ -21,8 +23,6 @@ interface IStakeToken {
 
   event Cooldown(address indexed user, uint256 amount);
 
-  event Staked(address indexed from, address indexed to, uint256 assets, uint256 shares);
-  event Redeem(address indexed from, address indexed to, uint256 assets, uint256 shares);
   event MaxSlashablePercentageChanged(uint256 newPercentage);
   event Slashed(address indexed destination, uint256 amount);
   event SlashingExitWindowDurationChanged(uint256 windowSeconds);
@@ -131,25 +131,10 @@ interface IStakeToken {
   function redeemOnBehalf(address from, address to, uint256 amount) external;
 
   /**
-   * @dev Getter of the underlying asset
-   * @return underlying asset
-   */
-  function asset() external view returns (address);
-
-  /**
    * @dev Getter for the pending cooldown of a user
    * @return pending cooldown
    */
   function stakersCooldowns(address user) external view returns (CooldownSnapshot memory);
-
-  /**
-   * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
-   *
-   * - SHOULD include any compounding that occurs from yield.
-   * - MUST be inclusive of any fees that are charged against assets in the Vault.
-   * - MUST NOT revert.
-   */
-  function totalAssets() external returns (uint256);
 
   /**
    * @dev Getter of the currently slashable assets
