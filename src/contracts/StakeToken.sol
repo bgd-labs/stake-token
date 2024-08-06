@@ -9,6 +9,8 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
+import {IRescuable} from 'solidity-utils/contracts/utils/interfaces/IRescuable.sol';
+
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
@@ -164,6 +166,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return $._stakersCooldowns[owner].amount;
   }
 
+  /// @inheritdoc IRescuable
   function whoCanRescue() public view override returns (address) {
     return owner();
   }
