@@ -18,7 +18,7 @@ contract StataStakeTokenTest is StataStakeTestBase {
     _dealUnderlying(amount, address(this));
 
     IERC20Metadata(underlying).approve(address(stakeToken), amount);
-    stakeToken.stake(address(this), amount, StataStakeToken.Token.UNDERLYING);
+    stataStakeToken.deposit(address(this), amount, StataStakeToken.Token.UNDERLYING);
   }
 
   function test_stakeAToken(uint64 amount) external {
@@ -26,7 +26,7 @@ contract StataStakeTokenTest is StataStakeTestBase {
     _dealAToken(amount, address(this));
 
     IERC20Metadata(aToken).approve(address(stakeToken), amount);
-    stakeToken.stake(address(this), amount, StataStakeToken.Token.A_TOKEN);
+    stataStakeToken.deposit(address(this), amount, StataStakeToken.Token.A_TOKEN);
   }
 
   function test_stakeStataToken(uint64 amount) external {
@@ -34,6 +34,6 @@ contract StataStakeTokenTest is StataStakeTestBase {
     _dealStataToken(amount, address(this));
 
     IERC20Metadata(address(staticATokenLM)).approve(address(stakeToken), amount);
-    stakeToken.stake(address(this), amount, StataStakeToken.Token.STATA_TOKEN);
+    stataStakeToken.deposit(address(this), amount, StataStakeToken.Token.STATA_TOKEN);
   }
 }

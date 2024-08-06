@@ -200,18 +200,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   ///@inheritdoc IERC4626
-  function previewDeposit(uint256 assets) external view override returns (uint256) {
+  function previewDeposit(uint256 assets) public view override returns (uint256) {
     return _convertToShares(assets, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
   function previewMint(uint256 shares) public view override returns (uint256) {
     return _convertToAssets(shares, Math.Rounding.Ceil);
-  }
-
-  /// @inheritdoc IStakeToken
-  function previewStake(uint256 assets) public view returns (uint256) {
-    return _convertToShares(assets, Math.Rounding.Floor);
   }
 
   ///@inheritdoc IERC4626
@@ -256,11 +251,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 assets = previewMint(shares);
     _stake(msg.sender, receiver, assets, true);
     return assets;
-  }
-
-  /// @inheritdoc IStakeToken
-  function stake(address to, uint256 amount) external whenNotPaused {
-    _stake(msg.sender, to, amount, true);
   }
 
   /// @inheritdoc IStakeToken
@@ -451,7 +441,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   ) internal returns (uint256 sharesToMint) {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
-    sharesToMint = previewStake(amount);
+    sharesToMint = previewDeposit(amount);
     require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
 
     _mint(to, sharesToMint.toUint104());

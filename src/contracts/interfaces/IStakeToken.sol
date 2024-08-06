@@ -35,13 +35,6 @@ interface IStakeToken is IERC4626 {
   event MinAssetsRemainingChanged(uint256 newMinAssetsRemaining);
 
   /**
-   * @dev Allows staking a specified amount of STAKED_TOKEN
-   * @param to The address to receiving the shares
-   * @param amount The amount of assets to be staked
-   */
-  function stake(address to, uint256 amount) external;
-
-  /**
    * @dev Redeems shares, and stop earning rewards
    * @param to Address to redeem to
    * @param amount Amount of shares to redeem
@@ -103,13 +96,6 @@ interface IStakeToken is IERC4626 {
   function setCooldownSeconds(uint256 cooldownSeconds) external;
 
   /**
-   * @dev returns the exact amount of shares that would be received for the provided number of assets
-   * @param assets the number of assets to stake
-   * @return uint256 shares the number of shares that would be received
-   */
-  function previewStake(uint256 assets) external view returns (uint256);
-
-  /**
    * @dev Activates the cooldown period to unstake
    * - It can't be called if the user is not staking
    */
@@ -156,4 +142,6 @@ interface IStakeToken is IERC4626 {
    * @param newMinAssetsRemaining the new minimum amount that always needs to remain on the contract after a slashing.
    */
   function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external;
+
+  function setPaused(bool paused) external;
 }

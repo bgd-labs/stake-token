@@ -70,7 +70,7 @@ contract StkTestUtils is Test {
     deal(address(underlyingToken), user, amount);
     vm.startPrank(user);
     underlyingToken.approve(address(stakeToken), amount);
-    stakeToken.stake(onBehalfOf, amount);
+    stakeToken.deposit(amount, onBehalfOf);
     vm.stopPrank();
   }
 

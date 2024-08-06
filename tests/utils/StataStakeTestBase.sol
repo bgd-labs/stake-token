@@ -11,32 +11,33 @@ import {StaticATokenLM, IStaticATokenLM, IERC20, IERC20Metadata, ERC20} from 'aa
 import {StataStakeToken} from '../../src/contracts/variants/StataStakeToken.sol';
 import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
 import {StakeTestBase} from './StakeTestBase.sol';
+import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
 
 contract StataStakeTestBase is StakeTestBase {
   StaticATokenFactory public factory;
   StaticATokenLM public staticATokenLM;
-  StataStakeToken public stakeToken;
+  StataStakeToken public stataStakeToken;
 
-  function setUp() public virtual {
+  function setUp() public virtual override {
     _setupProtocol();
     address token = _setupStaticAToken();
-    _setupStakeToken(token);
+    _setupStataStakeToken(token);
   }
 
   function _setupStaticAToken() internal returns (address) {
     factory = StaticATokenFactory(report.staticATokenFactoryProxy);
     factory.createStaticATokens(pool.getReservesList());
 
-    staticATokenLM = StaticATokenLM(factory.getStaticAToken(underlying));
+    staticATokenLM = StaticATokenLM(factory.getStaticAToken(address(underlying)));
     return address(staticATokenLM);
   }
 
-  function _setupStakeToken(address stakeTokenUnderlying) internal {
+  function _setupStataStakeToken(address stakeTokenUnderlying) internal {
     StataStakeToken stakeTokenImpl = new StataStakeToken(
       IRewardsController(address(contracts.rewardsControllerProxy)),
       contracts.poolAddressesProvider
     );
-    stakeToken = StataStakeToken(
+    stakeToken = IStakeToken(
       address(
         new TransparentUpgradeableProxy(
           address(stakeTokenImpl),
@@ -54,14 +55,23 @@ contract StataStakeTestBase is StakeTestBase {
         )
       )
     );
+    stataStakeToken = StataStakeToken(address(stakeToken));
   }
 
-  function _dealStataToken(uint256 amount, address user) internal {
+  function _dealAToken(uint256 amount, address actor) internal {
+      _dealUnderlying(amount, actor);
+    vm.prank(actor);
+    IERC20Metadata(underlying).approve(address(pool), amount);
+    vm.prank(actor);
+    pool.supply(address(underlying), amount, actor, 0);
+  }
+
+  function _dealStataToken(uint256 amount, address actor) internal {
     amount = staticATokenLM.previewMint(amount);
-    deal(underlying, user, amount);
-    vm.prank(user);
+    _dealUnderlying(amount, actor);
+    vm.prank(actor);
     IERC20Metadata(underlying).approve(address(staticATokenLM), amount);
-    vm.prank(user);
-    staticATokenLM.deposit(amount, user);
+    vm.prank(actor);
+    staticATokenLM.deposit(amount, actor);
   }
 }

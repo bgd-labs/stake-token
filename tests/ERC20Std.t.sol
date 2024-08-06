@@ -92,7 +92,7 @@ contract ERC20Std is StkTestUtils {
     vm.startPrank(USER);
     underlyingToken.approve(address(stakeToken), amount);
     vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
-    stakeToken.stake(address(0), amount);
+    stakeToken.deposit(amount, address(0));
     vm.stopPrank();
   }
 }

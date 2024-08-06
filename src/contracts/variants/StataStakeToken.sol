@@ -53,23 +53,21 @@ contract StataStakeToken is StakeToken {
     SafeERC20.forceApprove(underlyingAToken, cachedAsset, type(uint256).max);
   }
 
-  function stake(address to, uint256 amount, Token inputType) external {
+  function deposit(address to, uint256 amount, Token inputType) external returns (uint256){
     if (inputType == Token.UNDERLYING) {
       address cachedAsset = asset();
       IERC20 underlying = IERC20(IERC4626(cachedAsset).asset());
       IERC20(underlying).safeTransferFrom(msg.sender, address(this), amount);
       amount = IERC4626(cachedAsset).deposit(amount, address(this));
-      _stake(msg.sender, to, amount, false);
-      return;
+      return _stake(msg.sender, to, amount, false);
     }
     if (inputType == Token.A_TOKEN) {
       address cachedAsset = asset();
       IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
       IERC20(underlyingAToken).safeTransferFrom(msg.sender, address(this), amount);
       amount = IStaticATokenLM(cachedAsset).deposit(amount, address(this), 0, false);
-      _stake(msg.sender, to, amount, false);
-      return;
+      return _stake(msg.sender, to, amount, false);
     }
-    _stake(msg.sender, to, amount, true);
+    return _stake(msg.sender, to, amount, true);
   }
 }

@@ -13,7 +13,7 @@ contract InvariantTest is StataStakeTestBase {
 
   function setUp() public virtual override {
     super.setUp();
-    handler = new InvariantHandler(stakeToken);
+    handler = new InvariantHandler(stakeToken, slashingAdmin);
 
     targetContract(address(handler));
   }
