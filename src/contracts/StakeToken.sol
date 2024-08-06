@@ -57,6 +57,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     }
   }
 
+  /// @inheritdoc IStakeToken
   function stakersCooldowns(address user) public view returns (CooldownSnapshot memory) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._stakersCooldowns[user];
@@ -118,6 +119,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return IERC20Metadata($._smConfig.stakedToken).decimals();
   }
 
+  /// @inheritdoc IStakeToken
   function asset() public view returns (address) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._smConfig.stakedToken;
