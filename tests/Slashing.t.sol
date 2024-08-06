@@ -6,10 +6,10 @@ import {StakeToken, IStakeToken} from '../src/contracts/StakeToken.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
-import {StkTestUtils} from './StkTestUtils.t.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
+import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract Slashing is StkTestUtils {
+contract Slashing is StakeTestBase {
   function test_slash_shouldRevertWithWrongCaller(address caller) external {
     vm.assume(caller != address(proxyAdmin) && caller != slashingAdmin);
     address destination = vm.addr(100);
@@ -30,7 +30,7 @@ contract Slashing is StkTestUtils {
   function test_slash_shouldRevertWithFundsLteMinimum(uint256 amount) public {
     vm.assume(amount != 0 && amount <= stakeToken.getMinAssetsRemaining());
     address destination = vm.addr(100);
-    _stake(amount, USER);
+    _stake(amount, user);
 
     vm.startPrank(slashingAdmin);
     vm.expectRevert('ZERO_FUNDS_AVAILABLE');
@@ -42,10 +42,10 @@ contract Slashing is StkTestUtils {
    */
   function test_slash2000bps() public {
     address destination = vm.addr(100);
-    _stake(100 ether, USER);
+    _stake(100 ether, user);
     _slash(destination, 20 ether);
 
-    assertEq(underlyingToken.balanceOf(destination), 20 ether);
+    assertEq(underlying.balanceOf(destination), 20 ether);
     assertEq(stakeToken.getExchangeRate(), 1.25 ether);
   }
 
@@ -54,7 +54,7 @@ contract Slashing is StkTestUtils {
    */
   function test_stakeAfterSlash() public {
     address destination = vm.addr(100);
-    _stake(100 ether, USER);
+    _stake(100 ether, user);
     _slash(destination, 20 ether);
 
     address newUser = vm.addr(1000);

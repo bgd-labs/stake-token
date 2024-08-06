@@ -8,7 +8,6 @@ remappings = []
 fs_permissions = [{ access = "write", path = "./reports" }]
 solc_version = '0.8.26'
 ffi = true
-suppressedErrors = ["sendtransfer"]
 # disabled as will break due to aave-origin incompatibility
 # via-ir = true
 

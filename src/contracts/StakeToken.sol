@@ -183,6 +183,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
+  /// @inheritdoc IStakeToken
   function getUnstakeWindow() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 

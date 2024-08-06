@@ -101,6 +101,13 @@ interface IStakeToken is IERC4626 {
    */
   function cooldownOnBehalfOf(address from) external;
 
+
+  /**
+  * @dev Getter for the unstake window
+  * @return unstakeWindow in seconds
+  */
+  function getUnstakeWindow() external returns (uint256);
+
   /**
    * @dev returns the exact amount of assets that would be redeemed for the provided number of shares
    * @param shares the number of shares to redeem

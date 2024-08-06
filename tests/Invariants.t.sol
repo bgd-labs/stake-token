@@ -7,8 +7,9 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IStakeToken} from '../src/contracts/interfaces/IStakeToken.sol';
 import {StataStakeTestBase} from './utils/StataStakeTestBase.sol';
 import {InvariantHandler} from './utils/InvariantHandler.sol';
+import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract InvariantTest is StataStakeTestBase {
+contract InvariantTest is StakeTestBase {
   InvariantHandler public handler;
 
   function setUp() public virtual override {

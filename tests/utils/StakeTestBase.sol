@@ -13,6 +13,9 @@ import {StakeToken} from '../../src/contracts/StakeToken.sol';
 import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
 import {ActionsLibrary} from './ActionsLibrary.sol';
 
+/**
+ * Token agnostic stake base helper setting up a aave protocol & stake token with an erc20 underlying
+ */
 contract StakeTestBase is TestnetProcedures {
   using ActionsLibrary for IStakeToken;
 
@@ -69,8 +72,8 @@ contract StakeTestBase is TestnetProcedures {
     IAccessControl(address(contracts.aclManager)).grantRole('SLASHING_ADMIN', slashingAdmin);
   }
 
-  function _dealUnderlying(uint256 amount, address user) internal {
-    deal(address(underlying), user, amount);
+  function _dealUnderlying(uint256 amount, address actor) internal {
+    deal(address(underlying), actor, amount);
   }
 
   function _stake(uint256 amount, address actor) internal {
@@ -80,5 +83,15 @@ contract StakeTestBase is TestnetProcedures {
   function _stake(uint256 amount, address actor, address receiver) internal {
     _dealUnderlying(amount, actor);
     stakeToken.helper_deposit(vm, amount, actor, receiver);
+  }
+
+  function _redeem(uint256 amount, address actor, address destination) internal {
+    vm.startPrank(actor);
+    stakeToken.redeem(destination, amount);
+    vm.stopPrank();
+  }
+
+  function _slash(address destination, uint256 amount) internal {
+    stakeToken.helper_slash(vm, slashingAdmin, destination, amount);
   }
 }

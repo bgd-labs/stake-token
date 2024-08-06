@@ -8,11 +8,10 @@ import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/Pro
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
 import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol';
-import {StkTestUtils} from './StkTestUtils.t.sol';
-import {StataStakeTestBase} from './utils/StataStakeTestBase.sol';
+import {StakeTestBase} from './utils/StakeTestBase.sol';
 import {ActionsLibrary, IStakeToken} from './utils/ActionsLibrary.sol';
 
-contract Pause is StataStakeTestBase {
+contract Pause is StakeTestBase {
   using ActionsLibrary for IStakeToken;
 
   function test_setPaused() external {
@@ -63,12 +62,11 @@ contract Pause is StataStakeTestBase {
     _setPaused(true);
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
 
-    IStakeToken(stakeToken).helper_slash(vm, slashingAdmin, user, 1 ether);
+    stakeToken.helper_slash(vm, slashingAdmin, user, 1 ether);
   }
 
   function test_transfer_should_revert() external {
-    _dealStataToken(1 ether, user);
-    IStakeToken(stakeToken).helper_deposit(vm, 1 ether, user, user);
+    _stake(1 ether, user);
     _setPaused(true);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
