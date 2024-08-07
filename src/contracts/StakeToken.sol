@@ -9,6 +9,8 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 import {Rescuable} from 'solidity-utils/contracts/utils/Rescuable.sol';
+import {IRescuable} from 'solidity-utils/contracts/utils/interfaces/IRescuable.sol';
+
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
@@ -21,15 +23,19 @@ import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 
-contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable {
+contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using Math for uint256;
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
   using SafeCast for uint104;
 
+  /// @dev the exchange rate on stake-token "up only" and reflects hom many stk token you receive for the underlying
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
+
+  /// @dev the minimum assets to remain in the contract to prevent division by zero and limit griefing
+  uint256 public constant MIN_ASSETS_REMAINING = 1e4;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
   IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
@@ -40,8 +46,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
     uint216 _currentExchangeRate;
-    /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
-    uint256 _minAssetsRemaining;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -56,12 +60,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     _;
   }
 
-  function _getStakeTokenStorage() private pure returns (StakeTokenStorage storage $) {
+  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
     assembly {
       $.slot := StakeTokenStorageLocation
     }
   }
 
+  /// @inheritdoc IStakeToken
   function stakersCooldowns(address user) public view returns (CooldownSnapshot memory) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._stakersCooldowns[user];
@@ -79,18 +84,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     string calldata symbol,
     address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow,
-    uint256 minAssetsRemaining
+    uint256 unstakeWindow
   ) external virtual initializer {
-    _initialize(
-      stakedToken,
-      name,
-      symbol,
-      owner,
-      cooldownSeconds,
-      unstakeWindow,
-      minAssetsRemaining
-    );
+    _initialize(stakedToken, name, symbol, owner, cooldownSeconds, unstakeWindow);
   }
 
   function _initialize(
@@ -99,8 +95,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     string calldata symbol,
     address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow,
-    uint256 minAssetsRemaining
+    uint256 unstakeWindow
   ) internal onlyInitializing {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
@@ -110,7 +105,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    _setMinAssetsRemaining(minAssetsRemaining);
   }
 
   function setPaused(bool paused) external onlyOwnerOrGuardian {
@@ -124,13 +118,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   }
 
   /// @inheritdoc IERC4626
-  function asset() public view override returns (address) {
+  function asset() public view override(IERC4626) returns (address) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return $._smConfig.stakedToken;
   }
 
   ///@inheritdoc IERC4626
-  function totalAssets() public view override(IERC4626, IStakeToken) returns (uint256) {
+  function totalAssets() public view override(IERC4626) returns (uint256) {
     uint256 currentShares = totalSupply();
     return previewRedeem(currentShares);
   }
@@ -163,6 +157,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     return $._stakersCooldowns[owner].amount;
   }
 
+  /// @inheritdoc IRescuable
   function whoCanRescue() public view override returns (address) {
     return owner();
   }
@@ -179,6 +174,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
+  /// @inheritdoc IStakeToken
   function getUnstakeWindow() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
@@ -196,7 +192,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   }
 
   ///@inheritdoc IERC4626
-  function previewDeposit(uint256 assets) external view override returns (uint256) {
+  function previewDeposit(uint256 assets) public view override returns (uint256) {
     return _convertToShares(assets, Math.Rounding.Floor);
   }
 
@@ -205,20 +201,13 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     return _convertToAssets(shares, Math.Rounding.Ceil);
   }
 
-  /// @inheritdoc IStakeToken
-  function previewStake(uint256 assets) public view returns (uint256) {
-    return _convertToShares(assets, Math.Rounding.Floor);
-  }
-
   ///@inheritdoc IERC4626
   function previewWithdraw(uint256 assets) public view override returns (uint256) {
     return _convertToShares(assets, Math.Rounding.Ceil);
   }
 
   /// @inheritdoc IERC4626
-  function previewRedeem(
-    uint256 shares
-  ) public view override(IERC4626, IStakeToken) returns (uint256) {
+  function previewRedeem(uint256 shares) public view override returns (uint256) {
     return _convertToAssets(shares, Math.Rounding.Floor);
   }
 
@@ -254,11 +243,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
     uint256 assets = previewMint(shares);
     _stake(msg.sender, receiver, assets, true);
     return assets;
-  }
-
-  /// @inheritdoc IStakeToken
-  function stake(address to, uint256 amount) external whenNotPaused {
-    _stake(msg.sender, to, amount, true);
   }
 
   /// @inheritdoc IStakeToken
@@ -374,26 +358,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   /// @inheritdoc IStakeToken
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    uint256 cachedMin = $._minAssetsRemaining;
-    return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
-  }
-
-  /// @inheritdoc IStakeToken
-  function getMinAssetsRemaining() external view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._minAssetsRemaining;
-  }
-
-  /// @inheritdoc IStakeToken
-  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external onlyOwner {
-    _setMinAssetsRemaining(newMinAssetsRemaining);
-  }
-
-  function _setMinAssetsRemaining(uint256 newMinAssetsRemaining) internal {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._minAssetsRemaining = newMinAssetsRemaining;
-    emit MinAssetsRemainingChanged(newMinAssetsRemaining);
+    return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
 
   /// @inheritdoc IStakeToken
@@ -449,7 +414,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, IERC4626, Rescuable 
   ) internal returns (uint256 sharesToMint) {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
 
-    sharesToMint = previewStake(amount);
+    sharesToMint = previewDeposit(amount);
     require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
 
     _mint(to, sharesToMint.toUint104());

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-interface IStakeToken {
+import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
+
+interface IStakeToken is IERC4626 {
   struct CooldownSnapshot {
     /// @notice Represent the time of unlocking funds for redemption
     uint40 timestamp;
@@ -30,14 +32,8 @@ interface IStakeToken {
   event FundsReturned(uint256 amount);
   event SlashingSettled();
   event SlashingAdminChanged(address newAdmin);
-  event MinAssetsRemainingChanged(uint256 newMinAssetsRemaining);
 
-  /**
-   * @dev Allows staking a specified amount of STAKED_TOKEN
-   * @param to The address to receiving the shares
-   * @param amount The amount of assets to be staked
-   */
-  function stake(address to, uint256 amount) external;
+  function MIN_ASSETS_REMAINING() external returns (uint256);
 
   /**
    * @dev Redeems shares, and stop earning rewards
@@ -101,17 +97,16 @@ interface IStakeToken {
   function setCooldownSeconds(uint256 cooldownSeconds) external;
 
   /**
-   * @dev returns the exact amount of shares that would be received for the provided number of assets
-   * @param assets the number of assets to stake
-   * @return uint256 shares the number of shares that would be received
-   */
-  function previewStake(uint256 assets) external view returns (uint256);
-
-  /**
    * @dev Activates the cooldown period to unstake
    * - It can't be called if the user is not staking
    */
   function cooldownOnBehalfOf(address from) external;
+
+  /**
+   * @dev Getter for the unstake window
+   * @return unstakeWindow in seconds
+   */
+  function getUnstakeWindow() external returns (uint256);
 
   /**
    * @dev returns the exact amount of assets that would be redeemed for the provided number of shares
@@ -129,13 +124,10 @@ interface IStakeToken {
   function redeemOnBehalf(address from, address to, uint256 amount) external;
 
   /**
-   * @dev Returns the total amount of the underlying asset that is “managed” by Vault.
-   *
-   * - SHOULD include any compounding that occurs from yield.
-   * - MUST be inclusive of any fees that are charged against assets in the Vault.
-   * - MUST NOT revert.
+   * @dev Getter for the pending cooldown of a user
+   * @return pending cooldown
    */
-  function totalAssets() external returns (uint256);
+  function stakersCooldowns(address user) external view returns (CooldownSnapshot memory);
 
   /**
    * @dev Getter of the currently slashable assets
@@ -145,16 +137,8 @@ interface IStakeToken {
   function getMaxSlashableAssets() external view returns (uint256);
 
   /**
-   * @dev Getter of the minimum assets that must remain on the stake token after a slashing is performed
-   * - MUST consider minAssetsRemaining
-   * @return minAssetsRemaining the minimum of assets that need to stay on the contract after a slashing.
+   * @dev Sets the paused state on the token
+   * - MUST be permissioned
    */
-  function getMinAssetsRemaining() external view returns (uint256);
-
-  /**
-   * @dev Setter of minimum assets remaining
-   * - MUST only be called by the owner
-   * @param newMinAssetsRemaining the new minimum amount that always needs to remain on the contract after a slashing.
-   */
-  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external;
+  function setPaused(bool paused) external;
 }

@@ -10,39 +10,39 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
-import {StkTestUtils} from '../StkTestUtils.t.sol';
+import {StakeTestBase} from '../utils/StakeTestBase.sol';
 
-contract Cooldown is StkTestUtils {
-  function test_maxWithdraw(uint104 amountToStake, address user) public {
+contract Cooldown is StakeTestBase {
+  function test_maxWithdraw(uint104 amountToStake, address fuzzUser) public {
     vm.assume(amountToStake > 0);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
-    _stake(amountToStake, user);
+    _stake(amountToStake, fuzzUser);
 
-    uint256 zeroAssetsDueToCooldown = stakeToken.maxWithdraw(user);
+    uint256 zeroAssetsDueToCooldown = stakeToken.maxWithdraw(fuzzUser);
     assertEq(zeroAssetsDueToCooldown, 0);
 
-    vm.startPrank(user);
+    vm.startPrank(fuzzUser);
     stakeToken.cooldown();
 
-    uint256 allAssets = stakeToken.maxWithdraw(user);
+    uint256 allAssets = stakeToken.maxWithdraw(fuzzUser);
     assertEq(amountToStake, allAssets);
   }
 
-  function test_maxRedeem(uint104 amountToStake, address user) public {
+  function test_maxRedeem(uint104 amountToStake, address fuzzUser) public {
     vm.assume(amountToStake > 0);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
     uint256 sharesToMint = stakeToken.convertToShares(amountToStake);
-    _stake(amountToStake, user);
+    _stake(amountToStake, fuzzUser);
 
-    uint256 zeroSharesDueToCooldown = stakeToken.maxRedeem(user);
+    uint256 zeroSharesDueToCooldown = stakeToken.maxRedeem(fuzzUser);
     assertEq(zeroSharesDueToCooldown, 0);
 
-    vm.startPrank(user);
+    vm.startPrank(fuzzUser);
     stakeToken.cooldown();
 
-    uint256 allShares = stakeToken.maxWithdraw(user);
+    uint256 allShares = stakeToken.maxWithdraw(fuzzUser);
     assertEq(allShares, sharesToMint);
   }
 
@@ -63,227 +63,239 @@ contract Cooldown is StkTestUtils {
     assertEq(previewRedeem, assets);
   }
 
-  function test_deposit(uint104 amount, address user) public {
+  function test_deposit(uint104 amount, address fuzzUser) public {
     vm.assume(amount > 0);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
-    deal(address(underlyingToken), user, amount);
-    vm.startPrank(user);
-    underlyingToken.approve(address(stakeToken), amount);
+    deal(address(underlying), fuzzUser, amount);
+    vm.startPrank(fuzzUser);
+    underlying.approve(address(stakeToken), amount);
 
-    uint256 numberOfShares = stakeToken.deposit(amount, user);
+    uint256 numberOfShares = stakeToken.deposit(amount, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amount);
-    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(user));
+    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(fuzzUser));
 
     assertEq(stakeToken.totalSupply(), numberOfShares);
   }
 
-  function test_mint(uint104 amount, address user) public {
+  function test_mint(uint104 amount, address fuzzUser) public {
     vm.assume(amount > 0);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
     uint256 shares = stakeToken.convertToShares(amount);
 
-    deal(address(underlyingToken), user, amount);
-    vm.startPrank(user);
-    underlyingToken.approve(address(stakeToken), amount);
+    deal(address(underlying), fuzzUser, amount);
+    vm.startPrank(fuzzUser);
+    underlying.approve(address(stakeToken), amount);
 
-    stakeToken.mint(shares, user);
+    stakeToken.mint(shares, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amount);
-    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(user));
+    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(fuzzUser));
 
     assertEq(stakeToken.totalSupply(), shares);
   }
 
-  function test_redeem(uint104 amountStaked, uint104 amountRedeemed, address user) public {
+  function test_redeem(uint104 amountStaked, uint104 amountRedeemed, address fuzzUser) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.prank(user);
+    vm.prank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
 
-    vm.startPrank(user);
-    stakeToken.redeem(sharesToRedeem, destination, user);
+    vm.startPrank(fuzzUser);
+    stakeToken.redeem(sharesToRedeem, destination, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
+    assertEq(
+      stakeToken.balanceOf(fuzzUser),
+      stakeToken.convertToShares(amountStaked - amountRedeemed)
+    );
 
-    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(user));
-    assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
+    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(fuzzUser));
+    assertEq(underlying.balanceOf(destination), amountRedeemed);
   }
 
   function test_redeemWithApprove(
     uint104 amountStaked,
     uint104 amountRedeemed,
-    address user
+    address fuzzUser
   ) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0) && user != USER);
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && fuzzUser != user);
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.prank(user);
+    vm.prank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
 
-    vm.startPrank(user);
-    stakeToken.approve(USER, sharesToRedeem);
+    vm.startPrank(fuzzUser);
+    stakeToken.approve(user, sharesToRedeem);
     vm.stopPrank();
 
-    vm.startPrank(USER);
-    stakeToken.redeem(sharesToRedeem, destination, user);
+    vm.startPrank(user);
+    stakeToken.redeem(sharesToRedeem, destination, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
+    assertEq(
+      stakeToken.balanceOf(fuzzUser),
+      stakeToken.convertToShares(amountStaked - amountRedeemed)
+    );
 
-    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(user));
-    assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
+    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(fuzzUser));
+    assertEq(underlying.balanceOf(destination), amountRedeemed);
   }
 
   function test_redeemWithoutApprove(
     uint104 amountStaked,
     uint104 amountRedeemed,
-    address user
+    address fuzzUser
   ) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0) && user != USER);
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && fuzzUser != user);
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.prank(user);
+    vm.prank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
 
-    vm.startPrank(USER);
+    vm.startPrank(user);
     vm.expectRevert(
       abi.encodeWithSelector(
         IERC20Errors.ERC20InsufficientAllowance.selector,
-        address(USER),
+        address(user),
         0,
         sharesToRedeem
       )
     );
-    stakeToken.redeem(sharesToRedeem, destination, user);
+    stakeToken.redeem(sharesToRedeem, destination, fuzzUser);
   }
 
-  function test_withdraw(uint104 amountStaked, uint104 amountRedeemed, address user) public {
+  function test_withdraw(uint104 amountStaked, uint104 amountRedeemed, address fuzzUser) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0));
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0));
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.startPrank(user);
+    vm.startPrank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
-    stakeToken.withdraw(amountRedeemed, destination, user);
+    stakeToken.withdraw(amountRedeemed, destination, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
+    assertEq(
+      stakeToken.balanceOf(fuzzUser),
+      stakeToken.convertToShares(amountStaked - amountRedeemed)
+    );
 
-    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(user));
-    assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
+    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(fuzzUser));
+    assertEq(underlying.balanceOf(destination), amountRedeemed);
   }
 
   function test_withdrawWithApprove(
     uint104 amountStaked,
     uint104 amountRedeemed,
-    address user
+    address fuzzUser
   ) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0) && user != USER);
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && fuzzUser != user);
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.prank(user);
+    vm.prank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
 
-    vm.startPrank(user);
-    stakeToken.approve(USER, sharesToRedeem);
+    vm.startPrank(fuzzUser);
+    stakeToken.approve(user, sharesToRedeem);
     vm.stopPrank();
 
-    vm.startPrank(USER);
-    stakeToken.withdraw(amountRedeemed, destination, user);
+    vm.startPrank(user);
+    stakeToken.withdraw(amountRedeemed, destination, fuzzUser);
     vm.stopPrank();
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
+    assertEq(
+      stakeToken.balanceOf(fuzzUser),
+      stakeToken.convertToShares(amountStaked - amountRedeemed)
+    );
 
-    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(user));
-    assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
+    assertEq(stakeToken.totalSupply(), stakeToken.balanceOf(fuzzUser));
+    assertEq(underlying.balanceOf(destination), amountRedeemed);
   }
 
   function test_withdrawWithoutApprove(
     uint104 amountStaked,
     uint104 amountRedeemed,
-    address user
+    address fuzzUser
   ) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
-    vm.assume(user != address(proxyAdmin) && user != address(0) && user != USER);
+    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && fuzzUser != user);
 
     address destination = vm.addr(100);
     uint256 shares = stakeToken.convertToShares(amountStaked);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
-    _stake(amountStaked, user);
-    assertEq(stakeToken.balanceOf(user), shares);
+    _stake(amountStaked, fuzzUser);
+    assertEq(stakeToken.balanceOf(fuzzUser), shares);
 
-    vm.startPrank(user);
+    vm.startPrank(fuzzUser);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
     vm.stopPrank();
 
-    vm.startPrank(USER);
+    vm.startPrank(user);
 
     vm.expectRevert(
       abi.encodeWithSelector(
         IERC20Errors.ERC20InsufficientAllowance.selector,
-        address(USER),
+        address(user),
         0,
         sharesToRedeem
       )
     );
 
-    stakeToken.withdraw(amountRedeemed, destination, user);
+    stakeToken.withdraw(amountRedeemed, destination, fuzzUser);
   }
 }

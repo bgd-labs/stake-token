@@ -7,11 +7,11 @@ import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
-import {StkTestUtils} from './StkTestUtils.t.sol';
+import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 // @pavelvm5 in this file shares are messed with assets, so I think we should fix these tests in future
 // cause they are not valid + add more complex tests with slashing to find out the order of error
-contract ERC20Std is StkTestUtils {
+contract ERC20Std is StakeTestBase {
   function test_name() external {
     assertEq('Stake Test', stakeToken.name());
   }
@@ -23,9 +23,9 @@ contract ERC20Std is StkTestUtils {
   // mint
   function test_stake(uint104 amount) public {
     vm.assume(amount > 0);
-    _stake(amount, USER);
+    _stake(amount, user);
     assertEq(stakeToken.totalAssets(), amount);
-    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(USER));
+    assertEq(stakeToken.totalAssets(), stakeToken.balanceOf(user));
   }
 
   // burn
@@ -34,39 +34,39 @@ contract ERC20Std is StkTestUtils {
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
     address destination = vm.addr(100);
 
-    _stake(amountStaked, USER);
-    assertEq(stakeToken.balanceOf(USER), stakeToken.convertToShares(amountStaked));
+    _stake(amountStaked, user);
+    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked));
 
-    vm.prank(USER);
+    vm.prank(user);
     stakeToken.cooldown();
     vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
-    _redeem(amountRedeemed, USER, destination);
+    _redeem(amountRedeemed, user, destination);
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);
-    assertEq(stakeToken.balanceOf(USER), stakeToken.convertToAssets(amountStaked - amountRedeemed));
-    assertEq(underlyingToken.balanceOf(destination), amountRedeemed);
+    assertEq(stakeToken.balanceOf(user), stakeToken.convertToAssets(amountStaked - amountRedeemed));
+    assertEq(underlying.balanceOf(destination), amountRedeemed);
   }
 
   function test_approve(uint256 amount) public {
-    assertTrue(stakeToken.approve(USER, amount));
-    assertEq(stakeToken.allowance(address(this), USER), amount);
+    assertTrue(stakeToken.approve(user, amount));
+    assertEq(stakeToken.allowance(address(this), user), amount);
   }
 
   function test_resetApproval(uint256 amount) public {
     test_approve(amount);
-    assertTrue(stakeToken.approve(USER, 0));
-    assertEq(stakeToken.allowance(address(this), USER), 0);
+    assertTrue(stakeToken.approve(user, 0));
+    assertEq(stakeToken.allowance(address(this), user), 0);
   }
 
   function test_transfer(uint104 amountStake, uint104 amountTransfer, address otherUser) external {
-    vm.assume(otherUser != address(proxyAdmin) && otherUser != USER && otherUser != address(0));
+    vm.assume(otherUser != address(proxyAdmin) && otherUser != user && otherUser != address(0));
     vm.assume(amountStake > 1);
     vm.assume(amountTransfer <= amountStake);
     test_stake(amountStake);
-    vm.startPrank(USER);
+    vm.startPrank(user);
     stakeToken.transfer(otherUser, amountTransfer);
     assertEq(stakeToken.balanceOf(otherUser), amountTransfer);
-    assertEq(stakeToken.balanceOf(USER), amountStake - amountTransfer);
+    assertEq(stakeToken.balanceOf(user), amountStake - amountTransfer);
     vm.stopPrank();
   }
 
@@ -75,24 +75,24 @@ contract ERC20Std is StkTestUtils {
     uint104 amountTransfer,
     address otherUser
   ) external {
-    vm.assume(otherUser != address(proxyAdmin) && otherUser != USER && otherUser != address(0));
+    vm.assume(otherUser != address(proxyAdmin) && otherUser != user && otherUser != address(0));
     vm.assume(amountTransfer <= amountStake);
     test_stake(amountStake);
-    vm.prank(USER);
+    vm.prank(user);
     stakeToken.approve(address(this), amountStake);
-    assertTrue(stakeToken.transferFrom(USER, otherUser, amountTransfer));
-    assertEq(stakeToken.allowance(USER, address(this)), amountStake - amountTransfer);
-    assertEq(stakeToken.balanceOf(USER), amountStake - amountTransfer);
+    assertTrue(stakeToken.transferFrom(user, otherUser, amountTransfer));
+    assertEq(stakeToken.allowance(user, address(this)), amountStake - amountTransfer);
+    assertEq(stakeToken.balanceOf(user), amountStake - amountTransfer);
     assertEq(stakeToken.balanceOf(otherUser), amountTransfer);
   }
 
   function test_stakeToZeroShouldRevert() external {
     uint104 amount = 100;
-    deal(address(underlyingToken), USER, amount);
-    vm.startPrank(USER);
-    underlyingToken.approve(address(stakeToken), amount);
+    deal(address(underlying), user, amount);
+    vm.startPrank(user);
+    underlying.approve(address(stakeToken), amount);
     vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
-    stakeToken.stake(address(0), amount);
+    stakeToken.deposit(amount, address(0));
     vm.stopPrank();
   }
 }
