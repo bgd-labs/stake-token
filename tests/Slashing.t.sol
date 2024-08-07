@@ -28,7 +28,7 @@ contract Slashing is StakeTestBase {
   }
 
   function test_slash_shouldRevertWithFundsLteMinimum(uint256 amount) public {
-    vm.assume(amount != 0 && amount <= stakeToken.getMinAssetsRemaining());
+    vm.assume(amount != 0 && amount <= stakeToken.MIN_ASSETS_REMAINING());
     address destination = vm.addr(100);
     _stake(amount, user);
 

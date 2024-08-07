@@ -24,13 +24,12 @@ contract InvariantHandler is CommonBase, StdCheats, StdUtils {
   uint256 internal currentActorIndex;
   address internal currentActor;
   uint256 public ghost_sumOfStakedAssets = 0;
+  uint256 public ghost_lastExchangeRate;
 
   modifier useActor(uint256 actorIndexSeed) {
     currentActorIndex = bound(actorIndexSeed, 0, actors.length - 1);
     currentActor = actors[currentActorIndex];
-    vm.startPrank(currentActor);
     _;
-    vm.stopPrank();
   }
 
   constructor(IStakeToken stakeToken, address slashingAdmin) {
@@ -39,6 +38,7 @@ contract InvariantHandler is CommonBase, StdCheats, StdUtils {
     actors.push(vm.addr(1000));
     actors.push(vm.addr(1001));
     actors.push(vm.addr(1002));
+    ghost_lastExchangeRate = stakeToken.getExchangeRate();
   }
 
   function stake(uint256 assets, uint256 actorIndexSeed) external useActor(actorIndexSeed) {
@@ -66,6 +66,8 @@ contract InvariantHandler is CommonBase, StdCheats, StdUtils {
   }
 
   function slash(uint256 assets) external {
+    assets = bound(assets, 1, ghost_sumOfStakedAssets);
+    ghost_lastExchangeRate = _stakeToken.getExchangeRate();
     ghost_sumOfStakedAssets -= _stakeToken.helper_slash(vm, _slashingAdmin, vm.addr(0xB0B), assets);
   }
 

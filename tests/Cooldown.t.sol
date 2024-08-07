@@ -10,7 +10,6 @@ import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/Pro
 import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-
 contract Cooldown is StakeTestBase {
   /**
    * cooldown should activate for a given block.timestamp and cooldown the currently held amount
@@ -113,7 +112,9 @@ contract Cooldown is StakeTestBase {
   ) public {
     vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
     vm.assume(secondsAfterCooldownActivation < stakeToken.getCooldownSeconds());
-    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0));
+    vm.assume(
+      fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0)
+    );
 
     _stake(amountToStake, fuzzUser);
     vm.prank(fuzzUser);
@@ -137,7 +138,9 @@ contract Cooldown is StakeTestBase {
       secondsAfterCooldownActivation >
         stakeToken.getCooldownSeconds() + stakeToken.getUnstakeWindow()
     );
-    vm.assume(fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0));
+    vm.assume(
+      fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0)
+    );
 
     _stake(amountToStake, fuzzUser);
     vm.prank(fuzzUser);

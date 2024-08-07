@@ -34,18 +34,9 @@ contract StataStakeToken is StakeToken {
     string calldata symbol,
     address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow,
-    uint256 minAssetsRemaining
+    uint256 unstakeWindow
   ) external virtual override initializer {
-    _initialize(
-      stakedToken,
-      name,
-      symbol,
-      owner,
-      cooldownSeconds,
-      unstakeWindow,
-      minAssetsRemaining
-    );
+    _initialize(stakedToken, name, symbol, owner, cooldownSeconds, unstakeWindow);
     address cachedAsset = asset();
     IERC20 underlying = IERC20(IERC4626(cachedAsset).asset());
     IERC20 underlyingAToken = IERC20(address(IStaticATokenLM(cachedAsset).aToken()));
@@ -53,7 +44,7 @@ contract StataStakeToken is StakeToken {
     SafeERC20.forceApprove(underlyingAToken, cachedAsset, type(uint256).max);
   }
 
-  function deposit(address to, uint256 amount, Token inputType) external returns (uint256){
+  function deposit(address to, uint256 amount, Token inputType) external returns (uint256) {
     if (inputType == Token.UNDERLYING) {
       address cachedAsset = asset();
       IERC20 underlying = IERC20(IERC4626(cachedAsset).asset());

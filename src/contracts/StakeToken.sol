@@ -30,8 +30,12 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using SafeCast for uint256;
   using SafeCast for uint104;
 
+  /// @dev the exchange rate on stake-token "up only" and reflects hom many stk token you receive for the underlying
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
+
+  /// @dev the minimum assets to remain in the contract to prevent division by zero and limit griefing
+  uint256 public constant MIN_ASSETS_REMAINING = 1e4;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
   IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
@@ -42,8 +46,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
     uint216 _currentExchangeRate;
-    /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
-    uint256 _minAssetsRemaining;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -58,7 +60,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _;
   }
 
-  function _getStakeTokenStorage() private pure returns (StakeTokenStorage storage $) {
+  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
     assembly {
       $.slot := StakeTokenStorageLocation
     }
@@ -82,18 +84,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     string calldata symbol,
     address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow,
-    uint256 minAssetsRemaining
+    uint256 unstakeWindow
   ) external virtual initializer {
-    _initialize(
-      stakedToken,
-      name,
-      symbol,
-      owner,
-      cooldownSeconds,
-      unstakeWindow,
-      minAssetsRemaining
-    );
+    _initialize(stakedToken, name, symbol, owner, cooldownSeconds, unstakeWindow);
   }
 
   function _initialize(
@@ -102,8 +95,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     string calldata symbol,
     address owner,
     uint256 cooldownSeconds,
-    uint256 unstakeWindow,
-    uint256 minAssetsRemaining
+    uint256 unstakeWindow
   ) internal onlyInitializing {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
@@ -113,7 +105,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
-    _setMinAssetsRemaining(minAssetsRemaining);
   }
 
   function setPaused(bool paused) external onlyOwnerOrGuardian {
@@ -367,26 +358,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   /// @inheritdoc IStakeToken
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    uint256 cachedMin = $._minAssetsRemaining;
-    return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
-  }
-
-  /// @inheritdoc IStakeToken
-  function getMinAssetsRemaining() external view returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._minAssetsRemaining;
-  }
-
-  /// @inheritdoc IStakeToken
-  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external onlyOwner {
-    _setMinAssetsRemaining(newMinAssetsRemaining);
-  }
-
-  function _setMinAssetsRemaining(uint256 newMinAssetsRemaining) internal {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._minAssetsRemaining = newMinAssetsRemaining;
-    emit MinAssetsRemainingChanged(newMinAssetsRemaining);
+    return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
 
   /// @inheritdoc IStakeToken

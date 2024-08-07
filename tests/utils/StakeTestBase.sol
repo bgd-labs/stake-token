@@ -50,8 +50,7 @@ contract StakeTestBase is TestnetProcedures {
             'stkTest',
             admin,
             15 days,
-            2 days,
-            1 ether
+            2 days
           )
         )
       )

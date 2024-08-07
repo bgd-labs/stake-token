@@ -32,7 +32,8 @@ interface IStakeToken is IERC4626 {
   event FundsReturned(uint256 amount);
   event SlashingSettled();
   event SlashingAdminChanged(address newAdmin);
-  event MinAssetsRemainingChanged(uint256 newMinAssetsRemaining);
+
+  function MIN_ASSETS_REMAINING() external returns (uint256);
 
   /**
    * @dev Redeems shares, and stop earning rewards
@@ -101,11 +102,10 @@ interface IStakeToken is IERC4626 {
    */
   function cooldownOnBehalfOf(address from) external;
 
-
   /**
-  * @dev Getter for the unstake window
-  * @return unstakeWindow in seconds
-  */
+   * @dev Getter for the unstake window
+   * @return unstakeWindow in seconds
+   */
   function getUnstakeWindow() external returns (uint256);
 
   /**
@@ -137,18 +137,8 @@ interface IStakeToken is IERC4626 {
   function getMaxSlashableAssets() external view returns (uint256);
 
   /**
-   * @dev Getter of the minimum assets that must remain on the stake token after a slashing is performed
-   * - MUST consider minAssetsRemaining
-   * @return minAssetsRemaining the minimum of assets that need to stay on the contract after a slashing.
+   * @dev Sets the paused state on the token
+   * - MUST be permissioned
    */
-  function getMinAssetsRemaining() external view returns (uint256);
-
-  /**
-   * @dev Setter of minimum assets remaining
-   * - MUST only be called by the owner
-   * @param newMinAssetsRemaining the new minimum amount that always needs to remain on the contract after a slashing.
-   */
-  function setMinAssetsRemaining(uint256 newMinAssetsRemaining) external;
-
   function setPaused(bool paused) external;
 }

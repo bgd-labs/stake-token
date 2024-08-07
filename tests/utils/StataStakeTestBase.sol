@@ -49,8 +49,7 @@ contract StataStakeTestBase is StakeTestBase {
             'stkTest',
             admin,
             15 days,
-            2 days,
-            1 ether
+            2 days
           )
         )
       )
@@ -59,7 +58,7 @@ contract StataStakeTestBase is StakeTestBase {
   }
 
   function _dealAToken(uint256 amount, address actor) internal {
-      _dealUnderlying(amount, actor);
+    _dealUnderlying(amount, actor);
     vm.prank(actor);
     IERC20Metadata(underlying).approve(address(pool), amount);
     vm.prank(actor);

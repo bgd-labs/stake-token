@@ -8,8 +8,11 @@ import {IStakeToken} from '../src/contracts/interfaces/IStakeToken.sol';
 import {StataStakeTestBase} from './utils/StataStakeTestBase.sol';
 import {InvariantHandler} from './utils/InvariantHandler.sol';
 import {StakeTestBase} from './utils/StakeTestBase.sol';
+import {ActionsLibrary} from './utils/ActionsLibrary.sol';
 
 contract InvariantTest is StakeTestBase {
+  using ActionsLibrary for IStakeToken;
+
   InvariantHandler public handler;
 
   function setUp() public virtual override {
@@ -30,5 +33,22 @@ contract InvariantTest is StakeTestBase {
       IERC20(stakeToken.asset()).balanceOf(address(stakeToken)),
       handler.ghost_sumOfStakedAssets()
     );
+  }
+
+  /**
+   * the exchangeRate MUST always increase after a slashing
+   */
+  function invariant_exchangeRate() external view {
+    assertLe(handler.ghost_lastExchangeRate(), stakeToken.getExchangeRate());
+  }
+
+  /**
+   * the assets lost to the contract between deposit and redeem at the same exchange rate should be in the wei(s)
+   */
+  function invariant_deposit_and_redeem() external view {
+    uint256 amount = 1 ether;
+    uint256 shares = stakeToken.previewDeposit(amount);
+    uint256 assets = stakeToken.previewRedeem(shares);
+    assertApproxEqAbs(assets, amount, 1e2);
   }
 }
