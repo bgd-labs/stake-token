@@ -18,7 +18,7 @@ import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzep
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 
-import {ERC20PermitUpgradeable} from './ERC20PermitUpgradeable.sol';
+import {ERC20PermitUpgradeable, ECDSA} from './ERC20PermitUpgradeable.sol';
 import {ERC20Upgradeable} from './ERC20Upgradeable.sol';
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
@@ -28,7 +28,20 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   using SafeERC20 for IERC20;
   using PercentageMath for uint256;
   using SafeCast for uint256;
-  using SafeCast for uint104;
+
+  /// @dev type-hashes for meta transactions
+
+  /// @inheritdoc IStakeToken
+  bytes32 public constant METADEPOSIT_TYPEHASH =
+    keccak256(
+      'Deposit(address owner,address receiver,uint256 assets,uint256 nonce,uint256 deadline)'
+    );
+
+  /// @inheritdoc IStakeToken
+  bytes32 public constant METAREDEEM_TYPEHASH =
+    keccak256(
+      'Deposit(address owner,address receiver,uint256 amount,uint256 nonce,uint256 deadline)'
+    );
 
   /// @dev the exchange rate on stake-token "up only" and reflects hom many stk token you receive for the underlying
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
@@ -235,6 +248,75 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return _stake(msg.sender, receiver, assets, true);
   }
 
+  /// @inheritdoc IStakeToken
+  function metaRedeem(
+    address owner,
+    address receiver,
+    uint256 amount,
+    uint256 deadline,
+    SignatureParams calldata sigParams
+  ) external returns (uint256) {
+    if (block.timestamp > deadline) {
+      revert ERC2612ExpiredSignature(deadline);
+    }
+
+    bytes32 structHash = keccak256(
+      abi.encode(METAREDEEM_TYPEHASH, owner, receiver, amount, _useNonce(owner), deadline)
+    );
+
+    bytes32 hash = _hashTypedDataV4(structHash);
+
+    address signer = ECDSA.recover(hash, sigParams.v, sigParams.r, sigParams.s);
+    if (signer != owner) {
+      revert ERC2612InvalidSigner(signer, owner);
+    }
+
+    return _redeem(owner, receiver, amount.toUint104());
+  }
+
+  /// @inheritdoc IStakeToken
+  function metaDeposit(
+    address owner,
+    address receiver,
+    uint256 assets,
+    uint256 deadline,
+    PermitParams calldata permit,
+    SignatureParams calldata sigParams
+  ) external returns (uint256) {
+    if (block.timestamp > deadline) {
+      revert ERC2612ExpiredSignature(deadline);
+    }
+
+    bytes32 structHash = keccak256(
+      abi.encode(METADEPOSIT_TYPEHASH, owner, receiver, assets, _useNonce(owner), deadline)
+    );
+
+    bytes32 hash = _hashTypedDataV4(structHash);
+
+    address signer = ECDSA.recover(hash, sigParams.v, sigParams.r, sigParams.s);
+    if (signer != owner) {
+      revert ERC2612InvalidSigner(signer, owner);
+    }
+
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    // assume if deadline 0 no permit was supplied
+    if (permit.deadline != 0) {
+      try
+        IERC20Permit($._smConfig.stakedToken).permit(
+          owner,
+          address(this),
+          permit.value,
+          permit.deadline,
+          permit.v,
+          permit.r,
+          permit.s
+        )
+      {} catch {}
+    }
+
+    return _stake(owner, receiver, assets, true);
+  }
+
   ///@inheritdoc IERC4626
   function mint(
     uint256 shares,
@@ -243,33 +325,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 assets = previewMint(shares);
     _stake(msg.sender, receiver, assets, true);
     return assets;
-  }
-
-  /// @inheritdoc IStakeToken
-  function stakeWithPermit(
-    uint256 amount,
-    uint256 deadline,
-    uint8 v,
-    bytes32 r,
-    bytes32 s
-  ) external whenNotPaused {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    try
-      IERC20Permit($._smConfig.stakedToken).permit(
-        msg.sender,
-        address(this),
-        amount,
-        deadline,
-        v,
-        r,
-        s
-      )
-    {
-      // do nothing
-    } catch (bytes memory) {
-      // do nothing
-    }
-    _stake(msg.sender, msg.sender, amount, true);
   }
 
   /// @inheritdoc IStakeToken

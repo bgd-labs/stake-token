@@ -21,6 +21,24 @@ interface IStakeToken is IERC4626 {
     // reserved for future use
   }
 
+  /// @notice v,r,s components of a signature
+  struct SignatureParams {
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+  }
+
+  struct PermitParams {
+    /// @notice value to approve
+    uint256 value;
+    /// @notice signature expiration time
+    uint256 deadline;
+    /// @notice v,r,s components of a signature
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+  }
+
   event Cooldown(address indexed user, uint256 amount);
 
   event MaxSlashablePercentageChanged(uint256 newPercentage);
@@ -35,6 +53,44 @@ interface IStakeToken is IERC4626 {
 
   function MIN_ASSETS_REMAINING() external returns (uint256);
 
+  function METADEPOSIT_TYPEHASH() external view returns (bytes32);
+
+  function METAREDEEM_TYPEHASH() external view returns (bytes32);
+
+  /**
+   * @dev Mints shares Vault shares to receiver by depositing exactly amount of underlying tokens, gasless
+   * @param owner address of funds owner
+   * @param receiver address of funds receiver
+   * @param assets amount of underlying to deposit
+   * @param deadline The permit execution deadline
+   * @param permit The v,r,s components together with value and deadline of permit packed into PermitParams, can be empty
+   * @param sigParams The v,r,s components of the signed message packed into SignatureParams
+   */
+  function metaDeposit(
+    address owner,
+    address receiver,
+    uint256 assets,
+    uint256 deadline,
+    PermitParams calldata permit,
+    SignatureParams calldata sigParams
+  ) external returns (uint256);
+
+  /**
+   * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver, gasless
+   * @param owner address of funds owner
+   * @param receiver address of funds receiver
+   * @param amount amount of shares to burn
+   * @param deadline The permit execution deadline
+   * @param sigParams The v,r,s components of the signed message packed into SignatureParams
+   */
+  function metaRedeem(
+    address owner,
+    address receiver,
+    uint256 amount,
+    uint256 deadline,
+    SignatureParams calldata sigParams
+  ) external returns (uint256);
+
   /**
    * @dev Redeems shares, and stop earning rewards
    * @param to Address to redeem to
@@ -47,22 +103,6 @@ interface IStakeToken is IERC4626 {
    * - It can't be called if the user is not staking
    */
   function cooldown() external;
-
-  /**
-   * @dev Allows staking a certain amount of STAKED_TOKEN with gasless approvals (permit)
-   * @param amount The amount to be staked
-   * @param deadline The permit execution deadline
-   * @param v The v component of the signed message
-   * @param r The r component of the signed message
-   * @param s The s component of the signed message
-   */
-  function stakeWithPermit(
-    uint256 amount,
-    uint256 deadline,
-    uint8 v,
-    bytes32 r,
-    bytes32 s
-  ) external;
 
   /**
    * @dev Returns the current exchange rate

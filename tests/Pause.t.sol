@@ -36,12 +36,14 @@ contract Pause is StakeTestBase {
     stakeToken.deposit(0, user);
   }
 
-  function test_stakeWithPermit_should_revert() external {
+  function test_metaDeposit_should_revert() external {
     _setPaused(true);
 
+    IStakeToken.PermitParams memory permit;
+    IStakeToken.SignatureParams memory sigParams;
+
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    vm.prank(user);
-    stakeToken.stakeWithPermit(0, 0, 0, bytes32(0), bytes32(0));
+    stakeToken.metaDeposit(address(0), address(0), 0, 0, permit, sigParams);
   }
 
   function test_redeem_should_revert() external {
