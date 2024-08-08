@@ -21,8 +21,10 @@ interface IStakeToken is IERC4626 {
     // reserved for future use
   }
 
-  event Cooldown(address indexed user, uint256 amount);
+  error OnlyPauseGuardian(address caller);
+  error OnlyConfigurationAdmin(address caller);
 
+  event Cooldown(address indexed user, uint256 amount);
   event MaxSlashablePercentageChanged(uint256 newPercentage);
   event Slashed(address indexed destination, uint256 amount);
   event SlashingExitWindowDurationChanged(uint256 windowSeconds);

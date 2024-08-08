@@ -15,6 +15,8 @@ import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
 import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
+import {IACLManager} from 'aave-v3-origin/core/contracts/interfaces/IACLManager.sol';
+
 
 import {PercentageMath} from './lib/PercentageMath.sol';
 
@@ -60,6 +62,20 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     _;
   }
 
+  modifier onlyPauseGuardian() {
+    if (!canPause(msg.sender)) revert OnlyPauseGuardian(msg.sender);
+    _;
+  }
+
+  modifier onlyConfigurationAdmin() {
+    if (msg.sender != ADDRESSES_PROVIDER.getACLAdmin()) revert OnlyConfigurationAdmin(msg.sender);
+    _;
+  }
+
+  function canPause(address actor) public view returns (bool) {
+    return IACLManager(ADDRESSES_PROVIDER.getACLManager()).isEmergencyAdmin(actor);
+  }
+
   function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
     assembly {
       $.slot := StakeTokenStorageLocation
@@ -73,9 +89,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   constructor(IRewardsController rewardsController, IPoolAddressesProvider provider) {
+    _disableInitializers();
     REWARDS_CONTROLLER = rewardsController;
     ADDRESSES_PROVIDER = provider;
-    _disableInitializers();
   }
 
   function initialize(
@@ -100,14 +116,14 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._smConfig.stakedToken = stakedToken;
     __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
-    __Ownable_init(owner);
     __EIP712_init(string(abi.encodePacked('stk', name)), '1');
     _setCooldownSeconds(cooldownSeconds);
     _setUnstakeWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  function setPaused(bool paused) external onlyOwnerOrGuardian {
+  /// @inheritdoc IStakeToken
+  function setPaused(bool paused) external onlyPauseGuardian {
     if (paused) _pause();
     else _unpause();
   }
@@ -159,10 +175,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /// @inheritdoc IRescuable
   function whoCanRescue() public view override returns (address) {
-    return owner();
+    return ADDRESSES_PROVIDER.getACLAdmin();
   }
 
-  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
+  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyConfigurationAdmin {
     _setUnstakeWindow(newUnstakeWindow);
   }
 
@@ -278,7 +294,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function cooldownOnBehalfOf(address from) external whenNotPaused onlyOwner {
+  function cooldownOnBehalfOf(address from) external whenNotPaused onlyConfigurationAdmin {
     _cooldown(from);
   }
 
@@ -292,7 +308,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     address from,
     address to,
     uint256 amount
-  ) external whenNotPaused onlyOwner {
+  ) external whenNotPaused onlyConfigurationAdmin {
     _redeem(from, to, amount.toUint104());
   }
 
@@ -362,7 +378,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function setCooldownSeconds(uint256 cooldownSeconds) external onlyOwner {
+  function setCooldownSeconds(uint256 cooldownSeconds) external onlyConfigurationAdmin {
     _setCooldownSeconds(cooldownSeconds);
   }
 

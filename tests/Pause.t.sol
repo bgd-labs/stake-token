@@ -74,8 +74,15 @@ contract Pause is StakeTestBase {
     stakeToken.transfer(user, 1 ether);
   }
 
+  function test_setPaused_should_revert(address user) external {
+    vm.assume(user != poolAdmin && user != proxyAdmin);
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.OnlyPauseGuardian.selector, user));
+    vm.prank(user);
+    stakeToken.setPaused(true);
+  }
+
   function _setPaused(bool paused) internal {
-    vm.prank(admin);
+    vm.prank(poolAdmin);
     stakeToken.setPaused(paused);
   }
 }
