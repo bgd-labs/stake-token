@@ -17,7 +17,7 @@ methods {
     function totalSupply() external returns (uint256) envfree;
     function stakerRewardsToClaim(address) external returns (uint256) envfree;
     function stakersCooldowns(address) external returns (uint40, uint216) envfree;
-    function getDefaultCooldownSeconds() external returns (uint256) envfree;
+    function getCooldownSeconds() external returns (uint256) envfree;
     function getExchangeRate() external returns (uint216) envfree;
     function inPostSlashingPeriod() external returns (bool) envfree;
     function getMaxSlashablePercentage() external returns (uint256) envfree;
@@ -131,7 +131,7 @@ definition is_admin_func(method f) returns bool =
     || f.selector == sig:slash(address,uint256).selector
     || f.selector == sig:returnFunds(uint256).selector
     || f.selector == sig:cooldownOnBehalfOf(address).selector
-    || f.selector == sig:setDefaultCooldownSeconds(uint256).selector
+    || f.selector == sig:setCooldownSeconds(uint256).selector
     || f.selector == sig:claimRoleAdmin(uint256).selector
     || f.selector == sig:configureAssets(DistributionTypes.AssetConfigInput[]).selector
         ;
@@ -140,3 +140,8 @@ definition is_admin_func(method f) returns bool =
 function get_maxSlashable() returns mathint {
     return previewRedeem(totalSupply()) *getMaxSlashablePercentage() / PERCENTAGE_FACTOR();
 }
+
+
+
+
+
