@@ -14,9 +14,13 @@ import {ERC20PermitUpgradeable, ERC20Upgradeable} from 'openzeppelin-contracts-u
 import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 
+import {IERC20 as SafeIERC20}  from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+
+import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
 contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20PausableUpgradeable, ERC4626Upgradeable, UpgradableOwnableWithGuardian {
+  using SafeERC20 for SafeIERC20;
   using SafeCast for uint256;
   using Math for uint256;
 
@@ -37,6 +41,8 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
 
   error ZeroExchangeRate();
   error ZeroBalanceOnCooldown();
+  error ZeroAmountSlashing();
+  error ZeroFundsAvailable();
   error CallerIsNotSlashingAdmin();
   error NotApprovedForCooldown(address owner, address spender);
 
@@ -74,7 +80,32 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  function slash(address destination, uint256 amount) external override onlySlashingAdmin returns (uint256) {}
+  function slash(address destination, uint256 amount) external override onlySlashingAdmin returns (uint256) {
+    if (amount == 0) {
+      revert ZeroAmountSlashing();
+    }
+
+    uint256 maxSlashable = getMaxSlashableAssets();
+
+    if (maxSlashable == 0) {
+      revert ZeroFundsAvailable();
+    }
+
+    if (amount > maxSlashable) {
+      amount = maxSlashable;
+    }
+
+    uint256 currentShares = totalSupply();
+    uint256 balance = convertToAssets(currentShares);
+
+    _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
+  
+    SafeIERC20(asset()).safeTransfer(destination, amount);
+
+    emit Slashed(destination, amount);
+
+    return amount;
+  }
 
   function cooldown() external override whenNotPaused {
     _cooldown(msg.sender);
@@ -104,15 +135,6 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
     }
   }
 
-  function decimals()
-    public
-    view
-    override(ERC20Upgradeable, ERC4626Upgradeable)
-    returns (uint8)
-  {
-    return ERC4626Upgradeable.decimals();
-  }
-
   // @pavelvm5 why is it returning 216? changed to 256
   function getExchangeRate() external view override returns (uint256) {
     return _getStakeTokenStorage()._currentExchangeRate;
@@ -124,6 +146,12 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
 
   function getUnstakeWindow() external view override returns (uint256) {
     return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
+  }
+
+  function stakersCooldowns(
+    address user
+  ) external view override returns (CooldownSnapshot memory) {
+    return _getStakeTokenStorage()._stakersCooldowns[user];
   }
 
   function maxWithdraw(address owner) public view override returns (uint256) {
@@ -150,15 +178,18 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
     return 0;
   }
 
-  function stakersCooldowns(
-    address user
-  ) external view override returns (CooldownSnapshot memory) {
-    return _getStakeTokenStorage()._stakersCooldowns[user];
-  }
-
-  function getMaxSlashableAssets() external view override returns (uint256) {
+  function getMaxSlashableAssets() public view override returns (uint256) {
     uint256 currentAssets = totalAssets();
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
+  }
+
+  function decimals()
+    public
+    view
+    override(ERC20Upgradeable, ERC4626Upgradeable)
+    returns (uint8)
+  {
+    return ERC4626Upgradeable.decimals();
   }
 
   function _cooldown(address from) internal {
@@ -170,34 +201,34 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint40 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint40();
+    uint32 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint32();
 
     $._stakersCooldowns[from] = CooldownSnapshot({
       timestamp: timeForRedemption,
-      amount: uint216(amount)
+      amount: amount.toUint224()
     });
 
     emit Cooldown(from, amount);
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint40();
+    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function _setCooldownSeconds(uint256 newCooldownSeconds) internal {
-    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newCooldownSeconds.toUint40();
+    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newCooldownSeconds.toUint32();
 
     emit CooldownSecondsChanged(newCooldownSeconds);
   }
 
-  function _updateExchangeRate(uint216 newExchangeRate) internal {
+  function _updateExchangeRate(uint256 newExchangeRate) internal {
     if (newExchangeRate == 0) {
       revert ZeroExchangeRate();
     }
 
-    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
+    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate.toUint192();
 
     emit ExchangeRateChanged(newExchangeRate);
   }
@@ -210,6 +241,13 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, rounding);
+  }
+
+  function _getExchangeRate(
+    uint256 newTotalAssets,
+    uint256 newTotalShares
+  ) internal pure returns (uint256) {
+    return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
   }
 
   // @pavelvm5 add from old stakeToken here handle action for reward controller

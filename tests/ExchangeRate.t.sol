@@ -45,7 +45,7 @@ contract ExchangeRateTest is StakeToken, Test {
     exchangeRate = bound(exchangeRate, INITIAL_EXCHANGE_RATE, 1e29);
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    $._currentExchangeRate = uint216(exchangeRate);
+    $._currentExchangeRate = uint192(exchangeRate);
     uint256 shares = previewDeposit(amount);
     uint256 assets = previewRedeem(shares);
     assertApproxEqAbs(amount, assets, 3);

@@ -8,7 +8,7 @@ import {IPool} from 'aave-v3-origin/core/contracts/interfaces/IPool.sol';
 import {DataTypes} from 'aave-v3-origin/core/contracts/protocol/libraries/configuration/ReserveConfiguration.sol';
 import {StaticATokenFactory} from 'aave-v3-origin/periphery/contracts/static-a-token/StaticATokenFactory.sol';
 import {StaticATokenLM, IStaticATokenLM, IERC20, IERC20Metadata, ERC20} from 'aave-v3-origin/periphery/contracts/static-a-token/StaticATokenLM.sol';
-import {StataStakeToken} from '../../src/contracts/variants/StataStakeToken.sol';
+// import {StataStakeToken} from '../../src/contracts/variants/StataStakeToken.sol';
 import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
 import {StakeTestBase} from './StakeTestBase.sol';
 import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
@@ -16,12 +16,12 @@ import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
 contract StataStakeTestBase is StakeTestBase {
   StaticATokenFactory public factory;
   StaticATokenLM public staticATokenLM;
-  StataStakeToken public stataStakeToken;
+  // StataStakeToken public stataStakeToken;
 
   function setUp() public virtual override {
     _setupProtocol();
     address token = _setupStaticAToken();
-    _setupStataStakeToken(token);
+    // _setupStataStakeToken(token);
   }
 
   function _setupStaticAToken() internal returns (address) {
@@ -32,30 +32,30 @@ contract StataStakeTestBase is StakeTestBase {
     return address(staticATokenLM);
   }
 
-  function _setupStataStakeToken(address stakeTokenUnderlying) internal {
-    StataStakeToken stakeTokenImpl = new StataStakeToken(
-      IRewardsController(address(contracts.rewardsControllerProxy)),
-      contracts.poolAddressesProvider
-    );
-    stakeToken = IStakeToken(
-      address(
-        new TransparentUpgradeableProxy(
-          address(stakeTokenImpl),
-          address(proxyAdmin),
-          abi.encodeWithSelector(
-            StataStakeToken.initialize.selector,
-            address(stakeTokenUnderlying),
-            'Stake Test',
-            'stkTest',
-            admin,
-            15 days,
-            2 days
-          )
-        )
-      )
-    );
-    stataStakeToken = StataStakeToken(address(stakeToken));
-  }
+  // function _setupStataStakeToken(address stakeTokenUnderlying) internal {
+  //   StataStakeToken stakeTokenImpl = new StataStakeToken(
+  //     IRewardsController(address(contracts.rewardsControllerProxy)),
+  //     contracts.poolAddressesProvider
+  //   );
+  //   stakeToken = IStakeToken(
+  //     address(
+  //       new TransparentUpgradeableProxy(
+  //         address(stakeTokenImpl),
+  //         address(proxyAdmin),
+  //         abi.encodeWithSelector(
+  //           StataStakeToken.initialize.selector,
+  //           address(stakeTokenUnderlying),
+  //           'Stake Test',
+  //           'stkTest',
+  //           admin,
+  //           15 days,
+  //           2 days
+  //         )
+  //       )
+  //     )
+  //   );
+  //   stataStakeToken = StataStakeToken(address(stakeToken));
+  // }
 
   function _dealAToken(uint256 amount, address actor) internal {
     _dealUnderlying(amount, actor);

@@ -6,22 +6,21 @@ interface IStakeToken {
     mapping(address => CooldownSnapshot) _stakersCooldowns;
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
-    uint216 _currentExchangeRate;
+    uint192 _currentExchangeRate;
   }
 
   struct CooldownSnapshot {
     /// @notice Represent the time of unlocking funds for redemption
-    uint40 timestamp;
+    uint32 timestamp;
     /// @notice Amount of tokens available for redeem
-    uint216 amount;
+    uint224 amount;
   }
 
   struct SmConfig {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
-    uint40 unstakeWindowSeconds;
+    uint32 unstakeWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
-    uint40 cooldownSeconds;
-    /// @notice The address of the underlying asset
+    uint32 cooldownSeconds;
   }
 
   event SlashingSettled();
@@ -33,7 +32,7 @@ interface IStakeToken {
   event SlashingExitWindowDurationChanged(uint256 windowSeconds);
   event CooldownSecondsChanged(uint256 cooldownSeconds);
   event UnstakeWindowChanged(uint256 unstakeWindow);
-  event ExchangeRateChanged(uint216 exchangeRate);
+  event ExchangeRateChanged(uint256 exchangeRate);
   event SlashingAdminChanged(address newAdmin);
   
   event FundsReturned(uint256 amount);
