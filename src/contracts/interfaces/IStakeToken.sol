@@ -23,19 +23,23 @@ interface IStakeToken is IERC4626 {
     // reserved for future use
   }
 
-  /// @notice thrown when an entity tries to slash that is not listed as admin
+  /// @notice Thrown when an entity tries to slash that is not listed as admin.
+  /// @param caller The caller.
   error OnlySlashingAdmin(address caller);
-  /// @notice thrown when a passed amount is zero
+  /// @notice Thrown when a passed amount is zero.
   error ZeroAmount();
-  /// @notice throw when the passed assets amount corresponds to zero shares
+  /// @notice Throw when the passed assets amount corresponds to zero shares.
+  /// @param assets The asset amount.
   error ZeroSharesAfterConversion(uint256 assets);
-  /// @notice thrown when there are no funds available to slash
+  /// @notice Thrown when there are no funds available to slash.
   error NoFundsAvailable();
-
+  /// @notice Thrown when trying to redeem before the cooldown is read.
+  /// @param cooldownEndTimestamp The timestamp at which the shares can be redeemed.
   error CooldownNotReady(uint40 cooldownEndTimestamp);
-
+  /// @notice Thrown when trying to redeem after the cooldown has been expired.
+  /// @param expirationTimestamp The timestamp at which the cooldown expired.
   error CooldownExpired(uint40 expirationTimestamp);
-
+  /// @notice Throw when the cooldown amount is zero.
   error ZeroAmountRedeemable();
 
   event Cooldown(address indexed user, uint256 amount);
