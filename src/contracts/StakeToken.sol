@@ -163,17 +163,7 @@ contract StakeToken is
   }
 
   function maxWithdraw(address owner) public view override returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[owner];
-
-    if (
-      block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindowSeconds
-    ) {
-      return _convertToAssets($._stakersCooldowns[owner].amount, Math.Rounding.Floor);
-    }
-
-    return 0;
+    return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
   }
 
   function maxRedeem(address owner) public view override returns (uint256) {
