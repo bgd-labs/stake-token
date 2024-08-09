@@ -40,7 +40,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   /// @inheritdoc IStakeToken
   bytes32 public constant METAREDEEM_TYPEHASH =
     keccak256(
-      'Deposit(address owner,address receiver,uint256 amount,uint256 nonce,uint256 deadline)'
+      'Redeem(address owner,address receiver,uint256 shares,uint256 nonce,uint256 deadline)'
     );
 
   /// @dev the exchange rate on stake-token "up only" and reflects hom many stk token you receive for the underlying
@@ -252,7 +252,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   function metaRedeem(
     address owner,
     address receiver,
-    uint256 amount,
+    uint256 shares,
     uint256 deadline,
     SignatureParams calldata sigParams
   ) external returns (uint256) {
@@ -261,7 +261,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     }
 
     bytes32 structHash = keccak256(
-      abi.encode(METAREDEEM_TYPEHASH, owner, receiver, amount, _useNonce(owner), deadline)
+      abi.encode(METAREDEEM_TYPEHASH, owner, receiver, shares, _useNonce(owner), deadline)
     );
 
     bytes32 hash = _hashTypedDataV4(structHash);
@@ -271,7 +271,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
       revert ERC2612InvalidSigner(signer, owner);
     }
 
-    return _redeem(owner, receiver, amount.toUint104());
+    return _redeem(owner, receiver, shares.toUint104());
   }
 
   /// @inheritdoc IStakeToken

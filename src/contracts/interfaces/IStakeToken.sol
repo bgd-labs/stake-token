@@ -79,14 +79,14 @@ interface IStakeToken is IERC4626 {
    * @dev Burns exactly shares from owner and sends assets of underlying tokens to receiver, gasless
    * @param owner address of funds owner
    * @param receiver address of funds receiver
-   * @param amount amount of shares to burn
+   * @param shares value of shares to burn
    * @param deadline The permit execution deadline
    * @param sigParams The v,r,s components of the signed message packed into SignatureParams
    */
   function metaRedeem(
     address owner,
     address receiver,
-    uint256 amount,
+    uint256 shares,
     uint256 deadline,
     SignatureParams calldata sigParams
   ) external returns (uint256);
