@@ -64,14 +64,6 @@ interface IStakeToken {
   function cooldownOnBehalfOf(address from) external;
 
   /**
-   * @dev Redeems shares for a user. Only the claim helper contract is allowed to call this function
-   * @param from Address to redeem from
-   * @param to Address to redeem to
-   * @param amount Amount of shares to redeem
-   */
-  function redeemOnBehalf(address from, address to, uint256 amount) external;
-
-  /**
    * @dev Setter of cooldown seconds
    * Can only be called by the owner
    * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem

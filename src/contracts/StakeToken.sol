@@ -20,9 +20,10 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   using SafeCast for uint256;
   using Math for uint256;
 
-  // @audit-high @pavelvm5 this mechanic won't work at all if we will slash max amount, then deposit 1e18 and try to slash again we will have zero exchange_rate anyway
+  // @audit-high @pavelvm5 this mechanic won't work at all with 1e4 if we will slash max amount, then deposit 1e18 and try to slash again we will have zero exchange_rate anyway
   // should be 1e18 or smth like that, due to the fact that we will use mostly stata-tokens
-  uint256 public constant MIN_ASSETS_REMAINING = 1e4;
+  // changed to 1e18
+  uint256 public constant MIN_ASSETS_REMAINING = 1e18;
 
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
@@ -34,11 +35,15 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   IRewardsController public immutable REWARDS_CONTROLLER;
   IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
+  error ZeroExchangeRate();
+  error ZeroBalanceOnCooldown();
+  error CallerIsNotSlashingAdmin();
+  error NotApprovedForCooldown(address owner, address spender);
+
   modifier onlySlashingAdmin() {
-    require(
-      IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender),
-      'CALLER_NOT_SLASHING_ADMIN'
-    );
+    if (!IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender)) {
+      revert CallerIsNotSlashingAdmin();
+    }
     _;
   }
 
@@ -69,18 +74,19 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  function slash(address destination, uint256 amount) external override returns (uint256) {}
+  function slash(address destination, uint256 amount) external override onlySlashingAdmin returns (uint256) {}
 
   function cooldown() external override whenNotPaused {
     _cooldown(msg.sender);
   }
 
-  function cooldownOnBehalfOf(address from) external override onlyOwner whenNotPaused {
-    _cooldown(from);
-  }
+  function cooldownOnBehalfOf(address owner) external override whenNotPaused {
+    if(allowance(owner, msg.sender) == 0) {
+      revert NotApprovedForCooldown(owner, msg.sender);
+    }
 
-  // @pavelvm5 todo delete or add functionality
-  function redeemOnBehalf(address from, address to, uint256 amount) external override onlyOwner {}
+    _cooldown(owner);
+  }
 
   function setUnstakeWindow(uint256 newUnstakeWindow) external override onlyOwner {
     _setUnstakeWindow(newUnstakeWindow);
@@ -121,11 +127,27 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   }
 
   function maxWithdraw(address owner) public view override returns (uint256) {
-    return _convertToAssets(_getStakeTokenStorage()._stakersCooldowns[owner].amount, Math.Rounding.Floor);
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[owner];
+    
+    if (block.timestamp >= cooldownSnapshot.timestamp &&
+        block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindowSeconds) {
+      return _convertToAssets($._stakersCooldowns[owner].amount, Math.Rounding.Floor);
+    }
+    
+    return 0;
   }
 
   function maxRedeem(address owner) public view override returns (uint256) {
-    return _getStakeTokenStorage()._stakersCooldowns[owner].amount;
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[owner];
+    
+    if (block.timestamp >= cooldownSnapshot.timestamp &&
+        block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindowSeconds) {
+      return $._stakersCooldowns[owner].amount;
+    }
+    
+    return 0;
   }
 
   function stakersCooldowns(
@@ -142,7 +164,9 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   function _cooldown(address from) internal {
     uint256 amount = balanceOf(from);
 
-    require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
+    if(amount == 0) {
+      revert ZeroBalanceOnCooldown();
+    }
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
@@ -169,7 +193,9 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
   }
 
   function _updateExchangeRate(uint216 newExchangeRate) internal {
-    require(newExchangeRate != 0, 'ZERO_EXCHANGE_RATE');
+    if (newExchangeRate == 0) {
+      revert ZeroExchangeRate();
+    }
 
     _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
 
@@ -186,7 +212,7 @@ contract StakeToken is IStakeToken, Initializable, ERC20PermitUpgradeable, ERC20
     return shares.mulDiv(EXCHANGE_RATE_UNIT, $._currentExchangeRate, rounding);
   }
 
-  // @pavelvm5 add from old stakeToken here
+  // @pavelvm5 add from old stakeToken here handle action for reward controller
   function _update(address from, address to, uint256 value) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) whenNotPaused {
     super._update(from, to, value);
   }
