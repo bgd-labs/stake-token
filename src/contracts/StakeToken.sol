@@ -87,10 +87,7 @@ contract StakeToken is
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  function slash(
-    address destination,
-    uint256 amount
-  ) external override onlySlashingAdmin returns (uint256) {
+  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
     if (amount == 0) {
       revert ZeroAmountSlashing();
     }
@@ -117,11 +114,11 @@ contract StakeToken is
     return amount;
   }
 
-  function cooldown() external override whenNotPaused {
+  function cooldown() external {
     _cooldown(msg.sender);
   }
 
-  function cooldownOnBehalfOf(address owner) external override whenNotPaused {
+  function cooldownOnBehalfOf(address owner) external {
     if (allowance(owner, msg.sender) == 0) {
       revert NotApprovedForCooldown(owner, msg.sender);
     }
@@ -129,11 +126,11 @@ contract StakeToken is
     _cooldown(owner);
   }
 
-  function setUnstakeWindow(uint256 newUnstakeWindow) external override onlyOwner {
+  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
     _setUnstakeWindow(newUnstakeWindow);
   }
 
-  function setCooldownSeconds(uint256 newCooldownSeconds) external override onlyOwner {
+  function setCooldownSeconds(uint256 newCooldownSeconds) external onlyOwner {
     _setCooldownSeconds(newCooldownSeconds);
   }
 
@@ -146,19 +143,19 @@ contract StakeToken is
   }
 
   // @pavelvm5 why is it returning 216? changed to 256
-  function getExchangeRate() external view override returns (uint256) {
+  function getExchangeRate() external view returns (uint256) {
     return _getStakeTokenStorage()._currentExchangeRate;
   }
 
-  function getCooldownSeconds() external view override returns (uint256) {
+  function getCooldownSeconds() external view returns (uint256) {
     return _getStakeTokenStorage()._smConfig.cooldownSeconds;
   }
 
-  function getUnstakeWindow() external view override returns (uint256) {
+  function getUnstakeWindow() external view returns (uint256) {
     return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
   }
 
-  function stakersCooldowns(address user) external view override returns (CooldownSnapshot memory) {
+  function stakersCooldowns(address user) external view returns (CooldownSnapshot memory) {
     return _getStakeTokenStorage()._stakersCooldowns[user];
   }
 
@@ -180,7 +177,7 @@ contract StakeToken is
     return 0;
   }
 
-  function getMaxSlashableAssets() public view override returns (uint256) {
+  function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
@@ -189,7 +186,7 @@ contract StakeToken is
     return ERC4626Upgradeable.decimals();
   }
 
-  function _cooldown(address from) internal {
+  function _cooldown(address from) internal whenNotPaused {
     uint256 amount = balanceOf(from);
 
     if (amount == 0) {
