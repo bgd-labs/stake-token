@@ -26,11 +26,7 @@ contract AaveDistributionManager {
 
   event AssetConfigUpdated(address indexed asset, uint256 emission);
   event AssetIndexUpdated(address indexed asset, uint256 index);
-  event UserIndexUpdated(
-    address indexed user,
-    address indexed asset,
-    uint256 index
-  );
+  event UserIndexUpdated(address indexed user, address indexed asset, uint256 index);
 
   constructor(address emissionManager, uint256 distributionDuration) {
     DISTRIBUTION_END = block.timestamp + distributionDuration;
@@ -45,9 +41,7 @@ contract AaveDistributionManager {
     DistributionTypes.AssetConfigInput[] memory assetsConfigInput
   ) internal {
     for (uint256 i = 0; i < assetsConfigInput.length; i++) {
-      AssetData storage assetConfig = assets[
-        assetsConfigInput[i].underlyingAsset
-      ];
+      AssetData storage assetConfig = assets[assetsConfigInput[i].underlyingAsset];
 
       _updateAssetStateInternal(
         assetsConfigInput[i].underlyingAsset,
@@ -181,11 +175,7 @@ contract AaveDistributionManager {
 
       accruedRewards =
         accruedRewards +
-        _getRewards(
-          stakes[i].stakedByUser,
-          assetIndex,
-          assetConfig.users[user]
-        );
+        _getRewards(stakes[i].stakedByUser, assetIndex, assetConfig.users[user]);
     }
     return accruedRewards;
   }
@@ -202,9 +192,7 @@ contract AaveDistributionManager {
     uint256 reserveIndex,
     uint256 userIndex
   ) internal pure returns (uint256) {
-    return
-      (principalUserBalance * (reserveIndex - userIndex)) /
-      (10 ** uint256(PRECISION));
+    return (principalUserBalance * (reserveIndex - userIndex)) / (10 ** uint256(PRECISION));
   }
 
   /**
@@ -235,8 +223,7 @@ contract AaveDistributionManager {
       : block.timestamp;
     uint256 timeDelta = currentTimestamp - lastUpdateTimestamp;
     return
-      ((emissionPerSecond * timeDelta * (10 ** uint256(PRECISION))) /
-        totalBalance) + currentIndex;
+      ((emissionPerSecond * timeDelta * (10 ** uint256(PRECISION))) / totalBalance) + currentIndex;
   }
 
   /**
@@ -245,10 +232,7 @@ contract AaveDistributionManager {
    * @param asset The address of the reference asset of the distribution
    * @return The new index
    */
-  function getUserAssetData(
-    address user,
-    address asset
-  ) public view returns (uint256) {
+  function getUserAssetData(address user, address asset) public view returns (uint256) {
     return assets[asset].users[user];
   }
 }

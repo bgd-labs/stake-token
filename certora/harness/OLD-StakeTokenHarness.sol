@@ -5,16 +5,23 @@ import {StakeToken} from '../../src/contracts/StakeToken.sol';
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 
 contract StakeTokenHarness is StakeToken {
-    constructor(
-                string memory name,
-                IERC20 stakedToken,
-                IERC20 rewardToken,
-                uint256 unstakeWindow,
-                address rewardsVault,
-                address emissionManager,
-                uint128 distributionDuration
-    ) StakeToken (name, stakedToken, rewardToken, unstakeWindow,
-                  rewardsVault, emissionManager, distributionDuration) {}
-
+  constructor(
+    string memory name,
+    IERC20 stakedToken,
+    IERC20 rewardToken,
+    uint256 unstakeWindow,
+    address rewardsVault,
+    address emissionManager,
+    uint128 distributionDuration
+  )
+    StakeToken(
+      name,
+      stakedToken,
+      rewardToken,
+      unstakeWindow,
+      rewardsVault,
+      emissionManager,
+      distributionDuration
+    )
+  {}
 }
-

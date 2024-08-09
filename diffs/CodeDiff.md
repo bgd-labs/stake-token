@@ -1,4 +1,4 @@
-```diff
+````diff
 diff --git a/tmp/EtherscanFlattened.sol b/tmp/NewFlattened.sol
 index 5943c4f..69548d4 100644
 --- a/tmp/EtherscanFlattened.sol
@@ -9,7 +9,7 @@ index 5943c4f..69548d4 100644
 -pragma experimental ABIEncoderV2;
 +// SPDX-License-Identifier: BUSL-1.1
 +pragma solidity ^0.8.0 ^0.8.1 ^0.8.20 ^0.8.4 ^0.8.8;
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/aave-token-v3/src/DelegationAwareBalance.sol
 +// lib/aave-helpers/lib/solidity-utils/src/contracts/oz-common/Address.sol
 +
@@ -452,16 +452,16 @@ index 5943c4f..69548d4 100644
 +}
 +
 +// lib/aave-token-v3/src/DelegationAwareBalance.sol
- 
+
  enum DelegationMode {
    NO_DELEGATION,
 @@ -11,142 +450,9 @@ enum DelegationMode {
    FULL_POWER_DELEGATED
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/aave-token-v3/src/interfaces/IGovernancePowerDelegationToken.sol
 +// lib/openzeppelin-contracts/contracts/interfaces/IERC5267.sol
- 
+
 -interface IGovernancePowerDelegationToken {
 -  enum GovernancePowerType {
 -    VOTING,
@@ -597,16 +597,16 @@ index 5943c4f..69548d4 100644
 -
 -// OpenZeppelin Contracts (last updated v4.9.0) (interfaces/IERC5267.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (interfaces/IERC5267.sol)
- 
+
  interface IERC5267 {
    /**
 @@ -172,14 +478,410 @@ interface IERC5267 {
      );
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
 +// lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (interfaces/draft-IERC6093.sol)
 +
@@ -1005,7 +1005,7 @@ index 5943c4f..69548d4 100644
 +// lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol
 +
 +// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/IERC20.sol)
- 
+
  /**
   * @dev Interface of the ERC20 standard as defined in the EIP.
   */
@@ -1016,19 +1016,19 @@ index 5943c4f..69548d4 100644
     * another (`to`).
 @@ -195,23 +897,23 @@ interface IERC20 {
    event Approval(address indexed owner, address indexed spender, uint256 value);
- 
+
    /**
 -   * @dev Returns the amount of tokens in existence.
 +   * @dev Returns the value of tokens in existence.
     */
    function totalSupply() external view returns (uint256);
- 
+
    /**
 -   * @dev Returns the amount of tokens owned by `account`.
 +   * @dev Returns the value of tokens owned by `account`.
     */
    function balanceOf(address account) external view returns (uint256);
- 
+
    /**
 -   * @dev Moves `amount` tokens from the caller's account to `to`.
 +   * @dev Moves a `value` amount of tokens from the caller's account to `to`.
@@ -1039,12 +1039,12 @@ index 5943c4f..69548d4 100644
     */
 -  function transfer(address to, uint256 amount) external returns (bool);
 +  function transfer(address to, uint256 value) external returns (bool);
- 
+
    /**
     * @dev Returns the remaining number of tokens that `spender` will be
 @@ -223,7 +925,8 @@ interface IERC20 {
    function allowance(address owner, address spender) external view returns (uint256);
- 
+
    /**
 -   * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
 +   * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
@@ -1058,7 +1058,7 @@ index 5943c4f..69548d4 100644
     */
 -  function approve(address spender, uint256 amount) external returns (bool);
 +  function approve(address spender, uint256 value) external returns (bool);
- 
+
    /**
 -   * @dev Moves `amount` tokens from `from` to `to` using the
 -   * allowance mechanism. `amount` is then deducted from the caller's
@@ -1073,13 +1073,13 @@ index 5943c4f..69548d4 100644
 -  function transferFrom(address from, address to, uint256 amount) external returns (bool);
 +  function transferFrom(address from, address to, uint256 value) external returns (bool);
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/utils/Context.sol
 +// lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol
- 
+
 -// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/IERC20Permit.sol)
- 
+
  /**
 - * @dev Provides information about the current execution context, including the
 - * sender of the transaction and its data. While these are generally available
@@ -1380,7 +1380,7 @@ index 5943c4f..69548d4 100644
 +      return _nonces[owner]++;
 +    }
    }
- 
+
 -  function _msgData() internal view virtual returns (bytes calldata) {
 -    return msg.data;
 +  /**
@@ -1393,14 +1393,14 @@ index 5943c4f..69548d4 100644
 +    }
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol
 +// lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.9.0) (utils/StorageSlot.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/StorageSlot.sol)
  // This file was procedurally generated from scripts/generate/templates/StorageSlot.js.
- 
+
  /**
 @@ -302,9 +1287,6 @@ abstract contract Context {
   *     }
@@ -1415,10 +1415,10 @@ index 5943c4f..69548d4 100644
 @@ -412,9 +1394,190 @@ library StorageSlot {
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/utils/math/Math.sol
 +// lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.9.0) (utils/math/Math.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/cryptography/ECDSA.sol)
 +
@@ -1602,12 +1602,12 @@ index 5943c4f..69548d4 100644
 +// lib/openzeppelin-contracts/contracts/utils/math/Math.sol
 +
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/math/Math.sol)
- 
+
  /**
   * @dev Standard math utilities missing in the Solidity language.
 @@ -426,15 +1589,14 @@ library Math {
    error MathOverflowedMulDiv();
- 
+
    enum Rounding {
 -    Down, // Toward negative infinity
 -    Up, // Toward infinity
@@ -1617,7 +1617,7 @@ index 5943c4f..69548d4 100644
 +    Trunc, // Toward zero
 +    Expand // Away from zero
    }
- 
+
    /**
     * @dev Returns the addition of two unsigned integers, with an overflow flag.
 -   *
@@ -1626,7 +1626,7 @@ index 5943c4f..69548d4 100644
    function tryAdd(uint256 a, uint256 b) internal pure returns (bool, uint256) {
      unchecked {
 @@ -446,8 +1608,6 @@ library Math {
- 
+
    /**
     * @dev Returns the subtraction of two unsigned integers, with an overflow flag.
 -   *
@@ -1635,7 +1635,7 @@ index 5943c4f..69548d4 100644
    function trySub(uint256 a, uint256 b) internal pure returns (bool, uint256) {
      unchecked {
 @@ -458,8 +1618,6 @@ library Math {
- 
+
    /**
     * @dev Returns the multiplication of two unsigned integers, with an overflow flag.
 -   *
@@ -1644,7 +1644,7 @@ index 5943c4f..69548d4 100644
    function tryMul(uint256 a, uint256 b) internal pure returns (bool, uint256) {
      unchecked {
 @@ -475,8 +1633,6 @@ library Math {
- 
+
    /**
     * @dev Returns the division of two unsigned integers, with a division by zero flag.
 -   *
@@ -1653,7 +1653,7 @@ index 5943c4f..69548d4 100644
    function tryDiv(uint256 a, uint256 b) internal pure returns (bool, uint256) {
      unchecked {
 @@ -487,8 +1643,6 @@ library Math {
- 
+
    /**
     * @dev Returns the remainder of dividing two unsigned integers, with a division by zero flag.
 -   *
@@ -1674,7 +1674,7 @@ index 5943c4f..69548d4 100644
      if (b == 0) {
 @@ -537,9 +1691,10 @@ library Math {
    }
- 
+
    /**
 -   * @notice Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
 -   * @dev Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)
@@ -1698,16 +1698,16 @@ index 5943c4f..69548d4 100644
 -        prod0 := mul(x, y)
          prod1 := sub(sub(mm, prod0), lt(mm, prod0))
        }
- 
+
 @@ -586,11 +1740,10 @@ library Math {
          prod0 := sub(prod0, remainder)
        }
- 
+
 -      // Factor powers of two out of denominator and compute largest power of two divisor of denominator. Always >= 1.
 -      // See https://cs.stackexchange.com/q/138556/92363.
 +      // Factor powers of two out of denominator and compute largest power of two divisor of denominator.
 +      // Always >= 1. See https://cs.stackexchange.com/q/138556/92363.
- 
+
 -      // Does not overflow because the denominator cannot be zero at this stage in the function.
 -      uint256 twos = denominator & (~denominator + 1);
 +      uint256 twos = denominator & (0 - denominator);
@@ -1717,7 +1717,7 @@ index 5943c4f..69548d4 100644
 @@ -610,8 +1763,8 @@ library Math {
        // four bits. That is, denominator * inv = 1 mod 2^4.
        uint256 inverse = (3 * denominator) ^ 2;
- 
+
 -      // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also works
 -      // in modular arithmetic, doubling the correct bits in each step.
 +      // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also
@@ -1735,7 +1735,7 @@ index 5943c4f..69548d4 100644
      }
      return result;
    }
- 
+
    /**
 -   * @dev Returns the square root of a number. If the number is not a perfect square, the value is rounded down.
 +   * @dev Returns the square root of a number. If the number is not a perfect square, the value is rounded
@@ -1751,7 +1751,7 @@ index 5943c4f..69548d4 100644
 +      return result + (unsignedRoundsUp(rounding) && result * result < a ? 1 : 0);
      }
    }
- 
+
    /**
 -   * @dev Return the log in base 2, rounded down, of a positive value.
 +   * @dev Return the log in base 2 of a positive value rounded towards zero.
@@ -1766,7 +1766,7 @@ index 5943c4f..69548d4 100644
 +      return result + (unsignedRoundsUp(rounding) && 1 << result < value ? 1 : 0);
      }
    }
- 
+
    /**
 -   * @dev Return the log in base 10, rounded down, of a positive value.
 +   * @dev Return the log in base 10 of a positive value rounded towards zero.
@@ -1781,7 +1781,7 @@ index 5943c4f..69548d4 100644
 +      return result + (unsignedRoundsUp(rounding) && 10 ** result < value ? 1 : 0);
      }
    }
- 
+
    /**
 -   * @dev Return the log in base 256, rounded down, of a positive value.
 +   * @dev Return the log in base 256 of a positive value rounded towards zero.
@@ -1866,7 +1866,7 @@ index 5943c4f..69548d4 100644
 -   * @param amount Amount of shares to redeem
 -   */
 -  function redeem(address to, uint256 amount) external;
- 
+
    /**
 -   * @dev Activates the cooldown period to unstake
 -   * - It can't be called if the user is not staking
@@ -2229,14 +2229,14 @@ index 5943c4f..69548d4 100644
 +    return uint8(rounding) % 2 == 1;
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/lib/SafeCast.sol
 +// lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.8.0) (utils/math/SafeCast.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/math/SafeCast.sol)
  // This file was procedurally generated from scripts/generate/templates/SafeCast.js.
- 
+
  /**
 @@ -1283,11 +2015,28 @@ library PercentageMath {
   *
@@ -2284,7 +2284,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint248(value);
    }
- 
+
 @@ -1314,11 +2063,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2299,7 +2299,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint240(value);
    }
- 
+
 @@ -1331,11 +2080,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2314,7 +2314,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint232(value);
    }
- 
+
 @@ -1348,11 +2097,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2329,7 +2329,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint224(value);
    }
- 
+
 @@ -1365,11 +2114,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2344,7 +2344,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint216(value);
    }
- 
+
 @@ -1382,11 +2131,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2359,7 +2359,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint208(value);
    }
- 
+
 @@ -1399,11 +2148,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2374,7 +2374,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint200(value);
    }
- 
+
 @@ -1416,11 +2165,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2389,7 +2389,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint192(value);
    }
- 
+
 @@ -1433,11 +2182,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2404,7 +2404,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint184(value);
    }
- 
+
 @@ -1450,11 +2199,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2419,7 +2419,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint176(value);
    }
- 
+
 @@ -1467,11 +2216,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2434,7 +2434,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint168(value);
    }
- 
+
 @@ -1484,11 +2233,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2449,7 +2449,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint160(value);
    }
- 
+
 @@ -1501,11 +2250,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2464,7 +2464,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint152(value);
    }
- 
+
 @@ -1518,11 +2267,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2479,7 +2479,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint144(value);
    }
- 
+
 @@ -1535,11 +2284,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2494,7 +2494,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint136(value);
    }
- 
+
 @@ -1552,11 +2301,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2509,7 +2509,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint128(value);
    }
- 
+
 @@ -1569,11 +2318,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2524,7 +2524,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint120(value);
    }
- 
+
 @@ -1586,11 +2335,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2539,7 +2539,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint112(value);
    }
- 
+
 @@ -1603,11 +2352,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2554,7 +2554,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint104(value);
    }
- 
+
 @@ -1620,11 +2369,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2569,7 +2569,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint96(value);
    }
- 
+
 @@ -1637,11 +2386,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2584,7 +2584,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint88(value);
    }
- 
+
 @@ -1654,11 +2403,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2599,7 +2599,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint80(value);
    }
- 
+
 @@ -1671,11 +2420,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2614,7 +2614,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint72(value);
    }
- 
+
 @@ -1688,11 +2437,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2629,7 +2629,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint64(value);
    }
- 
+
 @@ -1705,11 +2454,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2644,7 +2644,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint56(value);
    }
- 
+
 @@ -1722,11 +2471,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2659,7 +2659,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint48(value);
    }
- 
+
 @@ -1739,11 +2488,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2674,7 +2674,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint40(value);
    }
- 
+
 @@ -1756,11 +2505,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2689,7 +2689,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint32(value);
    }
- 
+
 @@ -1773,11 +2522,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2704,7 +2704,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint24(value);
    }
- 
+
 @@ -1790,11 +2539,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2719,7 +2719,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint16(value);
    }
- 
+
 @@ -1807,11 +2556,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2734,7 +2734,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint8(value);
    }
- 
+
 @@ -1821,11 +2570,11 @@ library SafeCast {
     * Requirements:
     *
@@ -2749,7 +2749,7 @@ index 5943c4f..69548d4 100644
 +    }
      return uint256(value);
    }
- 
+
 @@ -1839,12 +2588,12 @@ library SafeCast {
     * Requirements:
     *
@@ -2764,7 +2764,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(248, value);
 +    }
    }
- 
+
    /**
 @@ -1857,12 +2606,12 @@ library SafeCast {
     * Requirements:
@@ -2780,7 +2780,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(240, value);
 +    }
    }
- 
+
    /**
 @@ -1875,12 +2624,12 @@ library SafeCast {
     * Requirements:
@@ -2796,7 +2796,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(232, value);
 +    }
    }
- 
+
    /**
 @@ -1893,12 +2642,12 @@ library SafeCast {
     * Requirements:
@@ -2812,7 +2812,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(224, value);
 +    }
    }
- 
+
    /**
 @@ -1911,12 +2660,12 @@ library SafeCast {
     * Requirements:
@@ -2828,7 +2828,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(216, value);
 +    }
    }
- 
+
    /**
 @@ -1929,12 +2678,12 @@ library SafeCast {
     * Requirements:
@@ -2844,7 +2844,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(208, value);
 +    }
    }
- 
+
    /**
 @@ -1947,12 +2696,12 @@ library SafeCast {
     * Requirements:
@@ -2860,7 +2860,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(200, value);
 +    }
    }
- 
+
    /**
 @@ -1965,12 +2714,12 @@ library SafeCast {
     * Requirements:
@@ -2876,7 +2876,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(192, value);
 +    }
    }
- 
+
    /**
 @@ -1983,12 +2732,12 @@ library SafeCast {
     * Requirements:
@@ -2892,7 +2892,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(184, value);
 +    }
    }
- 
+
    /**
 @@ -2001,12 +2750,12 @@ library SafeCast {
     * Requirements:
@@ -2908,7 +2908,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(176, value);
 +    }
    }
- 
+
    /**
 @@ -2019,12 +2768,12 @@ library SafeCast {
     * Requirements:
@@ -2924,7 +2924,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(168, value);
 +    }
    }
- 
+
    /**
 @@ -2037,12 +2786,12 @@ library SafeCast {
     * Requirements:
@@ -2940,7 +2940,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(160, value);
 +    }
    }
- 
+
    /**
 @@ -2055,12 +2804,12 @@ library SafeCast {
     * Requirements:
@@ -2956,7 +2956,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(152, value);
 +    }
    }
- 
+
    /**
 @@ -2073,12 +2822,12 @@ library SafeCast {
     * Requirements:
@@ -2972,7 +2972,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(144, value);
 +    }
    }
- 
+
    /**
 @@ -2091,12 +2840,12 @@ library SafeCast {
     * Requirements:
@@ -2988,7 +2988,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(136, value);
 +    }
    }
- 
+
    /**
 @@ -2109,12 +2858,12 @@ library SafeCast {
     * Requirements:
@@ -3004,7 +3004,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(128, value);
 +    }
    }
- 
+
    /**
 @@ -2127,12 +2876,12 @@ library SafeCast {
     * Requirements:
@@ -3020,7 +3020,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(120, value);
 +    }
    }
- 
+
    /**
 @@ -2145,12 +2894,12 @@ library SafeCast {
     * Requirements:
@@ -3036,7 +3036,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(112, value);
 +    }
    }
- 
+
    /**
 @@ -2163,12 +2912,12 @@ library SafeCast {
     * Requirements:
@@ -3052,7 +3052,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(104, value);
 +    }
    }
- 
+
    /**
 @@ -2181,12 +2930,12 @@ library SafeCast {
     * Requirements:
@@ -3068,7 +3068,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(96, value);
 +    }
    }
- 
+
    /**
 @@ -2199,12 +2948,12 @@ library SafeCast {
     * Requirements:
@@ -3084,7 +3084,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(88, value);
 +    }
    }
- 
+
    /**
 @@ -2217,12 +2966,12 @@ library SafeCast {
     * Requirements:
@@ -3100,7 +3100,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(80, value);
 +    }
    }
- 
+
    /**
 @@ -2235,12 +2984,12 @@ library SafeCast {
     * Requirements:
@@ -3116,7 +3116,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(72, value);
 +    }
    }
- 
+
    /**
 @@ -2253,12 +3002,12 @@ library SafeCast {
     * Requirements:
@@ -3132,7 +3132,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(64, value);
 +    }
    }
- 
+
    /**
 @@ -2271,12 +3020,12 @@ library SafeCast {
     * Requirements:
@@ -3148,7 +3148,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(56, value);
 +    }
    }
- 
+
    /**
 @@ -2289,12 +3038,12 @@ library SafeCast {
     * Requirements:
@@ -3164,7 +3164,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(48, value);
 +    }
    }
- 
+
    /**
 @@ -2307,12 +3056,12 @@ library SafeCast {
     * Requirements:
@@ -3180,7 +3180,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(40, value);
 +    }
    }
- 
+
    /**
 @@ -2325,12 +3074,12 @@ library SafeCast {
     * Requirements:
@@ -3196,7 +3196,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(32, value);
 +    }
    }
- 
+
    /**
 @@ -2343,12 +3092,12 @@ library SafeCast {
     * Requirements:
@@ -3212,7 +3212,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(24, value);
 +    }
    }
- 
+
    /**
 @@ -2361,12 +3110,12 @@ library SafeCast {
     * Requirements:
@@ -3228,7 +3228,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(16, value);
 +    }
    }
- 
+
    /**
 @@ -2379,12 +3128,12 @@ library SafeCast {
     * Requirements:
@@ -3244,7 +3244,7 @@ index 5943c4f..69548d4 100644
 +      revert SafeCastOverflowedIntDowncast(8, value);
 +    }
    }
- 
+
    /**
 @@ -2393,146 +3142,623 @@ library SafeCast {
     * Requirements:
@@ -3262,7 +3262,7 @@ index 5943c4f..69548d4 100644
      return int256(value);
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/utils/RoleManager.sol
 +// lib/openzeppelin-contracts/contracts/utils/math/SignedMath.sol
 +
@@ -3705,7 +3705,7 @@ index 5943c4f..69548d4 100644
 +  event MaxSlashablePercentageChanged(uint256 newPercentage);
 +  event Slashed(address indexed destination, uint256 amount);
 +  event SlashingExitWindowDurationChanged(uint256 windowSeconds);
-+  event CooldownSecondsChanged(uint256 cooldownSeconds);
++  event DefaultWithdrawalWindowChanged(uint256 cooldownSeconds);
 +  event UnstakeWindowChanged(uint256 unstakeWindow);
 +  event ExchangeRateChanged(uint216 exchangeRate);
 +  event FundsReturned(uint256 amount);
@@ -3771,14 +3771,14 @@ index 5943c4f..69548d4 100644
 +   * @dev Getter of the cooldown seconds
 +   * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
 +   */
-+  function getCooldownSeconds() external view returns (uint256);
++  function getDefaultCooldownSeconds() external view returns (uint256);
 +
 +  /**
 +   * @dev Setter of cooldown seconds
 +   * Can only be called by the cooldown admin
 +   * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
 +   */
-+  function setCooldownSeconds(uint256 cooldownSeconds) external;
++  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external;
 +
 +  /**
 +   * @dev returns the exact amount of shares that would be received for the provided number of assets
@@ -3819,7 +3819,7 @@ index 5943c4f..69548d4 100644
 +}
 +
 +// src/contracts/lib/PercentageMath.sol
- 
+
  /**
 - * @title RoleManager
 - * @notice Generic role manager to manage slashing and cooldown admin in StakedAaveV3.
@@ -3835,7 +3835,7 @@ index 5943c4f..69548d4 100644
 -    uint256 role;
 -    address admin;
 -  }
- 
+
 -  mapping(uint256 => address) private _admins;
 -  mapping(uint256 => address) private _pendingAdmins;
 -
@@ -3854,7 +3854,7 @@ index 5943c4f..69548d4 100644
 +library PercentageMath {
 +  uint256 constant PERCENTAGE_FACTOR = 1e4; //percentage plus two decimals
 +  uint256 constant HALF_PERCENT = PERCENTAGE_FACTOR / 2;
- 
+
    /**
 -   * @dev returns the admin associated with the specific role
 -   * @param role the role associated with the admin being returned
@@ -3909,10 +3909,10 @@ index 5943c4f..69548d4 100644
      }
 -  }
 -}
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/utils/VersionedInitializable.sol
 +    require(value <= (type(uint256).max) / percentage, 'MATH_MULTIPLICATION_OVERFLOW');
- 
+
 -/**
 - * @title VersionedInitializable
 - *
@@ -3934,7 +3934,7 @@ index 5943c4f..69548d4 100644
 -  uint256 internal lastInitializedRevision = 0;
 +    return (value * percentage) / PERCENTAGE_FACTOR;
 +  }
- 
+
    /**
 -   * @dev Modifier to use in the initializer function of a contract.
 -   */
@@ -3948,10 +3948,10 @@ index 5943c4f..69548d4 100644
 +   **/
 +  function percentDiv(uint256 value, uint256 percentage) internal pure returns (uint256) {
 +    require(percentage != 0, 'MATH_DIVISION_BY_ZERO');
- 
+
 -    lastInitializedRevision = revision;
 +    require(value <= type(uint256).max / PERCENTAGE_FACTOR, 'MATH_MULTIPLICATION_OVERFLOW');
- 
+
 -    _;
 +    return (value * PERCENTAGE_FACTOR) / percentage;
    }
@@ -3963,13 +3963,13 @@ index 5943c4f..69548d4 100644
 -  // Reserved storage space to allow for layout changes in the future.
 -  uint256[50] private ______gap;
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol
 +// lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol
- 
+
 -// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/IERC20Metadata.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/IERC20Metadata.sol)
- 
+
  /**
   * @dev Interface for the optional metadata functions from the ERC20 standard.
 - *
@@ -3983,13 +3983,13 @@ index 5943c4f..69548d4 100644
 @@ -2549,9 +3775,9 @@ interface IERC20Metadata is IERC20 {
    function decimals() external view returns (uint8);
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/utils/ShortStrings.sol
 +// lib/openzeppelin-contracts/contracts/utils/ShortStrings.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.9.0) (utils/ShortStrings.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/ShortStrings.sol)
- 
+
  // | string  | 0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA   |
  // | length  | 0x                                                              BB |
 @@ -2587,7 +3813,7 @@ type ShortString is bytes32;
@@ -3999,7 +3999,7 @@ index 5943c4f..69548d4 100644
 -  bytes32 private constant _FALLBACK_SENTINEL =
 +  bytes32 private constant FALLBACK_SENTINEL =
      0x00000000000000000000000000000000000000000000000000000000000000FF;
- 
+
    error StringTooLong(string str);
 @@ -2643,7 +3869,7 @@ library ShortStrings {
        return toShortString(value);
@@ -4009,7 +4009,7 @@ index 5943c4f..69548d4 100644
 +      return ShortString.wrap(FALLBACK_SENTINEL);
      }
    }
- 
+
 @@ -2654,7 +3880,7 @@ library ShortStrings {
      ShortString value,
      string storage store
@@ -4021,7 +4021,7 @@ index 5943c4f..69548d4 100644
        return store;
 @@ -2662,7 +3888,8 @@ library ShortStrings {
    }
- 
+
    /**
 -   * @dev Return the length of a string that was encoded to `ShortString` or written to storage using {setWithFallback}.
 +   * @dev Return the length of a string that was encoded to `ShortString` or written to storage using
@@ -4041,12 +4041,12 @@ index 5943c4f..69548d4 100644
 @@ -2679,427 +3906,48 @@ library ShortStrings {
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/contracts/AaveDistributionManager.sol
 +// lib/openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol
 +
 +// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
- 
+
  /**
 - * @title AaveDistributionManager
 - * @notice Accounting contract to manage multiple staking distributions
@@ -4205,7 +4205,7 @@ index 5943c4f..69548d4 100644
 -  }
 +abstract contract ContextUpgradeable is Initializable_1 {
 +  function __Context_init() internal onlyInitializing {}
- 
+
 -  /**
 -   * @dev Return the accrued rewards for an user over a list of distribution
 -   * @param user The address of the user
@@ -4218,7 +4218,7 @@ index 5943c4f..69548d4 100644
 -  ) internal view returns (uint256) {
 -    uint256 accruedRewards = 0;
 +  function __Context_init_unchained() internal onlyInitializing {}
- 
+
 -    for (uint256 i = 0; i < stakes.length; i++) {
 -      AssetData storage assetConfig = assets[stakes[i].underlyingAsset];
 -      uint256 assetIndex = _getAssetIndex(
@@ -4251,7 +4251,7 @@ index 5943c4f..69548d4 100644
 +  function _msgSender() internal view virtual returns (address) {
 +    return msg.sender;
    }
- 
+
 -  /**
 -   * @dev Calculates the next value of an specific distribution index, with validations
 -   * @param currentIndex Current index of the distribution
@@ -4284,7 +4284,7 @@ index 5943c4f..69548d4 100644
 +  function _msgData() internal view virtual returns (bytes calldata) {
 +    return msg.data;
    }
- 
+
 -  /**
 -   * @dev Returns the data of an user on a distribution
 -   * @param user Address of the user
@@ -4297,7 +4297,7 @@ index 5943c4f..69548d4 100644
 +    return 0;
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/interfaces/IAaveDistributionManager.sol
 -
 -interface IAaveDistributionManager {
@@ -4326,7 +4326,7 @@ index 5943c4f..69548d4 100644
 -  event MaxSlashablePercentageChanged(uint256 newPercentage);
 -  event Slashed(address indexed destination, uint256 amount);
 -  event SlashingExitWindowDurationChanged(uint256 windowSeconds);
--  event CooldownSecondsChanged(uint256 cooldownSeconds);
+-  event DefaultWithdrawalWindowChanged(uint256 cooldownSeconds);
 -  event ExchangeRateChanged(uint216 exchangeRate);
 -  event FundsReturned(uint256 amount);
 -  event SlashingSettled();
@@ -4382,7 +4382,7 @@ index 5943c4f..69548d4 100644
 -   * @dev Getter of the cooldown seconds
 -   * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
 -   */
--  function getCooldownSeconds() external view returns (uint256);
+-  function getDefaultCooldownSeconds() external view returns (uint256);
 -
 -  /**
 -   * @dev Getter of the cooldown seconds
@@ -4395,7 +4395,7 @@ index 5943c4f..69548d4 100644
 -   * Can only be called by the cooldown admin
 -   * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
 -   */
--  function setCooldownSeconds(uint256 cooldownSeconds) external;
+-  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external;
 -
 -  /**
 -   * @dev Getter of the max slashable percentage of the total staked amount.
@@ -4475,10 +4475,10 @@ index 5943c4f..69548d4 100644
 -
 -// etherscan/stkAAVE/StakedAaveV3/lib/openzeppelin-contracts/contracts/utils/Strings.sol
 +// lib/openzeppelin-contracts/contracts/utils/Strings.sol
- 
+
 -// OpenZeppelin Contracts (last updated v4.9.0) (utils/Strings.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/Strings.sol)
- 
+
  /**
   * @dev String operations.
   */
@@ -4487,7 +4487,7 @@ index 5943c4f..69548d4 100644
 -  uint8 private constant _ADDRESS_LENGTH = 20;
 +  bytes16 private constant HEX_DIGITS = '0123456789abcdef';
 +  uint8 private constant ADDRESS_LENGTH = 20;
- 
+
    /**
     * @dev The `value` string doesn't fit in the specified `length`.
 @@ -3122,7 +3970,7 @@ library Strings {
@@ -4510,7 +4510,7 @@ index 5943c4f..69548d4 100644
      if (localValue != 0) {
 @@ -3166,10 +4014,11 @@ library Strings {
    }
- 
+
    /**
 -   * @dev Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal representation.
 +   * @dev Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal
@@ -4520,15 +4520,15 @@ index 5943c4f..69548d4 100644
 -    return toHexString(uint256(uint160(addr)), _ADDRESS_LENGTH);
 +    return toHexString(uint256(uint160(addr)), ADDRESS_LENGTH);
    }
- 
+
    /**
 @@ -3180,9 +4029,127 @@ library Strings {
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/lib/SafeERC20.sol
 +// lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol
- 
+
 -// OpenZeppelin Contracts v4.4.1 (token/ERC20/utils/SafeERC20.sol)
 +// OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
 +
@@ -4649,7 +4649,7 @@ index 5943c4f..69548d4 100644
 +
 +// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/utils/SafeERC20.sol)
 +// Modified From commit https://github.com/OpenZeppelin/openzeppelin-contracts/commit/00cbf5a236564c3b7aacdad1f378cae22d890ca6
- 
+
  /**
   * @title SafeERC20
 @@ -3193,978 +4160,411 @@ library Strings {
@@ -4660,7 +4660,7 @@ index 5943c4f..69548d4 100644
 -  using Address for address;
 +library SafeERC20_0 {
 +  using Address_0 for address;
- 
+
 -  function safeTransfer(IERC20 token, address to, uint256 value) internal {
 -    _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
 -  }
@@ -4677,7 +4677,7 @@ index 5943c4f..69548d4 100644
 +    uint256 currentAllowance,
 +    uint256 requestedDecrease
 +  );
- 
+
 -  function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
 -    _callOptionalReturn(
 -      token,
@@ -4690,7 +4690,7 @@ index 5943c4f..69548d4 100644
 +  function safeTransfer(IERC20_0 token, address to, uint256 value) internal {
 +    _callOptionalReturn(token, abi.encodeCall(token.transfer, (to, value)));
    }
- 
+
    /**
 -   * @dev Deprecated. This function has issues similar to the ones found in
 -   * {IERC20-approve}, and its usage is discouraged.
@@ -4712,7 +4712,7 @@ index 5943c4f..69548d4 100644
 +  function safeTransferFrom(IERC20_0 token, address from, address to, uint256 value) internal {
 +    _callOptionalReturn(token, abi.encodeCall(token.transferFrom, (from, to, value)));
    }
- 
+
 -  function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
 -    uint256 newAllowance = token.allowance(address(this), spender) + value;
 -    _callOptionalReturn(
@@ -4727,7 +4727,7 @@ index 5943c4f..69548d4 100644
 +    uint256 oldAllowance = token.allowance(address(this), spender);
 +    forceApprove(token, spender, oldAllowance + value);
    }
- 
+
 -  function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
 +  /**
 +   * @dev Decrease the calling contract's allowance toward `spender` by `requestedDecrease`. If `token` returns no value,
@@ -4858,7 +4858,7 @@ index 5943c4f..69548d4 100644
 +      forceApprove(token, spender, currentAllowance - requestedDecrease);
      }
    }
- 
+
    /**
 -   * @dev Returns the address that signed a hashed message (`hash`) with
 -   * `signature`. This address can then be used for verification purposes.
@@ -4883,7 +4883,7 @@ index 5943c4f..69548d4 100644
 -  }
 +  function forceApprove(IERC20_0 token, address spender, uint256 value) internal {
 +    bytes memory approvalCall = abi.encodeCall(token.approve, (spender, value));
- 
+
 -  /**
 -   * @dev Overload of {ECDSA-tryRecover} that receives the `r` and `vs` short-signature fields separately.
 -   *
@@ -4906,7 +4906,7 @@ index 5943c4f..69548d4 100644
 +      _callOptionalReturn(token, approvalCall);
      }
    }
- 
+
    /**
 -   * @dev Overload of {ECDSA-recover} that receives the `r and `vs` short-signature fields separately.
 -   *
@@ -4968,7 +4968,7 @@ index 5943c4f..69548d4 100644
 +    // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
 +    // we're implementing it ourselves. We use {Address-functionCall} to perform this call, which verifies that
 +    // the target address contains contract code and also asserts for success in the low-level call.
- 
+
 -    // If the signature is valid (and not malleable), return the signer address
 -    address signer = ecrecover(hash, v, r, s);
 -    if (signer == address(0)) {
@@ -4991,7 +4991,7 @@ index 5943c4f..69548d4 100644
 +    // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
 +    // we're implementing it ourselves. We cannot use {Address-functionCall} here since this should return false
 +    // and not revert is the subcall reverts.
- 
+
 -    return (signer, RecoverError.NoError, bytes32(0));
 +    (bool success, bytes memory returndata) = address(token).call(data);
 +    return
@@ -5016,7 +5016,7 @@ index 5943c4f..69548d4 100644
 + */
 +library SafeERC20_1 {
 +  using Address_1 for address;
- 
+
    /**
 -   * @dev Overload of {ECDSA-recover} that receives the `v`,
 -   * `r` and `s` signature fields separately.
@@ -5044,7 +5044,7 @@ index 5943c4f..69548d4 100644
 +  function safeTransfer(IERC20_1 token, address to, uint256 value) internal {
 +    _callOptionalReturn(token, abi.encodeCall(token.transfer, (to, value)));
    }
- 
+
    /**
 -   * @dev Returns an Ethereum Signed Message, created from a `hash`. This
 -   * produces hash corresponding to the one signed with the
@@ -5177,7 +5177,7 @@ index 5943c4f..69548d4 100644
 +      digest := keccak256(0x00, 0x3c) // 0x3c is the length of the prefix (0x1c) + messageHash (0x20)
      }
    }
- 
+
    /**
 -   * @dev Returns an Ethereum Signed Message, created from `s`. This
 -   * produces hash corresponding to the one signed with the
@@ -5205,7 +5205,7 @@ index 5943c4f..69548d4 100644
 +        )
 +      );
    }
- 
+
    /**
 -   * @dev Returns an Ethereum Signed Typed Data, created from a
 -   * `domainSeparator` and a `structHash`. This produces hash corresponding
@@ -5478,10 +5478,10 @@ index 5943c4f..69548d4 100644
 -    _afterTokenTransfer(account, address(0), accountBalance, 0, amount);
 -  }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/aave-token-v3/src/BaseDelegation.sol
 +// lib/aave-helpers/lib/solidity-utils/src/contracts/utils/Rescuable.sol
- 
+
  /**
 - * @notice The contract implements generic delegation functionality for the upcoming governance v3
 + * @title Rescuable
@@ -5698,7 +5698,7 @@ index 5943c4f..69548d4 100644
 -    );
 +abstract contract Rescuable is IRescuable {
 +  using SafeERC20_0 for IERC20_0;
- 
+
 -    DelegationState memory delegateeState = _getDelegationState(delegatee);
 -    if (delegationType == GovernancePowerType.VOTING) {
 -      delegateeState.delegatedVotingBalance =
@@ -5717,7 +5717,7 @@ index 5943c4f..69548d4 100644
 +    require(msg.sender == whoCanRescue(), 'ONLY_RESCUE_GUARDIAN');
 +    _;
    }
- 
+
 -  /**
 -   * @dev performs all state changes related delegation changes on transfer
 -   * @param from token sender
@@ -5741,7 +5741,7 @@ index 5943c4f..69548d4 100644
 -    }
 +  ) external virtual onlyRescueGuardian {
 +    IERC20_0(erc20Token).safeTransfer(to, amount);
- 
+
 -    if (from != address(0)) {
 -      DelegationState memory fromUserState = _getDelegationState(from);
 -      uint256 fromBalanceAfter = fromBalanceBefore - amount;
@@ -5800,7 +5800,7 @@ index 5943c4f..69548d4 100644
 -      );
 +    emit ERC20Rescued(msg.sender, erc20Token, to, amount);
    }
- 
+
 -  /**
 -   * @dev Extracts from state and returns the delegatee of a delegator by type of governance power (Voting, Proposition)
 -   * - If the delegator doesn't have any delegatee, returns address(0)
@@ -5849,7 +5849,7 @@ index 5943c4f..69548d4 100644
 +  function emergencyEtherTransfer(address to, uint256 amount) external virtual onlyRescueGuardian {
 +    (bool success, ) = to.call{value: amount}(new bytes(0));
 +    require(success, 'ETH_TRANSFER_FAIL');
- 
+
 -  /**
 -   * @dev Updates the specific flag which signaling about existence of delegation of governance power (Voting, Proposition)
 -   * @param userState a user state to change
@@ -5877,7 +5877,7 @@ index 5943c4f..69548d4 100644
 -    return userState;
 +    emit NativeTokensRescued(msg.sender, to, amount);
    }
- 
+
 -  /**
 -   * @dev This is the equivalent of an ERC20 transfer(), but for a power type: an atomic transfer of a balance (power).
 -   * When needed, it decreases the power of the `delegator` and when needed, it increases the power of the `delegatee`
@@ -5926,15 +5926,15 @@ index 5943c4f..69548d4 100644
 +  /// @inheritdoc IRescuable
 +  function whoCanRescue() public view virtual returns (address);
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/lib/aave-token-v3/src/utils/EIP712.sol
 +// lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol
- 
+
 -// Contract modified from OpenZeppelin Contracts (last updated v4.9.0) (utils/cryptography/EIP712.sol) to remove local
 -// fallback storage variables, so contract does not affect on existing storage layout. This works as its used on contracts
 -// that have name and revision < 32 bytes
 +// OpenZeppelin Contracts (last updated v5.0.0) (utils/cryptography/EIP712.sol)
- 
+
  /**
   * @dev https://eips.ethereum.org/EIPS/eip-712[EIP 712] is a standard for hashing and signing of typed structured data.
   *
@@ -5963,19 +5963,19 @@ index 5943c4f..69548d4 100644
   */
  abstract contract EIP712 is IERC5267 {
    using ShortStrings for *;
- 
+
 -  bytes32 private constant _TYPE_HASH =
 +  bytes32 private constant TYPE_HASH =
      keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)');
- 
+
    // Cache the domain separator as an immutable value, but also store the chain id that it corresponds to, in order to
 @@ -4201,6 +4599,8 @@ abstract contract EIP712 is IERC5267 {
- 
+
    ShortString private immutable _name;
    ShortString private immutable _version;
 +  string private _nameFallback;
 +  string private _versionFallback;
- 
+
    /**
     * @dev Initializes the domain separator and parameter caches.
 @@ -4214,11 +4614,9 @@ abstract contract EIP712 is IERC5267 {
@@ -5991,15 +5991,15 @@ index 5943c4f..69548d4 100644
 +    _version = version.toShortStringWithFallback(_versionFallback);
      _hashedName = keccak256(bytes(name));
      _hashedVersion = keccak256(bytes(version));
- 
+
 @@ -4240,7 +4638,7 @@ abstract contract EIP712 is IERC5267 {
- 
+
    function _buildDomainSeparator() private view returns (bytes32) {
      return
 -      keccak256(abi.encode(_TYPE_HASH, _hashedName, _hashedVersion, block.chainid, address(this)));
 +      keccak256(abi.encode(TYPE_HASH, _hashedName, _hashedVersion, block.chainid, address(this)));
    }
- 
+
    /**
 @@ -4259,13 +4657,11 @@ abstract contract EIP712 is IERC5267 {
     * ```
@@ -6008,7 +6008,7 @@ index 5943c4f..69548d4 100644
 -    return ECDSA.toTypedDataHash(_domainSeparatorV4(), structHash);
 +    return MessageHashUtils.toTypedDataHash(_domainSeparatorV4(), structHash);
    }
- 
+
    /**
 -   * @dev See {EIP-5267}.
 -   *
@@ -6030,7 +6030,7 @@ index 5943c4f..69548d4 100644
 -    return _name.toString(); // _name.toStringWithFallback(_nameFallback);
 +    return _name.toStringWithFallback(_nameFallback);
    }
- 
+
    /**
 @@ -4311,313 +4704,539 @@ abstract contract EIP712 is IERC5267 {
     *
@@ -6046,7 +6046,7 @@ index 5943c4f..69548d4 100644
 +    return _version.toStringWithFallback(_versionFallback);
    }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/contracts/StakedTokenV2.sol
 +// src/contracts/ERC20.sol
 +
@@ -6054,7 +6054,7 @@ index 5943c4f..69548d4 100644
 +// @dev modification is related to the structure of the user data adapted to the future governance use
 +
 +// @dev with addition of Initializable, so this implementation can be used only behind a proxy !!!
- 
+
  /**
 - * @title StakedTokenV2
 - * @notice Contract to stake Aave token, tokenize the position and get rewards, inheriting from a distribution manager contract
@@ -6103,12 +6103,12 @@ index 5943c4f..69548d4 100644
 +  mapping(address account => mapping(address spender => uint256)) private _allowances;
 +
 +  uint256 private _totalSupply;
- 
+
 -  IERC20 public immutable STAKED_TOKEN;
 -  IERC20 public immutable REWARD_TOKEN;
 +  string private _name;
 +  string private _symbol;
- 
+
 -  /// @notice Seconds available to redeem once the cooldown period is fulfilled
 -  uint256 public immutable UNSTAKE_WINDOW;
 +  constructor() {
@@ -6129,7 +6129,7 @@ index 5943c4f..69548d4 100644
 +    _name = name_;
 +    _symbol = symbol_;
 +  }
- 
+
 -  /// @notice Address to pull from the rewards, needs to have approved this contract
 -  address public immutable REWARDS_VAULT;
 +  /**
@@ -6138,7 +6138,7 @@ index 5943c4f..69548d4 100644
 +  function name() public view virtual returns (string memory) {
 +    return _name;
 +  }
- 
+
 -  mapping(address => uint256) public stakerRewardsToClaim;
 -  mapping(address => CooldownSnapshot) public stakersCooldowns;
 +  /**
@@ -6148,7 +6148,7 @@ index 5943c4f..69548d4 100644
 +  function symbol() public view virtual returns (string memory) {
 +    return _symbol;
 +  }
- 
+
 -  /// @dev End of Storage layout from StakedToken v1
 -  uint256[5] private ______DEPRECATED_FROM_STK_AAVE_V2;
 +  /**
@@ -6167,7 +6167,7 @@ index 5943c4f..69548d4 100644
 +  function decimals() public view virtual returns (uint8) {
 +    return 18;
 +  }
- 
+
 -  bytes32 public constant PERMIT_TYPEHASH =
 +  /**
 +   * @dev See {IERC20-totalSupply}.
@@ -6422,7 +6422,7 @@ index 5943c4f..69548d4 100644
 +abstract contract ERC20Permit is ERC20, IERC20Permit_1, EIP712, Nonces {
 +  bytes32 private constant PERMIT_TYPEHASH =
      keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)');
- 
+
 -  /// @dev owner => next valid nonce to submit with permit()
 -  mapping(address => uint256) public _nonces;
 -
@@ -6493,7 +6493,7 @@ index 5943c4f..69548d4 100644
 +  ) public view virtual override(IERC20Permit_1, Nonces) returns (uint256) {
 +    return super.nonces(owner);
    }
- 
+
    /**
 -   * @notice Get the domain separator for the token
 -   * @dev Return cached value if chainId matches cache, otherwise recomputes separator
@@ -6590,10 +6590,10 @@ index 5943c4f..69548d4 100644
 -    return unclaimedRewards;
 -  }
  }
- 
+
 -// etherscan/stkAAVE/StakedAaveV3/src/contracts/StakedTokenV3.sol
 +// src/contracts/StakeToken.sol
- 
+
 -/**
 - * @title StakedTokenV3
 - * @notice Contract to stake Aave token, tokenize the position and get rewards, inheriting from a distribution manager contract
@@ -6612,18 +6612,18 @@ index 5943c4f..69548d4 100644
    using PercentageMath for uint256;
    using SafeCast for uint256;
    using SafeCast for uint104;
- 
+
 -  uint256 public constant SLASH_ADMIN_ROLE = 0;
 -  uint256 public constant COOLDOWN_ADMIN_ROLE = 1;
 -  uint256 public constant CLAIM_HELPER_ROLE = 2;
    uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
    uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
- 
+
 -  /// @notice lower bound to prevent spam & avoid exchangeRate issues
 -  // as returnFunds can be called permissionless an attacker could spam returnFunds(1) to produce exchangeRate snapshots making voting expensive
 -  uint256 public immutable LOWER_BOUND;
 +  IRewardsController public immutable REWARDS_CONTROLLER;
- 
+
 -  // Reserved storage space to allow for layout changes in the future.
 -  uint256[6] private ______gap;
 -  /// @notice Seconds between starting cooldown and being able to withdraw
@@ -6644,13 +6644,13 @@ index 5943c4f..69548d4 100644
 +
 +  /// @notice minimum of funds that should remain after slashing to prevent excessive rounding issues
 +  uint256 public minAssetsRemaining;
- 
+
    modifier onlySlashingAdmin() {
 -    require(msg.sender == getAdmin(SLASH_ADMIN_ROLE), 'CALLER_NOT_SLASHING_ADMIN');
 +    require(msg.sender == slashingAdmin, 'CALLER_NOT_SLASHING_ADMIN');
      _;
    }
- 
+
 -  modifier onlyCooldownAdmin() {
 -    require(msg.sender == getAdmin(COOLDOWN_ADMIN_ROLE), 'CALLER_NOT_COOLDOWN_ADMIN');
 -    _;
@@ -6662,7 +6662,7 @@ index 5943c4f..69548d4 100644
 +  constructor(string memory name, IRewardsController rewardsController) ERC20Permit(name) {
 +    REWARDS_CONTROLLER = rewardsController;
    }
- 
+
 -  constructor(
 -    IERC20 stakedToken,
 -    IERC20 rewardToken,
@@ -6734,12 +6734,12 @@ index 5943c4f..69548d4 100644
 +    _initializeMetadata(name, symbol);
 +    _transferOwnership(newSlashingAdmin);
 +    _setSlashingAdmin(newSlashingAdmin);
-     _setCooldownSeconds(cooldownSeconds);
+     _setDefaultCooldownSeconds(cooldownSeconds);
 +    _setUnstakeWindow(unstakeWindow);
      _updateExchangeRate(INITIAL_EXCHANGE_RATE);
 +    minAssetsRemaining = 10 ** decimals();
    }
- 
+
 -  /// @inheritdoc IAaveDistributionManager
 -  function configureAssets(
 -    DistributionTypes.AssetConfigInput[] memory assetsConfigInput
@@ -6767,7 +6767,7 @@ index 5943c4f..69548d4 100644
 +    _smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
 +    emit UnstakeWindowChanged(newUnstakeWindow);
 +  }
- 
+
 -    for (uint256 i = 0; i < assetsConfigInput.length; i++) {
 -      assetsConfigInput[i].totalStaked = totalSupply();
 -    }
@@ -6778,26 +6778,26 @@ index 5943c4f..69548d4 100644
 +  function setSlashingAdmin(address newSlashingAdmin) external onlyOwner {
 +    _setSlashingAdmin(newSlashingAdmin);
 +  }
- 
+
 -    _configureAssets(assetsConfigInput);
 +  function _setSlashingAdmin(address newSlashingAdmin) internal {
 +    slashingAdmin = newSlashingAdmin;
 +    emit SlashingAdminChanged(newSlashingAdmin);
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 +  /// @inheritdoc IStakeToken
    function previewStake(uint256 assets) public view returns (uint256) {
      return (assets * _currentExchangeRate) / EXCHANGE_RATE_UNIT;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV2
 -  function stake(address to, uint256 amount) external override(IStakedTokenV2, StakedTokenV2) {
 +  /// @inheritdoc IStakeToken
 +  function stake(address to, uint256 amount) external {
      _stake(msg.sender, to, amount);
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 +  /// @inheritdoc IStakeToken
    function stakeWithPermit(
@@ -6817,21 +6817,21 @@ index 5943c4f..69548d4 100644
 @@ -4634,167 +5253,86 @@ contract StakedTokenV3 is
      _stake(msg.sender, msg.sender, amount);
    }
- 
+
 -  /// @inheritdoc IStakedTokenV2
 -  function cooldown() external override(IStakedTokenV2, StakedTokenV2) {
 +  /// @inheritdoc IStakeToken
 +  function cooldown() external {
      _cooldown(msg.sender);
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function cooldownOnBehalfOf(address from) external override onlyClaimHelper {
 +  /// @inheritdoc IStakeToken
 +  function cooldownOnBehalfOf(address from) external onlyOwner {
      _cooldown(from);
    }
- 
+
 -  function _cooldown(address from) internal {
 -    uint256 amount = balanceOf(from);
 -    require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
@@ -6849,7 +6849,7 @@ index 5943c4f..69548d4 100644
 +  function redeem(address to, uint256 amount) external {
      _redeem(msg.sender, to, amount.toUint104());
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function redeemOnBehalf(
 -    address from,
@@ -6860,7 +6860,7 @@ index 5943c4f..69548d4 100644
 +  function redeemOnBehalf(address from, address to, uint256 amount) external onlyOwner {
      _redeem(from, to, amount.toUint104());
    }
- 
+
 -  /// @inheritdoc IStakedTokenV2
 -  function claimRewards(
 -    address to,
@@ -6905,14 +6905,14 @@ index 5943c4f..69548d4 100644
 +  function getExchangeRate() public view returns (uint216) {
      return _currentExchangeRate;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function previewRedeem(uint256 shares) public view override returns (uint256) {
 +  /// @inheritdoc IStakeToken
 +  function previewRedeem(uint256 shares) public view returns (uint256) {
      return (EXCHANGE_RATE_UNIT * shares) / _currentExchangeRate;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function slash(
 -    address destination,
@@ -6939,19 +6939,19 @@ index 5943c4f..69548d4 100644
        amount = maxSlashable;
      }
 -    require(balance - amount >= LOWER_BOUND, 'REMAINING_LT_MINIMUM');
- 
+
 -    inPostSlashingPeriod = true;
 +    uint256 currentShares = totalSupply();
 +    uint256 balance = previewRedeem(currentShares);
      _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
- 
+
 -    STAKED_TOKEN.safeTransfer(destination, amount);
 +    IERC20_1(_smConfig.stakedToken).safeTransfer(destination, amount);
- 
+
      emit Slashed(destination, amount);
      return amount;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function returnFunds(uint256 amount) external override {
 -    require(amount >= LOWER_BOUND, 'AMOUNT_LT_MINIMUM');
@@ -6983,21 +6983,21 @@ index 5943c4f..69548d4 100644
 +    uint256 cachedMin = minAssetsRemaining;
 +    return cachedMin > currentAssets ? 0 : currentAssets - cachedMin;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
--  function setCooldownSeconds(uint256 cooldownSeconds) external onlyCooldownAdmin {
+-  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external onlyCooldownAdmin {
 +  /// @inheritdoc IStakeToken
-+  function setCooldownSeconds(uint256 cooldownSeconds) external onlyOwner {
-     _setCooldownSeconds(cooldownSeconds);
++  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external onlyOwner {
+     _setDefaultCooldownSeconds(cooldownSeconds);
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 +  /// @inheritdoc IStakeToken
-   function getCooldownSeconds() external view returns (uint256) {
+   function getDefaultCooldownSeconds() external view returns (uint256) {
 -    return _cooldownSeconds;
 +    return _smConfig.cooldownSeconds;
    }
- 
+
 -  /// @inheritdoc IStakedTokenV3
 -  function COOLDOWN_SECONDS() external view returns (uint256) {
 -    return _cooldownSeconds;
@@ -7016,22 +7016,22 @@ index 5943c4f..69548d4 100644
 +      timestamp: uint40(block.timestamp),
 +      amount: uint216(amount)
 +    });
- 
+
 -    _maxSlashablePercentage = percentage;
 -    emit MaxSlashablePercentageChanged(percentage);
 +    emit Cooldown(from, amount);
    }
- 
+
    /**
 @@ -4802,84 +5340,25 @@ contract StakedTokenV3 is
     * @param cooldownSeconds the new amount of cooldown seconds
     */
-   function _setCooldownSeconds(uint256 cooldownSeconds) internal {
+   function _setDefaultCooldownSeconds(uint256 cooldownSeconds) internal {
 -    _cooldownSeconds = cooldownSeconds;
 +    _smConfig.cooldownSeconds = cooldownSeconds.toUint32();
-     emit CooldownSecondsChanged(cooldownSeconds);
+     emit DefaultWithdrawalWindowChanged(cooldownSeconds);
    }
- 
+
    /**
 -   * @dev claims the rewards for a specified address to a specified address
 -   * @param from The address of the from from which to claim
@@ -7086,7 +7086,7 @@ index 5943c4f..69548d4 100644
    function _stake(address from, address to, uint256 amount) internal {
 -    require(!inPostSlashingPeriod, 'SLASHING_ONGOING');
      require(amount != 0, 'INVALID_ZERO_AMOUNT');
- 
+
 -    uint256 balanceOfTo = balanceOf(to);
 -
 -    uint256 accruedRewards = _updateUserAssetInternal(
@@ -7105,17 +7105,17 @@ index 5943c4f..69548d4 100644
 -
 -    STAKED_TOKEN.safeTransferFrom(from, address(this), amount);
 +    require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
- 
+
      _mint(to, sharesToMint.toUint104());
- 
+
 +    IERC20_1(_smConfig.stakedToken).safeTransferFrom(from, address(this), amount);
 +
      emit Staked(from, to, amount, sharesToMint);
    }
- 
+
 @@ -4893,38 +5372,27 @@ contract StakedTokenV3 is
      require(amount != 0, 'INVALID_ZERO_AMOUNT');
- 
+
      CooldownSnapshot memory cooldownSnapshot = stakersCooldowns[from];
 -    if (!inPostSlashingPeriod) {
 -      require(
@@ -7137,20 +7137,20 @@ index 5943c4f..69548d4 100644
 +        cachedSmConfig.unstakeWindowSeconds),
 +      'UNSTAKE_WINDOW_FINISHED'
 +    );
- 
+
 -    uint256 balanceOfFrom = balanceOf(from);
 -    uint256 maxRedeemable = inPostSlashingPeriod ? balanceOfFrom : cooldownSnapshot.amount;
 +    uint256 maxRedeemable = cooldownSnapshot.amount;
      require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE');
- 
+
      uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
- 
+
 -    _updateCurrentUnclaimedRewards(from, balanceOfFrom, true);
 -
      uint256 underlyingToRedeem = previewRedeem(amountToRedeem);
- 
+
      _burn(from, amountToRedeem.toUint104());
- 
+
 -    if (cooldownSnapshot.timestamp != 0) {
 -      if (cooldownSnapshot.amount - amountToRedeem == 0) {
 -        delete stakersCooldowns[from];
@@ -7161,13 +7161,13 @@ index 5943c4f..69548d4 100644
 -
 -    IERC20(STAKED_TOKEN).safeTransfer(to, underlyingToRedeem);
 +    IERC20_1(cachedSmConfig.stakedToken).safeTransfer(to, underlyingToRedeem);
- 
+
      emit Redeem(from, to, underlyingToRedeem, amountToRedeem);
    }
 @@ -4953,81 +5421,39 @@ contract StakedTokenV3 is
      return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
    }
- 
+
 -  function _transfer(address from, address to, uint256 amount) internal override {
 -    uint256 balanceOfFrom = balanceOf(from);
 -    // Sender
@@ -7214,7 +7214,7 @@ index 5943c4f..69548d4 100644
          }
        }
      }
- 
+
 -    super._transfer(from, to, amount);
 -  }
 -
@@ -7273,4 +7273,4 @@ index 5943c4f..69548d4 100644
 +    super._update(from, to, amount);
    }
  }
-```
+````

@@ -44,9 +44,7 @@ abstract contract StakedTokenV2 is
   uint256[5] private ______DEPRECATED_FROM_STK_AAVE_V2;
 
   bytes32 public constant PERMIT_TYPEHASH =
-    keccak256(
-      'Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'
-    );
+    keccak256('Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)');
 
   /// @dev owner => next valid nonce to submit with permit()
   mapping(address => uint256) public _nonces;
@@ -58,10 +56,7 @@ abstract contract StakedTokenV2 is
     address rewardsVault,
     address emissionManager,
     uint128 distributionDuration
-  )
-    AaveDistributionManager(emissionManager, distributionDuration)
-    EIP712('Staked Aave', '2')
-  {
+  ) AaveDistributionManager(emissionManager, distributionDuration) EIP712('Staked Aave', '2') {
     STAKED_TOKEN = stakedToken;
     REWARD_TOKEN = rewardToken;
     UNSTAKE_WINDOW = unstakeWindow;
@@ -95,9 +90,7 @@ abstract contract StakedTokenV2 is
   function claimRewards(address to, uint256 amount) external virtual override;
 
   /// @inheritdoc IStakedTokenV2
-  function getTotalRewardsBalance(
-    address staker
-  ) external view returns (uint256) {
+  function getTotalRewardsBalance(address staker) external view returns (uint256) {
     DistributionTypes.UserStakeInput[]
       memory userStakeInputs = new DistributionTypes.UserStakeInput[](1);
     userStakeInputs[0] = DistributionTypes.UserStakeInput({
@@ -105,9 +98,7 @@ abstract contract StakedTokenV2 is
       stakedByUser: balanceOf(staker),
       totalStaked: totalSupply()
     });
-    return
-      stakerRewardsToClaim[staker] +
-      _getUnclaimedRewards(staker, userStakeInputs);
+    return stakerRewardsToClaim[staker] + _getUnclaimedRewards(staker, userStakeInputs);
   }
 
   /// @inheritdoc IStakedTokenV2
@@ -125,16 +116,7 @@ abstract contract StakedTokenV2 is
     require(block.timestamp <= deadline, 'INVALID_EXPIRATION');
     uint256 currentValidNonce = _nonces[owner];
     bytes32 digest = _hashTypedDataV4(
-      keccak256(
-        abi.encode(
-          PERMIT_TYPEHASH,
-          owner,
-          spender,
-          value,
-          currentValidNonce,
-          deadline
-        )
-      )
+      keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, currentValidNonce, deadline))
     );
 
     require(owner == ECDSA.recover(digest, v, r, s), 'INVALID_SIGNATURE');

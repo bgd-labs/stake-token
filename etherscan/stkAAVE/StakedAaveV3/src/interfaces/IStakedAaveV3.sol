@@ -10,10 +10,7 @@ interface IStakedAaveV3 is IStakedTokenV3 {
    * @param to Address to stake to
    * @param amount Amount to claim
    */
-  function claimRewardsAndStake(
-    address to,
-    uint256 amount
-  ) external returns (uint256);
+  function claimRewardsAndStake(address to, uint256 amount) external returns (uint256);
 
   /**
    * @dev Claims an `amount` of `REWARD_TOKEN` and stakes. Only the claim helper contract is allowed to call this function

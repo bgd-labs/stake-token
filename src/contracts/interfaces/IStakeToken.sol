@@ -6,28 +6,42 @@ import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 interface IStakeToken is IERC4626 {
   struct CooldownSnapshot {
     /// @notice Represent the time of unlocking funds for redemption
-    uint40 timestamp;
+    uint40 cooldownEnd;
+    /// @notice Represents the sice (in seconds) of the withdrawal window when the snapshot was taken
+    uint40 withdrawalWindowSeconds;
     /// @notice Amount of tokens available for redeem
-    uint216 amount;
+    uint104 amount;
   }
 
   struct SmConfig {
     /// @notice Seconds available to redeem once the cooldown period is fulfilled
-    uint40 unstakeWindowSeconds;
+    uint40 defaultWithdrawalWindowSeconds;
     /// @notice Seconds between starting cooldown and being able to withdraw
-    uint40 cooldownSeconds;
+    uint40 defaultCooldownSeconds;
     /// @notice The address of the underlying asset
     address stakedToken;
     // reserved for future use
   }
 
-  event Cooldown(address indexed user, uint256 amount);
+  /// @notice thrown when an entity tries to slash that is not listed as admin
+  error OnlySlashingAdmin(address caller);
+  /// @notice thrown when a passed amount is zero
+  error ZeroAmount();
+  /// @notice throw when the passed assets amount corresponds to zero shares
+  error ZeroSharesAfterConversion(uint256 assets);
+  /// @notice thrown when there are no funds available to slash
+  error NoFundsAvailable();
 
-  event MaxSlashablePercentageChanged(uint256 newPercentage);
+  error CooldownNotReady(uint40 cooldownEndTimestamp);
+
+  error CooldownExpired(uint40 expirationTimestamp);
+
+  error ZeroAmountRedeemable();
+
+  event Cooldown(address indexed user, uint256 amount);
   event Slashed(address indexed destination, uint256 amount);
-  event SlashingExitWindowDurationChanged(uint256 windowSeconds);
-  event CooldownSecondsChanged(uint256 cooldownSeconds);
-  event UnstakeWindowChanged(uint256 unstakeWindow);
+  event DefaultCooldownSecondsChanged(uint256 cooldownSeconds);
+  event DefaultWithdrawalWindowChanged(uint256 withdrawalWindowSeconds);
   event ExchangeRateChanged(uint216 exchangeRate);
   event FundsReturned(uint256 amount);
   event SlashingSettled();
@@ -43,7 +57,7 @@ interface IStakeToken is IERC4626 {
   function redeem(address to, uint256 amount) external;
 
   /**
-   * @dev Activates the cooldown period to unstake
+   * @dev Activates the cooldown period to withdraw
    * - It can't be called if the user is not staking
    */
   function cooldown() external;
@@ -87,26 +101,26 @@ interface IStakeToken is IERC4626 {
    * @dev Getter of the cooldown seconds
    * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
    */
-  function getCooldownSeconds() external view returns (uint256);
+  function getDefaultCooldownSeconds() external view returns (uint256);
 
   /**
    * @dev Setter of cooldown seconds
    * Can only be called by the owner
    * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
    */
-  function setCooldownSeconds(uint256 cooldownSeconds) external;
+  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external;
 
   /**
-   * @dev Activates the cooldown period to unstake
+   * @dev Activates the cooldown period to withdraw
    * - It can't be called if the user is not staking
    */
   function cooldownOnBehalfOf(address from) external;
 
   /**
-   * @dev Getter for the unstake window
-   * @return unstakeWindow in seconds
+   * @dev Getter for the withdraw window
+   * @return withdrawWindow in seconds
    */
-  function getUnstakeWindow() external returns (uint256);
+  function getWithdrawalWindow() external returns (uint256);
 
   /**
    * @dev returns the exact amount of assets that would be redeemed for the provided number of shares

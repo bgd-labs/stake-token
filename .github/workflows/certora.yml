@@ -51,7 +51,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 15 
+      max-parallel: 15
       matrix:
         rule:
           - frontRun.conf --rule front_run__stake
@@ -64,6 +64,3 @@ jobs:
           - allProps.conf --rule_sanity none --rule slashing_cant_occur_during_post_slashing_period
           - propertiesWithSummarization.conf
           - invariants.conf
-
-
-          

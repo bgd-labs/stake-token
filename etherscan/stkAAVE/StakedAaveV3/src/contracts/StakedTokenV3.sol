@@ -55,26 +55,17 @@ contract StakedTokenV3 is
   bool public inPostSlashingPeriod;
 
   modifier onlySlashingAdmin() {
-    require(
-      msg.sender == getAdmin(SLASH_ADMIN_ROLE),
-      'CALLER_NOT_SLASHING_ADMIN'
-    );
+    require(msg.sender == getAdmin(SLASH_ADMIN_ROLE), 'CALLER_NOT_SLASHING_ADMIN');
     _;
   }
 
   modifier onlyCooldownAdmin() {
-    require(
-      msg.sender == getAdmin(COOLDOWN_ADMIN_ROLE),
-      'CALLER_NOT_COOLDOWN_ADMIN'
-    );
+    require(msg.sender == getAdmin(COOLDOWN_ADMIN_ROLE), 'CALLER_NOT_COOLDOWN_ADMIN');
     _;
   }
 
   modifier onlyClaimHelper() {
-    require(
-      msg.sender == getAdmin(CLAIM_HELPER_ROLE),
-      'CALLER_NOT_CLAIM_HELPER'
-    );
+    require(msg.sender == getAdmin(CLAIM_HELPER_ROLE), 'CALLER_NOT_CLAIM_HELPER');
     _;
   }
 
@@ -137,7 +128,7 @@ contract StakedTokenV3 is
     _initAdmins(initAdmins);
 
     _setMaxSlashablePercentage(maxSlashablePercentage);
-    _setCooldownSeconds(cooldownSeconds);
+    _setDefaultCooldownSeconds(cooldownSeconds);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
@@ -160,10 +151,7 @@ contract StakedTokenV3 is
   }
 
   /// @inheritdoc IStakedTokenV2
-  function stake(
-    address to,
-    uint256 amount
-  ) external override(IStakedTokenV2, StakedTokenV2) {
+  function stake(address to, uint256 amount) external override(IStakedTokenV2, StakedTokenV2) {
     _stake(msg.sender, to, amount);
   }
 
@@ -215,10 +203,7 @@ contract StakedTokenV3 is
   }
 
   /// @inheritdoc IStakedTokenV2
-  function redeem(
-    address to,
-    uint256 amount
-  ) external override(IStakedTokenV2, StakedTokenV2) {
+  function redeem(address to, uint256 amount) external override(IStakedTokenV2, StakedTokenV2) {
     _redeem(msg.sender, to, amount.toUint104());
   }
 
@@ -275,9 +260,7 @@ contract StakedTokenV3 is
   }
 
   /// @inheritdoc IStakedTokenV3
-  function previewRedeem(
-    uint256 shares
-  ) public view override returns (uint256) {
+  function previewRedeem(uint256 shares) public view override returns (uint256) {
     return (EXCHANGE_RATE_UNIT * shares) / _currentExchangeRate;
   }
 
@@ -326,31 +309,22 @@ contract StakedTokenV3 is
   }
 
   /// @inheritdoc IStakedTokenV3
-  function setMaxSlashablePercentage(
-    uint256 percentage
-  ) external override onlySlashingAdmin {
+  function setMaxSlashablePercentage(uint256 percentage) external override onlySlashingAdmin {
     _setMaxSlashablePercentage(percentage);
   }
 
   /// @inheritdoc IStakedTokenV3
-  function getMaxSlashablePercentage()
-    external
-    view
-    override
-    returns (uint256)
-  {
+  function getMaxSlashablePercentage() external view override returns (uint256) {
     return _maxSlashablePercentage;
   }
 
   /// @inheritdoc IStakedTokenV3
-  function setCooldownSeconds(
-    uint256 cooldownSeconds
-  ) external onlyCooldownAdmin {
-    _setCooldownSeconds(cooldownSeconds);
+  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external onlyCooldownAdmin {
+    _setDefaultCooldownSeconds(cooldownSeconds);
   }
 
   /// @inheritdoc IStakedTokenV3
-  function getCooldownSeconds() external view returns (uint256) {
+  function getDefaultCooldownSeconds() external view returns (uint256) {
     return _cooldownSeconds;
   }
 
@@ -364,10 +338,7 @@ contract StakedTokenV3 is
    * @param percentage must be strictly lower 100% as otherwise the exchange rate calculation would result in 0 division
    */
   function _setMaxSlashablePercentage(uint256 percentage) internal {
-    require(
-      percentage < PercentageMath.PERCENTAGE_FACTOR,
-      'INVALID_SLASHING_PERCENTAGE'
-    );
+    require(percentage < PercentageMath.PERCENTAGE_FACTOR, 'INVALID_SLASHING_PERCENTAGE');
 
     _maxSlashablePercentage = percentage;
     emit MaxSlashablePercentageChanged(percentage);
@@ -377,9 +348,9 @@ contract StakedTokenV3 is
    * @dev sets the cooldown seconds
    * @param cooldownSeconds the new amount of cooldown seconds
    */
-  function _setCooldownSeconds(uint256 cooldownSeconds) internal {
+  function _setDefaultCooldownSeconds(uint256 cooldownSeconds) internal {
     _cooldownSeconds = cooldownSeconds;
-    emit CooldownSecondsChanged(cooldownSeconds);
+    emit DefaultWithdrawalWindowChanged(cooldownSeconds);
   }
 
   /**
@@ -389,21 +360,11 @@ contract StakedTokenV3 is
    * @param amount Amount to claim
    * @return amount claimed
    */
-  function _claimRewards(
-    address from,
-    address to,
-    uint256 amount
-  ) internal returns (uint256) {
+  function _claimRewards(address from, address to, uint256 amount) internal returns (uint256) {
     require(amount != 0, 'INVALID_ZERO_AMOUNT');
-    uint256 newTotalRewards = _updateCurrentUnclaimedRewards(
-      from,
-      balanceOf(from),
-      false
-    );
+    uint256 newTotalRewards = _updateCurrentUnclaimedRewards(from, balanceOf(from), false);
 
-    uint256 amountToClaim = (amount > newTotalRewards)
-      ? newTotalRewards
-      : amount;
+    uint256 amountToClaim = (amount > newTotalRewards) ? newTotalRewards : amount;
     require(amountToClaim != 0, 'INVALID_ZERO_AMOUNT');
 
     stakerRewardsToClaim[from] = newTotalRewards - amountToClaim;
@@ -426,14 +387,8 @@ contract StakedTokenV3 is
   ) internal returns (uint256) {
     require(REWARD_TOKEN == STAKED_TOKEN, 'REWARD_TOKEN_IS_NOT_STAKED_TOKEN');
 
-    uint256 userUpdatedRewards = _updateCurrentUnclaimedRewards(
-      from,
-      balanceOf(from),
-      true
-    );
-    uint256 amountToClaim = (amount > userUpdatedRewards)
-      ? userUpdatedRewards
-      : amount;
+    uint256 userUpdatedRewards = _updateCurrentUnclaimedRewards(from, balanceOf(from), true);
+    uint256 amountToClaim = (amount > userUpdatedRewards) ? userUpdatedRewards : amount;
 
     if (amountToClaim != 0) {
       _claimRewards(from, address(this), amountToClaim);
@@ -491,16 +446,13 @@ contract StakedTokenV3 is
         'INSUFFICIENT_COOLDOWN'
       );
       require(
-        (block.timestamp - (cooldownSnapshot.timestamp + _cooldownSeconds) <=
-          UNSTAKE_WINDOW),
+        (block.timestamp - (cooldownSnapshot.timestamp + _cooldownSeconds) <= UNSTAKE_WINDOW),
         'UNSTAKE_WINDOW_FINISHED'
       );
     }
 
     uint256 balanceOfFrom = balanceOf(from);
-    uint256 maxRedeemable = inPostSlashingPeriod
-      ? balanceOfFrom
-      : cooldownSnapshot.amount;
+    uint256 maxRedeemable = inPostSlashingPeriod ? balanceOfFrom : cooldownSnapshot.amount;
     require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE');
 
     uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
@@ -515,9 +467,7 @@ contract StakedTokenV3 is
       if (cooldownSnapshot.amount - amountToRedeem == 0) {
         delete stakersCooldowns[from];
       } else {
-        stakersCooldowns[from].amount =
-          stakersCooldowns[from].amount -
-          amountToRedeem.toUint184();
+        stakersCooldowns[from].amount = stakersCooldowns[from].amount - amountToRedeem.toUint184();
       }
     }
 
@@ -547,16 +497,10 @@ contract StakedTokenV3 is
     uint256 totalAssets,
     uint256 totalShares
   ) internal pure returns (uint216) {
-    return
-      (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets)
-        .toUint216();
+    return (((totalShares * EXCHANGE_RATE_UNIT) + totalAssets - 1) / totalAssets).toUint216();
   }
 
-  function _transfer(
-    address from,
-    address to,
-    uint256 amount
-  ) internal override {
+  function _transfer(address from, address to, uint256 amount) internal override {
     uint256 balanceOfFrom = balanceOf(from);
     // Sender
     _updateCurrentUnclaimedRewards(from, balanceOfFrom, true);
@@ -587,13 +531,7 @@ contract StakedTokenV3 is
     uint256 toBalanceBefore,
     uint256 amount
   ) internal virtual override {
-    _delegationChangeOnTransfer(
-      from,
-      to,
-      fromBalanceBefore,
-      toBalanceBefore,
-      amount
-    );
+    _delegationChangeOnTransfer(from, to, fromBalanceBefore, toBalanceBefore, amount);
   }
 
   function _getDelegationState(
@@ -616,9 +554,7 @@ contract StakedTokenV3 is
     address user,
     GovernancePowerType delegationType
   ) public view override returns (uint256) {
-    return
-      (super.getPowerCurrent(user, delegationType) * EXCHANGE_RATE_UNIT) /
-      getExchangeRate();
+    return (super.getPowerCurrent(user, delegationType) * EXCHANGE_RATE_UNIT) / getExchangeRate();
   }
 
   function _setDelegationState(
@@ -626,8 +562,7 @@ contract StakedTokenV3 is
     DelegationState memory delegationState
   ) internal override {
     DelegationAwareBalance storage userState = _balances[user];
-    userState.delegatedPropositionBalance = delegationState
-      .delegatedPropositionBalance;
+    userState.delegatedPropositionBalance = delegationState.delegatedPropositionBalance;
     userState.delegatedVotingBalance = delegationState.delegatedVotingBalance;
     userState.delegationMode = delegationState.delegationMode;
   }

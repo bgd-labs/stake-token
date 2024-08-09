@@ -110,7 +110,7 @@ rule noSlashingMoreThanMax(uint256 amount, address recipient) {
     slash(e, recipient, amount);
 
     uint vaultBalanceAfter = stake_token.balanceOf(currentContract);
-    
+
     assert vaultBalanceBefore - vaultBalanceAfter == maxSlashable;
 }
 
@@ -208,8 +208,8 @@ rule integrityOfReturnFunds(uint256 amount) {
             redeem(to, amount)
         {
             (inPostSlashingPeriod = true) ||
-            (block.timestamp > cooldown + getCooldownSeconds() &&
-            block.timestamp - (cooldown + getCooldownSeconds()) <= UNSTAKE_WINDOW)
+            (block.timestamp > cooldown + getDefaultCooldownSeconds() &&
+            block.timestamp - (cooldown + getDefaultCooldownSeconds()) <= UNSTAKE_WINDOW)
         }
 
     @Notes:
@@ -224,8 +224,8 @@ rule noRedeemOutOfUnstakeWindow(address to, uint256 amount) {
 
     // assert cooldown is inside the unstake window or it's a post slashing period
     assert inPostSlashingPeriod() ||
-        (to_mathint(e.block.timestamp) >= to_mathint(cooldown) + getCooldownSeconds() &&
-         to_mathint(e.block.timestamp) - (to_mathint(cooldown) + getCooldownSeconds()) <= to_mathint(UNSTAKE_WINDOW()));
+        (to_mathint(e.block.timestamp) >= to_mathint(cooldown) + getDefaultCooldownSeconds() &&
+         to_mathint(e.block.timestamp) - (to_mathint(cooldown) + getDefaultCooldownSeconds()) <= to_mathint(UNSTAKE_WINDOW()));
 }
 
 /*
@@ -270,8 +270,8 @@ rule cooldownCorrectness(env e) {
     require(sharesBefore >= require_uint256(sharesCooldownStart));
     // The following 3 requirements make sure we are in the unstake period
     require(cooldownStart > 0);
-    require(to_mathint(e.block.timestamp) > cooldownStart + getCooldownSeconds());
-    require(to_mathint(e.block.timestamp) - (cooldownStart + getCooldownSeconds()) <= to_mathint(UNSTAKE_WINDOW()));
+    require(to_mathint(e.block.timestamp) > cooldownStart + getDefaultCooldownSeconds());
+    require(to_mathint(e.block.timestamp) - (cooldownStart + getDefaultCooldownSeconds()) <= to_mathint(UNSTAKE_WINDOW()));
 
     redeem(e, to, amountToUnstake);
     mathint soldShares = sharesBefore - balanceOf(user);
@@ -563,7 +563,7 @@ rule previewStakeEquivalentStake(method f, env e, address to, uint256 amount) {
 
 /* ====================================================================
    The following is a liveness rule that is suposed to check the following:
-   In the post-slashing-period, a user can redeem his shares even with amount that 
+   In the post-slashing-period, a user can redeem his shares even with amount that
    is higher than the amount of the cooldown.
 
    Status: PASS
@@ -575,7 +575,7 @@ rule redeem_in_post_slashing_period(env e) {
     address user = e.msg.sender;
     require_feasible_state(e,user);
     require_feasible_state(e,to);
-    
+
     uint256 amount_to_redeem;
     require 0 < amount_to_redeem && amount_to_redeem <= assert_uint256(MAX_UINT104());
     uint256 sharesBefore = balanceOf(user); // number of shares
@@ -588,7 +588,7 @@ rule redeem_in_post_slashing_period(env e) {
 
     redeem@withrevert(e, to, amount_to_redeem);
     assert !lastReverted;
-    
+
     mathint soldShares = sharesBefore - balanceOf(user);
 
     assert amount_to_redeem <= assert_uint256(sharesBefore) =>
@@ -617,7 +617,7 @@ rule exchangeRate_cant_changed_unless_slash_returnFunds(method f, env e) filtere
 
     calldataarg args;
     f(e,args);
-    
+
     uint216 exchangeRate_after = getExchangeRate();
 
     assert (exchangeRate_before==exchangeRate_after);
@@ -635,14 +635,14 @@ rule cooldown_always_updates_cooldown_info() {
     env e;
     uint40 block_timestamp = require_uint40(e.block.timestamp);
     cooldown(e);
-    
+
     assert cooldownTimestamp(e.msg.sender)==block_timestamp;
     assert (assert_uint256(cooldownAmount(e.msg.sender))==balanceOf(e.msg.sender));
 }
 
 
 /* ===========================================================================
-   Check that the function _updateCurrentUnclaimedRewards(user ...) is called 
+   Check that the function _updateCurrentUnclaimedRewards(user ...) is called
    each time that the balance of user is changed.
 
    Status: PASS
@@ -657,7 +657,7 @@ rule when_changing_bal_update_rewards_must_be_called(method f)
 
     env e; calldataarg args;
     f(e,args);
-    
+
     uint256 alice_bal_2 = balanceOf(alice);
 
     assert (alice_bal_1 != alice_bal_2) => was_updated(alice)==true;
@@ -701,7 +701,7 @@ rule slash_increases_exchangeRate(env e) {
     uint256 total_underline = previewRedeem(totalSupply());
 
     uint216 exchange_rate_before = getExchangeRate();
-        
+
     address a; uint256 amount_to_slash;
     require to_mathint(amount_to_slash) >= 9 * total_underline / 10;
     slash(e,a,amount_to_slash);
@@ -727,7 +727,7 @@ rule returnFunds_decreases_exchangeRate(env e) {
     uint256 total_underline = previewRedeem(totalSupply());
 
     uint216 exchange_rate_before = getExchangeRate();
-        
+
     address a; uint256 amount_to_give;
     require to_mathint(amount_to_give) >= 9 * total_underline / 10;
     returnFunds(e,amount_to_give);
@@ -747,7 +747,7 @@ rule returnFunds_decreases_exchangeRate(env e) {
    except settleSlashing(). This is the corect behaviour.
    ==========================================================================*/
 rule slashing_cant_occur_during_post_slashing_period() {
-    
+
     require inPostSlashingPeriod();
 
     method f;
@@ -758,7 +758,7 @@ rule slashing_cant_occur_during_post_slashing_period() {
     address a; uint256 amount;
     slash(e2,a,amount);
     bool reverted = lastReverted;
-    
+
     assert !reverted => f.selector==sig:settleSlashing().selector;
 }
 
@@ -768,7 +768,7 @@ rule slashing_cant_occur_during_post_slashing_period() {
 /* ===========================================================================
    If we start with a "feasible-state", and the user has enough shares, then
    redeem must succeed.
-   Note: this rule was written originally in order to understand what should be 
+   Note: this rule was written originally in order to understand what should be
    a "feasible-state".
 
    Status: PASS
@@ -777,7 +777,7 @@ rule redeem_not_reverting(env e) {
     require e.msg.value == 0;
     address user = e.msg.sender;
     require_feasible_state(e,user);
-   
+
     uint256 amount_to_redeem;
     require 0 < amount_to_redeem && amount_to_redeem <= assert_uint256(MAX_UINT104());
 

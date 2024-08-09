@@ -53,10 +53,8 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
   modifier onlySlashingAdmin() {
-    require(
-      IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender),
-      'CALLER_NOT_SLASHING_ADMIN'
-    );
+    if (!IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender))
+      revert OnlySlashingAdmin(msg.sender);
     _;
   }
 
@@ -83,10 +81,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     string calldata name,
     string calldata symbol,
     address owner,
-    uint256 cooldownSeconds,
+    uint256 defaultCooldownSeconds,
     uint256 unstakeWindow
   ) external virtual initializer {
-    _initialize(stakedToken, name, symbol, owner, cooldownSeconds, unstakeWindow);
+    _initialize(stakedToken, name, symbol, owner, defaultCooldownSeconds, unstakeWindow);
   }
 
   function _initialize(
@@ -94,7 +92,7 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     string calldata name,
     string calldata symbol,
     address owner,
-    uint256 cooldownSeconds,
+    uint256 defaultCooldownSeconds,
     uint256 unstakeWindow
   ) internal onlyInitializing {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
@@ -102,8 +100,8 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     __ERC20_init(name, symbol); // TODO: should naming be inherited from underlying or not?
     __Ownable_init(owner);
     __EIP712_init(string(abi.encodePacked('stk', name)), '1');
-    _setCooldownSeconds(cooldownSeconds);
-    _setUnstakeWindow(unstakeWindow);
+    _setDefaultCooldownSeconds(defaultCooldownSeconds);
+    _setWithdrawalWindow(unstakeWindow);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
@@ -162,23 +160,23 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     return owner();
   }
 
-  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
-    _setUnstakeWindow(newUnstakeWindow);
+  function setWithdrawalWindow(uint256 newWithdrawalWindow) external onlyOwner {
+    _setWithdrawalWindow(newWithdrawalWindow);
   }
 
-  function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
+  function _setWithdrawalWindow(uint256 newWithdrawalWindow) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    $._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint40();
+    $._smConfig.defaultWithdrawalWindowSeconds = newWithdrawalWindow.toUint40();
 
-    emit UnstakeWindowChanged(newUnstakeWindow);
+    emit DefaultWithdrawalWindowChanged(newWithdrawalWindow);
   }
 
   /// @inheritdoc IStakeToken
-  function getUnstakeWindow() external view returns (uint256) {
+  function getWithdrawalWindow() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    return $._smConfig.unstakeWindowSeconds;
+    return $._smConfig.defaultWithdrawalWindowSeconds;
   }
 
   ///@inheritdoc IERC4626
@@ -337,9 +335,9 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     address destination,
     uint256 amount
   ) external onlySlashingAdmin whenNotPaused returns (uint256) {
-    require(amount > 0, 'ZERO_AMOUNT');
+    if (amount == 0) revert ZeroAmount();
     uint256 maxSlashable = getMaxSlashableAssets();
-    require(maxSlashable > 0, 'ZERO_FUNDS_AVAILABLE');
+    if (maxSlashable == 0) revert NoFundsAvailable();
     if (amount > maxSlashable) {
       amount = maxSlashable;
     }
@@ -362,28 +360,28 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
   }
 
   /// @inheritdoc IStakeToken
-  function setCooldownSeconds(uint256 cooldownSeconds) external onlyOwner {
-    _setCooldownSeconds(cooldownSeconds);
+  function setDefaultCooldownSeconds(uint256 defaultCooldownSeconds) external onlyOwner {
+    _setDefaultCooldownSeconds(defaultCooldownSeconds);
   }
 
   /// @inheritdoc IStakeToken
-  function getCooldownSeconds() external view returns (uint256) {
+  function getDefaultCooldownSeconds() external view returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    return $._smConfig.cooldownSeconds;
+    return $._smConfig.defaultCooldownSeconds;
   }
 
   function _cooldown(address from) internal {
     uint256 amount = balanceOf(from);
-
-    require(amount != 0, 'INVALID_BALANCE_ON_COOLDOWN');
+    if (amount == 0) revert ZeroAmount();
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint40 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint40();
+    uint40 timeForRedemption = (block.timestamp + $._smConfig.defaultCooldownSeconds).toUint40();
 
     $._stakersCooldowns[from] = CooldownSnapshot({
-      timestamp: timeForRedemption,
-      amount: uint216(amount)
+      cooldownEnd: timeForRedemption,
+      withdrawalWindowSeconds: $._smConfig.defaultWithdrawalWindowSeconds,
+      amount: uint104(amount)
     });
 
     emit Cooldown(from, amount);
@@ -391,14 +389,14 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
 
   /**
    * @dev sets the cooldown seconds
-   * @param cooldownSeconds the new amount of cooldown seconds
+   * @param defaultCooldownSeconds the new amount of cooldown seconds
    */
-  function _setCooldownSeconds(uint256 cooldownSeconds) internal {
+  function _setDefaultCooldownSeconds(uint256 defaultCooldownSeconds) internal {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    $._smConfig.cooldownSeconds = cooldownSeconds.toUint40();
+    $._smConfig.defaultCooldownSeconds = defaultCooldownSeconds.toUint40();
 
-    emit CooldownSecondsChanged(cooldownSeconds);
+    emit DefaultCooldownSecondsChanged(defaultCooldownSeconds);
   }
 
   /**
@@ -412,10 +410,10 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
     uint256 amount,
     bool pullFunds
   ) internal returns (uint256 sharesToMint) {
-    require(amount != 0, 'INVALID_ZERO_AMOUNT');
+    if (amount == 0) revert ZeroAmount();
 
     sharesToMint = previewDeposit(amount);
-    require(sharesToMint != 0, 'INVALID_ZERO_AMOUNT_AFTER_CONVERSION');
+    if (sharesToMint == 0) revert ZeroSharesAfterConversion(amount);
 
     _mint(to, sharesToMint.toUint104());
 
@@ -434,21 +432,22 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    * @param amount Amount to redeem
    */
   function _redeem(address from, address to, uint104 amount) internal returns (uint256 assets) {
-    require(amount != 0, 'INVALID_ZERO_AMOUNT');
+    if (amount == 0) revert ZeroAmount();
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
     CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[from];
     SmConfig memory cachedSmConfig = $._smConfig;
 
-    require(block.timestamp >= cooldownSnapshot.timestamp, 'INSUFFICIENT_COOLDOWN');
-    require(
-      block.timestamp - cooldownSnapshot.timestamp <= cachedSmConfig.unstakeWindowSeconds,
-      'UNSTAKE_WINDOW_FINISHED'
-    );
+    if (block.timestamp < cooldownSnapshot.cooldownEnd)
+      revert CooldownNotReady(cooldownSnapshot.cooldownEnd);
+    if (block.timestamp > cooldownSnapshot.cooldownEnd + cooldownSnapshot.withdrawalWindowSeconds)
+      revert CooldownExpired(
+        cooldownSnapshot.cooldownEnd + cooldownSnapshot.withdrawalWindowSeconds
+      );
 
     uint256 maxRedeemable = cooldownSnapshot.amount;
-    require(maxRedeemable != 0, 'INVALID_ZERO_MAX_REDEEMABLE');
+    if(maxRedeemable == 0) revert ZeroAmountRedeemable();
 
     uint256 amountToRedeem = (amount > maxRedeemable) ? maxRedeemable : amount;
 
@@ -466,7 +465,6 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
    * @param newExchangeRate the new exchange rate
    */
   function _updateExchangeRate(uint216 newExchangeRate) internal virtual {
-    require(newExchangeRate != 0, 'ZERO_EXCHANGE_RATE');
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     $._currentExchangeRate = newExchangeRate;
     emit ExchangeRateChanged(newExchangeRate);
@@ -501,21 +499,21 @@ contract StakeToken is ERC20PermitUpgradeable, IStakeToken, Rescuable {
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
       StakeTokenStorage storage $ = _getStakeTokenStorage();
       CooldownSnapshot memory previousSenderCooldown = $._stakersCooldowns[from];
-      if (previousSenderCooldown.timestamp != 0) {
+      if (previousSenderCooldown.cooldownEnd != 0) {
         // update to 0 means redeem
         // this is based on the assumption that erc20 forbids transfer to 0
         if (to == address(0)) {
           if (previousSenderCooldown.amount <= amount) {
             delete $._stakersCooldowns[from];
           } else {
-            $._stakersCooldowns[from].amount = uint216(previousSenderCooldown.amount - amount);
+            $._stakersCooldowns[from].amount = uint104(previousSenderCooldown.amount - amount);
           }
         } else {
           uint256 balanceAfter = balanceOfFrom - amount;
           if (balanceAfter == 0) {
             delete $._stakersCooldowns[from];
           } else if (balanceAfter < previousSenderCooldown.amount) {
-            $._stakersCooldowns[from].amount = uint216(balanceAfter);
+            $._stakersCooldowns[from].amount = uint104(balanceAfter);
           }
         }
       }

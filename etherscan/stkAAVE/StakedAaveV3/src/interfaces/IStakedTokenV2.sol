@@ -8,11 +8,7 @@ interface IStakedTokenV2 {
   }
 
   event RewardsAccrued(address user, uint256 amount);
-  event RewardsClaimed(
-    address indexed from,
-    address indexed to,
-    uint256 amount
-  );
+  event RewardsClaimed(address indexed from, address indexed to, uint256 amount);
   event Cooldown(address indexed user, uint256 amount);
 
   /**
@@ -47,9 +43,7 @@ interface IStakedTokenV2 {
    * @param staker The staker address
    * @return The rewards
    */
-  function getTotalRewardsBalance(
-    address staker
-  ) external view returns (uint256);
+  function getTotalRewardsBalance(address staker) external view returns (uint256);
 
   /**
    * @dev implements the permit function as for https://github.com/ethereum/EIPs/blob/8a34d644aacf0f9f8f00815307fd7dd5da07655f/EIPS/eip-2612.md

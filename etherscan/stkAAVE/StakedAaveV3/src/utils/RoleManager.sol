@@ -24,10 +24,7 @@ contract RoleManager {
   }
 
   modifier onlyPendingRoleAdmin(uint256 role) {
-    require(
-      _pendingAdmins[role] == msg.sender,
-      'CALLER_NOT_PENDING_ROLE_ADMIN'
-    );
+    require(_pendingAdmins[role] == msg.sender, 'CALLER_NOT_PENDING_ROLE_ADMIN');
     _;
   }
 
@@ -52,10 +49,7 @@ contract RoleManager {
    * @param role the role associated with the new pending admin being set
    * @param newPendingAdmin the address of the new pending admin
    **/
-  function setPendingAdmin(
-    uint256 role,
-    address newPendingAdmin
-  ) public onlyRoleAdmin(role) {
+  function setPendingAdmin(uint256 role, address newPendingAdmin) public onlyRoleAdmin(role) {
     _pendingAdmins[role] = newPendingAdmin;
     emit PendingAdminChanged(newPendingAdmin, role);
   }
@@ -73,8 +67,7 @@ contract RoleManager {
   function _initAdmins(InitAdmin[] memory initAdmins) internal {
     for (uint256 i = 0; i < initAdmins.length; i++) {
       require(
-        _admins[initAdmins[i].role] == address(0) &&
-          initAdmins[i].admin != address(0),
+        _admins[initAdmins[i].role] == address(0) && initAdmins[i].admin != address(0),
         'ADMIN_CANNOT_BE_INITIALIZED'
       );
       _admins[initAdmins[i].role] = initAdmins[i].admin;

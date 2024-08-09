@@ -28,7 +28,7 @@ library ActionsLibrary {
     vm.prank(actor);
     self.cooldown();
     IStakeToken.CooldownSnapshot memory snapshot = self.stakersCooldowns(actor);
-    vm.warp(snapshot.timestamp + 1);
+    vm.warp(snapshot.cooldownEnd + 1);
   }
 
   function helper_slash(

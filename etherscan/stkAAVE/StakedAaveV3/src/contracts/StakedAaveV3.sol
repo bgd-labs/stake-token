@@ -52,10 +52,7 @@ contract StakedAaveV3 is StakedTokenV3, IStakedAaveV3 {
   function initialize() external override initializer {}
 
   /// @inheritdoc IStakedAaveV3
-  function claimRewardsAndStake(
-    address to,
-    uint256 amount
-  ) external override returns (uint256) {
+  function claimRewardsAndStake(address to, uint256 amount) external override returns (uint256) {
     return _claimRewardsAndStakeOnBehalf(msg.sender, to, amount);
   }
 
@@ -85,13 +82,7 @@ contract StakedAaveV3 is StakedTokenV3, IStakedAaveV3 {
     uint256 toBalanceBefore,
     uint256 amount
   ) internal override {
-    super._afterTokenTransfer(
-      from,
-      to,
-      fromBalanceBefore,
-      toBalanceBefore,
-      amount
-    );
+    super._afterTokenTransfer(from, to, fromBalanceBefore, toBalanceBefore, amount);
 
     address cachedGhoDebtToken = address(ghoDebtToken);
     if (cachedGhoDebtToken != address(0)) {
@@ -116,9 +107,7 @@ contract StakedAaveV3 is StakedTokenV3, IStakedAaveV3 {
     uint256 toBalanceBefore,
     uint256 amount
   ) internal {
-    bytes4 selector = IGhoVariableDebtTokenTransferHook
-      .updateDiscountDistribution
-      .selector;
+    bytes4 selector = IGhoVariableDebtTokenTransferHook.updateDiscountDistribution.selector;
     uint256 gasLimit = 220_000;
 
     /// @solidity memory-safe-assembly

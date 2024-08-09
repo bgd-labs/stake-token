@@ -15,7 +15,7 @@ contract Slashing is StakeTestBase {
     address destination = vm.addr(100);
 
     vm.startPrank(caller);
-    vm.expectRevert('CALLER_NOT_SLASHING_ADMIN');
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.OnlySlashingAdmin.selector, caller));
     stakeToken.slash(destination, type(uint256).max);
   }
 
@@ -23,7 +23,7 @@ contract Slashing is StakeTestBase {
     address destination = vm.addr(100);
 
     vm.startPrank(slashingAdmin);
-    vm.expectRevert('ZERO_AMOUNT');
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.ZeroAmount.selector));
     stakeToken.slash(destination, 0);
   }
 
@@ -33,7 +33,7 @@ contract Slashing is StakeTestBase {
     _stake(amount, user);
 
     vm.startPrank(slashingAdmin);
-    vm.expectRevert('ZERO_FUNDS_AVAILABLE');
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.NoFundsAvailable.selector));
     stakeToken.slash(destination, type(uint256).max);
   }
 
