@@ -5,7 +5,7 @@ import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/I
 import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
 
 import {IRewardsController} from './interfaces/IRewardsController.sol';
-import {IStakeToken} from './interfaces/eIStakeToken.sol';
+import {IStakeToken} from './interfaces/IStakeToken.sol';
 
 import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradableOwnableWithGuardian.sol';
 
@@ -45,13 +45,6 @@ contract StakeToken is
 
   IRewardsController public immutable REWARDS_CONTROLLER;
   IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
-
-  error ZeroExchangeRate();
-  error ZeroBalanceOnCooldown();
-  error ZeroAmountSlashing();
-  error ZeroFundsAvailable();
-  error CallerIsNotSlashingAdmin();
-  error NotApprovedForCooldown(address owner, address spender);
 
   modifier onlySlashingAdmin() {
     if (!IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender)) {
@@ -155,8 +148,8 @@ contract StakeToken is
     return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
   }
 
-  function stakersCooldowns(address user) external view returns (CooldownSnapshot memory) {
-    return _getStakeTokenStorage()._stakersCooldowns[user];
+  function getStakerCooldown(address user) external view returns (CooldownSnapshot memory) {
+    return _getStakeTokenStorage()._stakerCooldown[user];
   }
 
   function maxWithdraw(address owner) public view override returns (uint256) {
@@ -165,13 +158,13 @@ contract StakeToken is
 
   function maxRedeem(address owner) public view override returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $._stakersCooldowns[owner];
+    CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
 
     if (
       block.timestamp >= cooldownSnapshot.timestamp &&
       block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindowSeconds
     ) {
-      return $._stakersCooldowns[owner].amount;
+      return $._stakerCooldown[owner].amount;
     }
 
     return 0;
@@ -197,7 +190,7 @@ contract StakeToken is
 
     uint32 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint32();
 
-    $._stakersCooldowns[from] = CooldownSnapshot({
+    $._stakerCooldown[from] = CooldownSnapshot({
       timestamp: timeForRedemption,
       amount: amount.toUint224()
     });
