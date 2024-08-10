@@ -11,7 +11,7 @@ import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-con
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
 import {ERC20PermitUpgradeable, ERC20Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
-import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
+import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math, IERC4626} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 
 import {IERC20 as SafeIERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
@@ -20,21 +20,18 @@ import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
 contract StakeToken is
-  IStakeToken,
   Initializable,
   ERC20PermitUpgradeable,
   ERC20PausableUpgradeable,
   ERC4626Upgradeable,
-  UpgradableOwnableWithGuardian
+  UpgradableOwnableWithGuardian,
+  IStakeToken
 {
   using SafeERC20 for SafeIERC20;
   using SafeCast for uint256;
   using Math for uint256;
 
-  // @audit-high @pavelvm5 this mechanic won't work at all with 1e4 if we will slash max amount, then deposit 1e18 and try to slash again we will have zero exchange_rate anyway
-  // should be 1e18 or smth like that, due to the fact that we will use mostly stata-tokens
-  // changed to 1e18
-  uint256 public constant MIN_ASSETS_REMAINING = 1e18;
+  uint256 public constant MIN_ASSETS_REMAINING = 1e6;
 
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
@@ -135,7 +132,6 @@ contract StakeToken is
     }
   }
 
-  // @pavelvm5 why is it returning 216? changed to 256
   function getExchangeRate() external view returns (uint256) {
     return _getStakeTokenStorage()._currentExchangeRate;
   }
@@ -152,11 +148,15 @@ contract StakeToken is
     return _getStakeTokenStorage()._stakerCooldown[user];
   }
 
-  function maxWithdraw(address owner) public view override returns (uint256) {
+  function maxWithdraw(
+    address owner
+  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
     return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
   }
 
-  function maxRedeem(address owner) public view override returns (uint256) {
+  function maxRedeem(
+    address owner
+  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
     StakeTokenStorage storage $ = _getStakeTokenStorage();
     CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
 
@@ -175,7 +175,12 @@ contract StakeToken is
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
 
-  function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+  function decimals()
+    public
+    view
+    override(ERC20Upgradeable, ERC4626Upgradeable, IERC20Metadata)
+    returns (uint8)
+  {
     return ERC4626Upgradeable.decimals();
   }
 
@@ -220,6 +225,50 @@ contract StakeToken is
     emit ExchangeRateChanged(newExchangeRate);
   }
 
+  function _update(
+    address from,
+    address to,
+    uint256 value
+  ) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) whenNotPaused {
+    uint256 cachedTotalSupply = totalSupply();
+
+    // stake & transfer
+    if (to != address(0)) {
+      REWARDS_CONTROLLER.handleAction(to, cachedTotalSupply, balanceOf(to));
+    }
+
+    // redeem & transfer
+    if (from != address(0) && from != to) {
+      uint256 balanceOfFrom = balanceOf(from);
+      REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
+
+      StakeTokenStorage storage $ = _getStakeTokenStorage();
+      CooldownSnapshot memory previousSenderCooldown = $._stakerCooldown[from];
+
+      if (previousSenderCooldown.timestamp != 0) {
+        if (to == address(0)) {
+          // redeem
+          if (previousSenderCooldown.amount == value) {
+            delete $._stakerCooldown[from];
+          } else {
+            $._stakerCooldown[from].amount = (previousSenderCooldown.amount - value).toUint224();
+          }
+        } else {
+          // transfer
+          uint224 balanceAfter = (balanceOfFrom - value).toUint224();
+
+          if (balanceAfter == 0) {
+            delete $._stakerCooldown[from];
+          } else if (balanceAfter < previousSenderCooldown.amount) {
+            $._stakerCooldown[from].amount = balanceAfter;
+          }
+        }
+      }
+    }
+
+    super._update(from, to, value);
+  }
+
   function _convertToShares(
     uint256 assets,
     Math.Rounding rounding
@@ -241,15 +290,6 @@ contract StakeToken is
     uint256 newTotalShares
   ) internal pure returns (uint256) {
     return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
-  }
-
-  // @pavelvm5 add from old stakeToken here handle action for reward controller
-  function _update(
-    address from,
-    address to,
-    uint256 value
-  ) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) whenNotPaused {
-    super._update(from, to, value);
   }
 
   function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
