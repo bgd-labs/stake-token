@@ -14,8 +14,28 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract Cooldown is StakeTestBase {
+  event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
+
+  event Withdraw(
+    address indexed sender,
+    address indexed receiver,
+    address indexed owner,
+    uint256 assets,
+    uint256 shares
+  );
+
+  function test_baseFunctionsBeforeActions() public view {
+    assertEq(stakeToken.asset(), address(underlying));
+
+    assertEq(stakeToken.totalAssets(), 0);
+    assertEq(stakeToken.totalSupply(), 0);
+
+    assertEq(stakeToken.maxDeposit(user), type(uint256).max);
+    assertEq(stakeToken.maxMint(user), type(uint256).max);
+  }
+
   // Due to default 1e18 exchange rate there's no rounding here at all, so I checked these values striclty
-  function test_previewFunctions(uint104 assets) public view {
+  function test_previewFunctions(uint224 assets) public view {
     uint256 shares = stakeToken.convertToShares(assets);
 
     uint256 previewDeposit = stakeToken.previewDeposit(assets);
@@ -31,7 +51,7 @@ contract Cooldown is StakeTestBase {
     assertEq(previewRedeem, assets);
   }
 
-  function test_deposit(uint104 amountToStake) public {
+  function test_deposit(uint224 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     uint256 shares = _deposit(amountToStake, user, user);
@@ -43,7 +63,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), shares);
   }
 
-  function test_depositToSomeone(uint104 amountToStake) public {
+  function test_depositToSomeone(uint224 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     uint256 shares = _deposit(amountToStake, user, someone);
@@ -55,7 +75,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(someone), shares);
   }
 
-  function test_mint(uint104 amountOfShares) public {
+  function test_mint(uint224 amountOfShares) public {
     vm.assume(amountOfShares > 0);
 
     uint256 amountToStake = stakeToken.convertToAssets(amountOfShares);
@@ -70,7 +90,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), amountOfShares);
   }
 
-  function test_mintToSomeone(uint104 amountOfShares) public {
+  function test_mintToSomeone(uint224 amountOfShares) public {
     vm.assume(amountOfShares > 0);
 
     uint256 amountToStake = stakeToken.convertToAssets(amountOfShares);
@@ -85,7 +105,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(someone), amountOfShares);
   }
 
-  function test_maxWithdraw(uint104 amountToStake) public {
+  function test_maxWithdraw(uint224 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     deal(address(underlying), user, amountToStake);
@@ -107,7 +127,7 @@ contract Cooldown is StakeTestBase {
     assertEq(assetsAvailable, amountToStake);
   }
 
-  function test_maxRedeem(uint104 amountToStake) public {
+  function test_maxRedeem(uint224 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     uint256 shares = _deposit(amountToStake, user, user);
@@ -127,11 +147,11 @@ contract Cooldown is StakeTestBase {
     assertEq(sharesAvailable, shares);
   }
 
-  function test_redeem(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_redeem(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
-    uint256 shares = _deposit(amountStaked, user, user);
+    _deposit(amountStaked, user, user);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
     vm.startPrank(user);
@@ -149,7 +169,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_redeemToSomeone(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_redeemToSomeone(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -171,7 +191,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_redeemWithApprove(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_redeemWithApprove(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -196,7 +216,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_redeemWithoutApprove(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_redeemWithoutApprove(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -222,11 +242,11 @@ contract Cooldown is StakeTestBase {
     stakeToken.redeem(sharesToRedeem, someone, user);
   }
 
-  function test_withdraw(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_withdraw(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
-    uint256 shares = _deposit(amountStaked, user, user);
+    _deposit(amountStaked, user, user);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
     vm.startPrank(user);
@@ -246,11 +266,11 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_withdrawToSomeone(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_withdrawToSomeone(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
-    uint256 shares = _deposit(amountStaked, user, user);
+    _deposit(amountStaked, user, user);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
 
     vm.startPrank(user);
@@ -270,11 +290,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_withdrawWithApprove(
-    uint104 amountStaked,
-    uint104 amountRedeemed,
-    address fuzzUser
-  ) public {
+  function test_withdrawWithApprove(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -301,7 +317,7 @@ contract Cooldown is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_withdrawWithoutApprove(uint104 amountStaked, uint104 amountRedeemed) public {
+  function test_withdrawWithoutApprove(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -326,5 +342,28 @@ contract Cooldown is StakeTestBase {
     );
 
     stakeToken.withdraw(amountRedeemed, someone, user);
+  }
+
+  function test_events(uint224 amountStaked, uint224 amountRedeemed) public {
+    vm.assume(amountStaked > 0);
+    vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
+
+    _dealUnderlying(amountStaked, user);
+
+    vm.startPrank(user);
+
+    IERC20(stakeToken.asset()).approve(address(stakeToken), amountStaked);
+
+    vm.expectEmit(true, true, false, true);
+    emit Deposit(user, user, amountStaked, stakeToken.convertToShares(amountStaked));
+    stakeToken.deposit(amountStaked, user);
+
+    stakeToken.cooldown();
+
+    skip(stakeToken.getCooldownSeconds());
+
+    vm.expectEmit(true, true, false, true);
+    emit Withdraw(user, user, user, amountRedeemed, stakeToken.convertToShares(amountRedeemed));
+    stakeToken.redeem(amountRedeemed, user, user);
   }
 }
