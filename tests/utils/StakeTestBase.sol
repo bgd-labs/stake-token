@@ -17,9 +17,6 @@ import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
 import {StakeToken} from '../../src/contracts/StakeToken.sol';
 import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
 
-/**
- * Token agnostic stake base helper setting up a aave protocol & stake token with an erc20 underlying
- */
 contract StakeTestBase is TestnetProcedures {
   address public admin = vm.addr(0x1000);
   address public guardian = vm.addr(0x2000);
