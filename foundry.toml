@@ -11,6 +11,9 @@ ffi = true
 # disabled as will break due to aave-origin incompatibility
 # via-ir = true
 
+[fuzz]
+runs = 1024
+
 [rpc_endpoints]
 mainnet = "${RPC_MAINNET}"
 optimism = "${RPC_OPTIMISM}"

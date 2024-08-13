@@ -187,4 +187,46 @@ contract CooldownTests is StakeTestBase {
 
     stakeToken.withdraw(1, user, user);
   }
+
+  function test_cooldownOnBehalf(uint224 amountToStake, uint224 amountToRedeem) public {
+    vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
+
+    _deposit(amountToStake, user, user);
+
+    vm.startPrank(user);
+
+    stakeToken.approve(someone, stakeToken.convertToShares(amountToStake));
+
+    vm.stopPrank();
+    vm.startPrank(someone);
+
+    stakeToken.cooldownOnBehalfOf(user);
+
+    IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
+
+    assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldownSeconds());
+    assertEq(snapshotBefore.amount, amountToStake);
+
+    skip(stakeToken.getCooldownSeconds());
+
+    stakeToken.withdraw(amountToRedeem, someone, user);
+
+    IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
+
+    assertEq(snapshotAfter.amount, amountToStake - amountToRedeem);
+    assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
+  }
+
+  function test_cooldownOnBehalfNotApproved(uint224 amountToStake) public {
+    vm.assume(amountToStake > 0);
+
+    _deposit(amountToStake, user, user);
+
+    vm.startPrank(someone);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(IStakeToken.NotApprovedForCooldown.selector, user, someone)
+    );
+    stakeToken.cooldownOnBehalfOf(user);
+  }
 }
