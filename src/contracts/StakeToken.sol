@@ -78,7 +78,10 @@ contract StakeToken is
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
+  function slash(
+    address destination,
+    uint256 amount
+  ) external onlySlashingAdmin whenNotPaused returns (uint256) {
     if (amount == 0) {
       revert ZeroAmountSlashing();
     }

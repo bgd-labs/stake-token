@@ -15,7 +15,7 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract Cooldown is StakeTestBase {
+contract ERC4626Tests is StakeTestBase {
   event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
 
   event Withdraw(

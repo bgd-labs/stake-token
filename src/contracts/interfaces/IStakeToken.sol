@@ -60,6 +60,12 @@ interface IStakeToken is IERC4626 {
   function slash(address destination, uint256 amount) external returns (uint256);
 
   /**
+   * @dev Sets pause to the contract, can be called by guardian or owner
+   * @param pause bool flag indicates true - set to pause, false unpause
+   */
+  function setPause(bool pause) external;
+
+  /**
    * @dev Activates the cooldown period to unstake
    * - It can't be called if the user is not staking
    */

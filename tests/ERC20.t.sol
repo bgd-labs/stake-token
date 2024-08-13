@@ -11,7 +11,7 @@ import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IE
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract ERC20Std is StakeTestBase {
+contract ERC20Tests is StakeTestBase {
   function test_name() external view {
     assertEq('Stake Test', stakeToken.name());
   }

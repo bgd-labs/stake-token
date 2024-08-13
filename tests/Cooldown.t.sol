@@ -13,7 +13,7 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract Cooldown is StakeTestBase {
+contract CooldownTests is StakeTestBase {
   function test_cooldown(uint224 amountToStake, uint224 amountToRedeem) public {
     vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
 
