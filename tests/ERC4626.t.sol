@@ -6,6 +6,8 @@ import {StakeToken} from 'src/contracts/StakeToken.sol';
 import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
 import {IERC20Errors} from 'openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
+import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
+
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
@@ -242,6 +244,28 @@ contract Cooldown is StakeTestBase {
     stakeToken.redeem(sharesToRedeem, someone, user);
   }
 
+  function test_redeemMoreThanHave(uint224 amountStaked) public {
+    vm.assume(amountStaked > 0);
+
+    uint256 shares = _deposit(amountStaked, user, user);
+
+    vm.startPrank(user);
+
+    stakeToken.cooldown();
+    skip(stakeToken.getCooldownSeconds());
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ERC4626Upgradeable.ERC4626ExceededMaxRedeem.selector,
+        address(user),
+        shares + 1,
+        shares
+      )
+    );
+
+    stakeToken.redeem(shares + 1, user, user);
+  }
+
   function test_withdraw(uint224 amountStaked, uint224 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
@@ -342,6 +366,28 @@ contract Cooldown is StakeTestBase {
     );
 
     stakeToken.withdraw(amountRedeemed, someone, user);
+  }
+
+  function test_withdrawMoreThanHave(uint224 amountStaked) public {
+    vm.assume(amountStaked > 0);
+
+    _deposit(amountStaked, user, user);
+
+    vm.startPrank(user);
+
+    stakeToken.cooldown();
+
+    skip(stakeToken.getCooldownSeconds());
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ERC4626Upgradeable.ERC4626ExceededMaxWithdraw.selector,
+        address(user),
+        uint256(amountStaked) + 1,
+        amountStaked
+      )
+    );
+    stakeToken.withdraw(uint256(amountStaked) + 1, user, user);
   }
 
   function test_events(uint224 amountStaked, uint224 amountRedeemed) public {
