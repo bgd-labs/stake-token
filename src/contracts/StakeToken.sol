@@ -7,7 +7,7 @@ import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzep
 import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradableOwnableWithGuardian.sol';
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
-import {ERC20PermitUpgradeable, ERC20Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
+import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
 import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math, IERC4626} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 
@@ -43,7 +43,9 @@ contract StakeToken is
   IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
   modifier onlySlashingAdmin() {
-    if (!IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', msg.sender)) {
+    if (
+      !IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', _msgSender())
+    ) {
       revert CallerIsNotSlashingAdmin();
     }
     _;
@@ -62,8 +64,8 @@ contract StakeToken is
     string calldata symbol,
     address owner,
     address guardian,
-    uint256 cooldownSeconds,
-    uint256 unstakeWindow
+    uint256 cooldown_,
+    uint256 unstakeWindow_
   ) external virtual initializer {
     __ERC20_init(name, symbol);
     __ERC20Permit_init(name);
@@ -73,8 +75,8 @@ contract StakeToken is
     __Ownable_init(owner);
     __Ownable_With_Guardian_init(guardian);
 
-    _setCooldownSeconds(cooldownSeconds);
-    _setUnstakeWindow(unstakeWindow);
+    _setCooldown(cooldown_);
+    _setUnstakeWindow(unstakeWindow_);
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
@@ -108,13 +110,36 @@ contract StakeToken is
     return amount;
   }
 
+  function depositWithPermit(
+    uint256 assets,
+    address receiver,
+    uint256 deadline,
+    SignatureParams memory sig
+  ) public returns (uint256) {
+    try
+      IERC20Permit(asset()).permit(
+        _msgSender(),
+        address(this),
+        assets,
+        deadline,
+        sig.v,
+        sig.r,
+        sig.s
+      )
+    {} catch {
+      revert PermitIsFailed();
+    }
+
+    return deposit(assets, receiver);
+  }
+
   function cooldown() external {
-    _cooldown(msg.sender);
+    _cooldown(_msgSender());
   }
 
   function cooldownOnBehalfOf(address owner) external {
-    if (allowance(owner, msg.sender) == 0) {
-      revert NotApprovedForCooldown(owner, msg.sender);
+    if (allowance(owner, _msgSender()) == 0) {
+      revert NotApprovedForCooldown(owner, _msgSender());
     }
 
     _cooldown(owner);
@@ -124,8 +149,8 @@ contract StakeToken is
     _setUnstakeWindow(newUnstakeWindow);
   }
 
-  function setCooldownSeconds(uint256 newCooldownSeconds) external onlyOwner {
-    _setCooldownSeconds(newCooldownSeconds);
+  function setCooldown(uint256 newCooldown) external onlyOwner {
+    _setCooldown(newCooldown);
   }
 
   function setPause(bool pause) external onlyOwnerOrGuardian {
@@ -140,12 +165,12 @@ contract StakeToken is
     return _getStakeTokenStorage()._currentExchangeRate;
   }
 
-  function getCooldownSeconds() external view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.cooldownSeconds;
+  function getCooldown() external view returns (uint256) {
+    return _getStakeTokenStorage()._smConfig.cooldown;
   }
 
   function getUnstakeWindow() external view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.unstakeWindowSeconds;
+    return _getStakeTokenStorage()._smConfig.unstakeWindow;
   }
 
   function getStakerCooldown(address user) external view returns (CooldownSnapshot memory) {
@@ -166,7 +191,7 @@ contract StakeToken is
 
     if (
       block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindowSeconds
+      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindow
     ) {
       return $._stakerCooldown[owner].amount;
     }
@@ -197,26 +222,26 @@ contract StakeToken is
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint32 timeForRedemption = (block.timestamp + $._smConfig.cooldownSeconds).toUint32();
+    uint32 timeForRedemption = (block.timestamp + $._smConfig.cooldown).toUint32();
 
     $._stakerCooldown[from] = CooldownSnapshot({
       timestamp: timeForRedemption,
       amount: amount.toUint224()
     });
 
-    emit Cooldown(from, amount);
+    emit Cooldown(from, amount, timeForRedemption);
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _getStakeTokenStorage()._smConfig.unstakeWindowSeconds = newUnstakeWindow.toUint32();
+    _getStakeTokenStorage()._smConfig.unstakeWindow = newUnstakeWindow.toUint32();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
-  function _setCooldownSeconds(uint256 newCooldownSeconds) internal {
-    _getStakeTokenStorage()._smConfig.cooldownSeconds = newCooldownSeconds.toUint32();
+  function _setCooldown(uint256 newCooldown) internal {
+    _getStakeTokenStorage()._smConfig.cooldown = newCooldown.toUint32();
 
-    emit CooldownSecondsChanged(newCooldownSeconds);
+    emit CooldownChanged(newCooldown);
   }
 
   function _updateExchangeRate(uint256 newExchangeRate) internal {

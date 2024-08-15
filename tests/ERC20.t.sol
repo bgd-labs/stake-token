@@ -40,7 +40,7 @@ contract ERC20Tests is StakeTestBase {
     vm.startPrank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     stakeToken.redeem(amountRedeemed, user, user);
 

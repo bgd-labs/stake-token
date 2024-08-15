@@ -5,122 +5,143 @@ import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 
 interface IStakeToken is IERC4626 {
   struct StakeTokenStorage {
+    /// @notice User cooldown options
     mapping(address => CooldownSnapshot) _stakerCooldown;
+    /// @notice Cooldown parameters
     SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
     uint192 _currentExchangeRate;
   }
 
   struct CooldownSnapshot {
-    /// @notice Represent the time of unlocking funds for redemption
+    /// @notice Time to unlock funds for withdrawal
     uint32 timestamp;
-    /// @notice Amount of tokens available for redeem
+    /// @notice Amount of tokens available for withdrawal
     uint224 amount;
   }
 
   struct SmConfig {
-    /// @notice Seconds available to redeem once the cooldown period is fulfilled
-    uint32 unstakeWindowSeconds;
-    /// @notice Seconds between starting cooldown and being able to withdraw
-    uint32 cooldownSeconds;
+    /// @notice Cooldown duration
+    uint32 cooldown;
+    /// @notice Time period during which funds can be withdrawn
+    uint32 unstakeWindow;
   }
 
-  event SlashingSettled();
+  struct SignatureParams {
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+  }
 
-  event Cooldown(address indexed user, uint256 amount);
+  event Cooldown(address indexed user, uint256 amount, uint256 timestamp);
   event Slashed(address indexed destination, uint256 amount);
 
-  event MaxSlashablePercentageChanged(uint256 newPercentage);
-  event SlashingExitWindowDurationChanged(uint256 windowSeconds);
-  event CooldownSecondsChanged(uint256 cooldownSeconds);
+  event CooldownChanged(uint256 cooldown);
   event UnstakeWindowChanged(uint256 unstakeWindow);
   event ExchangeRateChanged(uint256 exchangeRate);
   event SlashingAdminChanged(address newAdmin);
-
-  event FundsReturned(uint256 amount);
 
   error ZeroExchangeRate();
   error ZeroBalanceOnCooldown();
   error ZeroAmountSlashing();
   error ZeroFundsAvailable();
   error CallerIsNotSlashingAdmin();
+  error PermitIsFailed();
   error NotApprovedForCooldown(address owner, address spender);
 
   /**
-   * @dev Executes a slashing of the underlying of a certain amount, transferring the seized funds
+   * @dev Executes a slashing of the asset of a certain amount, transferring the seized funds
    * to destination. Decreasing the amount of underlying will automatically adjust the exchange rate.
-   * A call to `slash` will start a slashing event which has to be settled via `settleSlashing`.
-   * As long as the slashing event is ongoing, stake and slash are deactivated.
-   * - MUST NOT be called when a previous slashing is still ongoing
-   * @param destination the address where seized funds will be transferred
-   * @param amount the amount to be slashed
-   * - if the amount bigger than maximum allowed, the maximum will be slashed instead.
-   * @return amount the amount slashed
+   * If the amount exceeds maxSlashableAmount then the second one is taken.
+   * Emits a {Slashed} event.
+   * @param destination Address where seized funds will be transferred
+   * @param amount Amount to be slashed
+   * @return amount Amount slashed
    */
   function slash(address destination, uint256 amount) external returns (uint256);
 
   /**
-   * @dev Sets pause to the contract, can be called by guardian or owner
-   * @param pause bool flag indicates true - set to pause, false unpause
+   * @dev Makes a deposit by first issuing approve for the required number of tokens (if `asset` supports the `permit` function).
+   * Emits a {Deposit} event.
+   * @param assets Amount of assets to be deposited
+   * @param receiver Receiver of shares
+   * @param deadline Signature deadline for issuing approve
+   * @param sig Signature parameters
+   */
+  function depositWithPermit(
+    uint256 assets,
+    address receiver,
+    uint256 deadline,
+    SignatureParams memory sig
+  ) external returns (uint256);
+
+  /**
+   * @dev Sets pause to the contract, can be called by `guardian` or `owner`.
+   * Emits a {Paused} or an {Unpaused} event.
+   * @param pause Flag indicating whether to pause or unpause
    */
   function setPause(bool pause) external;
 
   /**
-   * @dev Activates the cooldown period to unstake
-   * - It can't be called if the user is not staking
+   * @dev Activates the cooldown period to unstake for `msg.sender`.
+   * It can't be called if the user is not staking.
+   * Emits a {Cooldown} event.
    */
   function cooldown() external;
 
   /**
-   * @dev Activates the cooldown period to unstake
-   * - It can't be called if the user is not staking
+   * @dev Activates the cooldown period to unstake for a certain user.
+   * It can't be called if the user is not staking.
+   * `from` must approve shares for `msg.sender` so that he can activate the cooldown on his behalf.
+   * Emits a {Cooldown} event.
+   * @param from Address at which the `cooldown` will be activated
    */
   function cooldownOnBehalfOf(address from) external;
 
   /**
-   * @dev Setter of cooldown seconds
-   * Can only be called by the owner
-   * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
+   * @dev Sets a new `cooldown` duration.
+   * Can only be called by the `owner`.
+   * Emits a {CooldownChanged} event.
+   * @param cooldown Amount of seconds users have to wait between starting the `cooldown` and being able to withdraw funds
    */
-  function setCooldownSeconds(uint256 cooldownSeconds) external;
+  function setCooldown(uint256 cooldown) external;
 
   /**
-   * @dev Setter of unstake window in seconds
-   * Can only be called by the owner
-   * @param newUnstakeWindow the new amount of seconds you have to withdraw after cooldown
+   * @dev Sets a new `unstakeWindow` duration.
+   * Can only be called by the `owner`.
+   * Emits a {UnstakeWindowChanged} event.
+   * @param newUnstakeWindow Amount of seconds users have to withdraw after `cooldown`
    */
   function setUnstakeWindow(uint256 newUnstakeWindow) external;
 
   /**
-   * @dev Returns the current exchange rate
-   * @return exchangeRate as 18 decimal precision uint216
+   * @dev Returns the current exchange rate with a 1e18 precision.
    */
   function getExchangeRate() external view returns (uint256);
 
   /**
-   * @dev Getter of the cooldown seconds
-   * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
+   * @dev Returns current `cooldown` duration.
    */
-  function getCooldownSeconds() external view returns (uint256);
+  function getCooldown() external view returns (uint256);
 
   /**
-   * @dev Getter for the unstake window
-   * @return unstakeWindow in seconds
+   * @dev Returns current `unstakeWindow` duration.
    */
   function getUnstakeWindow() external view returns (uint256);
 
   /**
-   * @dev Getter for the pending cooldown of a user
-   * @return pending cooldown
+   * @dev Returns the last activated user `cooldown`. Contains the amount of tokens and timestamp.
+   * May return zero values ​​if all funds have been withdrawn or transferred.
    */
   function getStakerCooldown(address user) external view returns (CooldownSnapshot memory);
 
   /**
-   * @dev Getter of the currently slashable assets
-   * @return maxSlashableAssets the maximum amount of assets that could be slashed at this moment
-   * - MUST consider minAssetsRemaining
+   * @dev Returns the maximum slashable assets available for now.
    */
   function getMaxSlashableAssets() external view returns (uint256);
 
+  /**
+   * @dev Returns the minimum amount of assets, which can't be slashed.
+   */
   function MIN_ASSETS_REMAINING() external view returns (uint256);
 }

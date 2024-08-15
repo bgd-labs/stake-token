@@ -49,7 +49,7 @@ contract PauseTests is StakeTestBase {
     stakeToken.approve(someone, 1000);
     underlying.approve(address(stakeToken), 1e18);
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.stopPrank();
     vm.startPrank(admin);

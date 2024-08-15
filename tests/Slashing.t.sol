@@ -9,7 +9,7 @@ import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/prox
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract Slashing is StakeTestBase {
+contract SlashingTests is StakeTestBase {
   function test_slashWithWrongCaller() external {
     vm.startPrank(user);
 

@@ -123,7 +123,7 @@ contract ERC4626Tests is StakeTestBase {
     uint256 assetsAvailable = stakeToken.maxWithdraw(user);
     assertEq(assetsAvailable, 0);
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     assetsAvailable = stakeToken.maxWithdraw(user);
     assertEq(assetsAvailable, amountToStake);
@@ -143,7 +143,7 @@ contract ERC4626Tests is StakeTestBase {
     uint256 sharesAvailable = stakeToken.maxRedeem(user);
     assertEq(sharesAvailable, 0);
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     sharesAvailable = stakeToken.maxRedeem(user);
     assertEq(sharesAvailable, shares);
@@ -160,7 +160,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     stakeToken.redeem(sharesToRedeem, user, user);
 
@@ -182,7 +182,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     stakeToken.redeem(sharesToRedeem, someone, user);
 
@@ -203,7 +203,7 @@ contract ERC4626Tests is StakeTestBase {
     vm.startPrank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
     stakeToken.approve(someone, sharesToRedeem);
 
     vm.stopPrank();
@@ -228,7 +228,7 @@ contract ERC4626Tests is StakeTestBase {
     vm.prank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.stopPrank();
     vm.startPrank(someone);
@@ -252,7 +252,7 @@ contract ERC4626Tests is StakeTestBase {
     vm.startPrank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -277,7 +277,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     uint256 sharesRedeemed = stakeToken.withdraw(amountRedeemed, user, user);
 
@@ -301,7 +301,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     uint256 sharesRedeemed = stakeToken.withdraw(amountRedeemed, someone, user);
 
@@ -324,7 +324,7 @@ contract ERC4626Tests is StakeTestBase {
     vm.startPrank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
     stakeToken.approve(someone, sharesToRedeem);
 
     vm.stopPrank();
@@ -351,7 +351,7 @@ contract ERC4626Tests is StakeTestBase {
     vm.startPrank(user);
 
     stakeToken.cooldown();
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.stopPrank();
     vm.startPrank(someone);
@@ -377,7 +377,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -406,7 +406,7 @@ contract ERC4626Tests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(stakeToken.getCooldownSeconds());
+    skip(stakeToken.getCooldown());
 
     vm.expectEmit(true, true, false, true);
     emit Withdraw(user, user, user, amountRedeemed, stakeToken.convertToShares(amountRedeemed));
