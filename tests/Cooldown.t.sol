@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: agpl-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
@@ -223,5 +223,12 @@ contract CooldownTests is StakeTestBase {
       abi.encodeWithSelector(IStakeToken.NotApprovedForCooldown.selector, user, someone)
     );
     stakeToken.cooldownOnBehalfOf(user);
+  }
+
+  function test_cooldownZeroAmount() public {
+    vm.startPrank(user);
+
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.ZeroBalanceInStaking.selector));
+    stakeToken.cooldown();
   }
 }

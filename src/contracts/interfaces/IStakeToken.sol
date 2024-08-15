@@ -42,9 +42,10 @@ interface IStakeToken is IERC4626 {
   event SlashingAdminChanged(address newAdmin);
 
   error ZeroExchangeRate();
-  error ZeroBalanceOnCooldown();
+  error ZeroBalanceInStaking();
   error ZeroAmountSlashing();
   error ZeroFundsAvailable();
+
   error CallerIsNotSlashingAdmin();
   error PermitIsFailed();
   error NotApprovedForCooldown(address owner, address spender);

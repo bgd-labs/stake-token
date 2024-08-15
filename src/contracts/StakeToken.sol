@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
 import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
@@ -217,7 +217,7 @@ contract StakeToken is
     uint256 amount = balanceOf(from);
 
     if (amount == 0) {
-      revert ZeroBalanceOnCooldown();
+      revert ZeroBalanceInStaking();
     }
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
