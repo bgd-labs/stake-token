@@ -258,7 +258,7 @@ contract StakeToken is
     address from,
     address to,
     uint256 value
-  ) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) whenNotPaused {
+  ) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) {
     uint256 cachedTotalSupply = totalSupply();
 
     // stake & transfer
