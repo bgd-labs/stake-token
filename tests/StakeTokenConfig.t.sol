@@ -29,4 +29,8 @@ contract StakeTokenConfigTests is StakeTestBase {
 
     assertEq(stakeToken.getUnstakeWindow(), unstakeWindow);
   }
+
+  function test_decimals() public view {
+    assertEq(stakeToken.decimals(), 18);
+  }
 }

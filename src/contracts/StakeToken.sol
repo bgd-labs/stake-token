@@ -35,12 +35,28 @@ contract StakeToken is
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
+  IRewardsController public immutable REWARDS_CONTROLLER;
+  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
+
+  /// @custom:storage-location erc7201:aave.storage.StakeToken
+  struct StakeTokenStorage {
+    /// @notice User cooldown options
+    mapping(address => CooldownSnapshot) _stakerCooldown;
+    /// @notice Cooldown parameters
+    SmConfig _smConfig;
+    /// @notice Current exchangeRate of the stk
+    uint192 _currentExchangeRate;
+  }
+
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant StakeTokenStorageLocation =
     0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
-  IRewardsController public immutable REWARDS_CONTROLLER;
-  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
+  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
+    assembly {
+      $.slot := StakeTokenStorageLocation
+    }
+  }
 
   modifier onlySlashingAdmin() {
     if (
@@ -127,7 +143,9 @@ contract StakeToken is
         sig.s
       )
     {} catch {
-      revert PermitIsFailed();
+      if (IERC20Metadata(asset()).allowance(msg.sender, address(this)) < assets) {
+        revert PermitNotSucceded();
+      }
     }
 
     return deposit(assets, receiver);
@@ -319,11 +337,5 @@ contract StakeToken is
     uint256 newTotalShares
   ) internal pure returns (uint256) {
     return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
-  }
-
-  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
-    assembly {
-      $.slot := StakeTokenStorageLocation
-    }
   }
 }
