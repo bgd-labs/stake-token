@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradableOwnableWithGuardian.sol';
+import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
 import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
@@ -23,7 +23,7 @@ contract StakeToken is
   ERC20PermitUpgradeable,
   ERC20PausableUpgradeable,
   ERC4626Upgradeable,
-  UpgradableOwnableWithGuardian,
+  UpgradeableOwnableWithGuardian,
   IStakeToken
 {
   using SafeERC20 for SafeIERC20;
