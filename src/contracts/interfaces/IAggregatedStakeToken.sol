@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.10;
 
 interface IAggregatedStakeToken {
   event Approval(address indexed owner, address indexed spender, uint256 value);

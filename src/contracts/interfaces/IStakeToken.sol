@@ -5,161 +5,140 @@ import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 
 interface IStakeToken is IERC4626 {
   struct CooldownSnapshot {
-    /// @notice Time to unlock funds for withdrawal
-    uint32 timestamp;
-    /// @notice Amount of tokens available for withdrawal
-    uint224 amount;
+    /// @notice Represent the time of unlocking funds for redemption
+    uint40 timestamp;
+    /// @notice Amount of tokens available for redeem
+    uint216 amount;
   }
 
   struct SmConfig {
-    /// @notice Cooldown duration
-    uint32 cooldown;
-    /// @notice Time period during which funds can be withdrawn
-    uint32 unstakeWindow;
+    /// @notice Seconds available to redeem once the cooldown period is fulfilled
+    uint40 unstakeWindowSeconds;
+    /// @notice Seconds between starting cooldown and being able to withdraw
+    uint40 cooldownSeconds;
+    /// @notice The address of the underlying asset
+    address stakedToken;
+    // reserved for future use
   }
 
-  struct SignatureParams {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-  }
+  event Cooldown(address indexed user, uint256 amount);
 
-  event Cooldown(address indexed user, uint256 amount, uint256 timestamp);
+  event MaxSlashablePercentageChanged(uint256 newPercentage);
   event Slashed(address indexed destination, uint256 amount);
-
-  event CooldownChanged(uint256 cooldown);
+  event SlashingExitWindowDurationChanged(uint256 windowSeconds);
+  event CooldownSecondsChanged(uint256 cooldownSeconds);
   event UnstakeWindowChanged(uint256 unstakeWindow);
-  event ExchangeRateChanged(uint256 exchangeRate);
+  event ExchangeRateChanged(uint216 exchangeRate);
+  event FundsReturned(uint256 amount);
+  event SlashingSettled();
   event SlashingAdminChanged(address newAdmin);
 
-  /**
-   * @dev Attempted to set zero `exchangeRate`.
-   */
-  error ZeroExchangeRate();
+  function MIN_ASSETS_REMAINING() external returns (uint256);
 
   /**
-   * @dev Attempted to call cooldown without locked liquidity.
+   * @dev Redeems shares, and stop earning rewards
+   * @param to Address to redeem to
+   * @param amount Amount of shares to redeem
    */
-  error ZeroBalanceInStaking();
+  function redeem(address to, uint256 amount) external;
 
   /**
-   * @dev Attempted to slash for zero amount of assets.
-   */
-  error ZeroAmountSlashing();
-
-  /**
-   * @dev Attempted to slash with insufficient funds in staking.
-   */
-  error ZeroFundsAvailable();
-
-  /**
-   * @dev Attempt to make permit, which wasn't succeded.
-   */
-  error PermitNotSucceded();
-
-  /**
-   * @dev Attempt to call slash not from `slashingAdmin` address.
-   */
-  error CallerIsNotSlashingAdmin();
-
-  /**
-   * @dev Attempt to call cooldown without allowance for `stakeToken`.
-   */
-  error NotApprovedForCooldown(address owner, address spender);
-
-  /**
-   * @dev Executes a slashing of the asset of a certain amount, transferring the seized funds
-   * to destination. Decreasing the amount of underlying will automatically adjust the exchange rate.
-   * If the amount exceeds maxSlashableAmount then the second one is taken.
-   * Emits a {Slashed} event.
-   * @param destination Address where seized funds will be transferred
-   * @param amount Amount to be slashed
-   * @return amount Amount slashed
-   */
-  function slash(address destination, uint256 amount) external returns (uint256);
-
-  /**
-   * @dev Makes a deposit by first issuing approve for the required number of tokens (if `asset` supports the `permit` function).
-   * Emits a {Deposit} event.
-   * @param assets Amount of assets to be deposited
-   * @param receiver Receiver of shares
-   * @param deadline Signature deadline for issuing approve
-   * @param sig Signature parameters
-   */
-  function depositWithPermit(
-    uint256 assets,
-    address receiver,
-    uint256 deadline,
-    SignatureParams memory sig
-  ) external returns (uint256);
-
-  /**
-   * @dev Sets pause to the contract, can be called by `guardian` or `owner`.
-   * Emits a {Paused} or an {Unpaused} event.
-   * @param pause Flag indicating whether to pause or unpause
-   */
-  function setPause(bool pause) external;
-
-  /**
-   * @dev Activates the cooldown period to unstake for `msg.sender`.
-   * It can't be called if the user is not staking.
-   * Emits a {Cooldown} event.
+   * @dev Activates the cooldown period to unstake
+   * - It can't be called if the user is not staking
    */
   function cooldown() external;
 
   /**
-   * @dev Activates the cooldown period to unstake for a certain user.
-   * It can't be called if the user is not staking.
-   * `from` must approve shares for `msg.sender` so that he can activate the cooldown on his behalf.
-   * Emits a {Cooldown} event.
-   * @param from Address at which the `cooldown` will be activated
+   * @dev Allows staking a certain amount of STAKED_TOKEN with gasless approvals (permit)
+   * @param amount The amount to be staked
+   * @param deadline The permit execution deadline
+   * @param v The v component of the signed message
+   * @param r The r component of the signed message
+   * @param s The s component of the signed message
+   */
+  function stakeWithPermit(
+    uint256 amount,
+    uint256 deadline,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+  ) external;
+
+  /**
+   * @dev Returns the current exchange rate
+   * @return exchangeRate as 18 decimal precision uint216
+   */
+  function getExchangeRate() external view returns (uint216);
+
+  /**
+   * @dev Executes a slashing of the underlying of a certain amount, transferring the seized funds
+   * to destination. Decreasing the amount of underlying will automatically adjust the exchange rate.
+   * A call to `slash` will start a slashing event which has to be settled via `settleSlashing`.
+   * As long as the slashing event is ongoing, stake and slash are deactivated.
+   * - MUST NOT be called when a previous slashing is still ongoing
+   * @param destination the address where seized funds will be transferred
+   * @param amount the amount to be slashed
+   * - if the amount bigger than maximum allowed, the maximum will be slashed instead.
+   * @return amount the amount slashed
+   */
+  function slash(address destination, uint256 amount) external returns (uint256);
+
+  /**
+   * @dev Getter of the cooldown seconds
+   * @return cooldownSeconds the amount of seconds between starting the cooldown and being able to redeem
+   */
+  function getCooldownSeconds() external view returns (uint256);
+
+  /**
+   * @dev Setter of cooldown seconds
+   * Can only be called by the owner
+   * @param cooldownSeconds the new amount of seconds you have to wait between starting the cooldown and being able to redeem
+   */
+  function setCooldownSeconds(uint256 cooldownSeconds) external;
+
+  /**
+   * @dev Activates the cooldown period to unstake
+   * - It can't be called if the user is not staking
    */
   function cooldownOnBehalfOf(address from) external;
 
   /**
-   * @dev Sets a new `cooldown` duration.
-   * Can only be called by the `owner`.
-   * Emits a {CooldownChanged} event.
-   * @param cooldown Amount of seconds users have to wait between starting the `cooldown` and being able to withdraw funds
+   * @dev Getter for the unstake window
+   * @return unstakeWindow in seconds
    */
-  function setCooldown(uint256 cooldown) external;
+  function getUnstakeWindow() external returns (uint256);
 
   /**
-   * @dev Sets a new `unstakeWindow` duration.
-   * Can only be called by the `owner`.
-   * Emits a {UnstakeWindowChanged} event.
-   * @param newUnstakeWindow Amount of seconds users have to withdraw after `cooldown`
+   * @dev returns the exact amount of assets that would be redeemed for the provided number of shares
+   * @param shares the number of shares to redeem
+   * @return uint256 assets the number of assets that would be redeemed
    */
-  function setUnstakeWindow(uint256 newUnstakeWindow) external;
+  function previewRedeem(uint256 shares) external view returns (uint256);
 
   /**
-   * @dev Returns the current exchange rate with a 1e18 precision.
+   * @dev Redeems shares for a user. Only the claim helper contract is allowed to call this function
+   * @param from Address to redeem from
+   * @param to Address to redeem to
+   * @param amount Amount of shares to redeem
    */
-  function getExchangeRate() external view returns (uint256);
+  function redeemOnBehalf(address from, address to, uint256 amount) external;
 
   /**
-   * @dev Returns current `cooldown` duration.
+   * @dev Getter for the pending cooldown of a user
+   * @return pending cooldown
    */
-  function getCooldown() external view returns (uint256);
+  function stakersCooldowns(address user) external view returns (CooldownSnapshot memory);
 
   /**
-   * @dev Returns current `unstakeWindow` duration.
-   */
-  function getUnstakeWindow() external view returns (uint256);
-
-  /**
-   * @dev Returns the last activated user `cooldown`. Contains the amount of tokens and timestamp.
-   * May return zero values ​​if all funds have been withdrawn or transferred.
-   */
-  function getStakerCooldown(address user) external view returns (CooldownSnapshot memory);
-
-  /**
-   * @dev Returns the maximum slashable assets available for now.
+   * @dev Getter of the currently slashable assets
+   * @return maxSlashableAssets the maximum amount of assets that could be slashed at this moment
+   * - MUST consider minAssetsRemaining
    */
   function getMaxSlashableAssets() external view returns (uint256);
 
   /**
-   * @dev Returns the minimum amount of assets, which can't be slashed.
+   * @dev Sets the paused state on the token
+   * - MUST be permissioned
    */
-  function MIN_ASSETS_REMAINING() external view returns (uint256);
+  function setPaused(bool paused) external;
 }
