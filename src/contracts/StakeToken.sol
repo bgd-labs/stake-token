@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
-
 import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradableOwnableWithGuardian.sol';
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
@@ -11,11 +8,14 @@ import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from 'openzeppel
 import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math, IERC4626} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 
+import {IAccessControl} from 'openzeppelin-contracts/contracts/access/IAccessControl.sol';
 import {IERC20 as SafeIERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
+import {IPoolAddressesProvider} from './interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
+
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 
 contract StakeToken is
@@ -35,12 +35,28 @@ contract StakeToken is
   uint216 public constant INITIAL_EXCHANGE_RATE = 1e18;
   uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
+  IRewardsController public immutable REWARDS_CONTROLLER;
+  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
+
+  /// @custom:storage-location erc7201:aave.storage.StakeToken
+  struct StakeTokenStorage {
+    /// @notice User cooldown options
+    mapping(address => CooldownSnapshot) _stakerCooldown;
+    /// @notice Cooldown parameters
+    SmConfig _smConfig;
+    /// @notice Current exchangeRate of the stk
+    uint192 _currentExchangeRate;
+  }
+
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant StakeTokenStorageLocation =
     0x570b5e9089e57b3d227cfcd747a97877e3c5f12150099d7b38848c6202ca0a00;
 
-  IRewardsController public immutable REWARDS_CONTROLLER;
-  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
+  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
+    assembly {
+      $.slot := StakeTokenStorageLocation
+    }
+  }
 
   modifier onlySlashingAdmin() {
     if (
@@ -127,7 +143,9 @@ contract StakeToken is
         sig.s
       )
     {} catch {
-      revert PermitIsFailed();
+      if (IERC20Metadata(asset()).allowance(msg.sender, address(this)) < assets) {
+        revert PermitNotSucceded();
+      }
     }
 
     return deposit(assets, receiver);
@@ -319,11 +337,5 @@ contract StakeToken is
     uint256 newTotalShares
   ) internal pure returns (uint256) {
     return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
-  }
-
-  function _getStakeTokenStorage() internal pure returns (StakeTokenStorage storage $) {
-    assembly {
-      $.slot := StakeTokenStorageLocation
-    }
   }
 }

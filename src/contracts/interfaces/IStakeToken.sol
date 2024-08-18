@@ -4,15 +4,6 @@ pragma solidity ^0.8.0;
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 
 interface IStakeToken is IERC4626 {
-  struct StakeTokenStorage {
-    /// @notice User cooldown options
-    mapping(address => CooldownSnapshot) _stakerCooldown;
-    /// @notice Cooldown parameters
-    SmConfig _smConfig;
-    /// @notice Current exchangeRate of the stk
-    uint192 _currentExchangeRate;
-  }
-
   struct CooldownSnapshot {
     /// @notice Time to unlock funds for withdrawal
     uint32 timestamp;
@@ -41,13 +32,39 @@ interface IStakeToken is IERC4626 {
   event ExchangeRateChanged(uint256 exchangeRate);
   event SlashingAdminChanged(address newAdmin);
 
+  /**
+   * @dev Attempted to set zero `exchangeRate`.
+   */
   error ZeroExchangeRate();
+
+  /**
+   * @dev Attempted to call cooldown without locked liquidity.
+   */
   error ZeroBalanceInStaking();
+
+  /**
+   * @dev Attempted to slash for zero amount of assets.
+   */
   error ZeroAmountSlashing();
+
+  /**
+   * @dev Attempted to slash with insufficient funds in staking.
+   */
   error ZeroFundsAvailable();
 
+  /**
+   * @dev Attempt to make permit, which wasn't succeded.
+   */
+  error PermitNotSucceded();
+
+  /**
+   * @dev Attempt to call slash not from `slashingAdmin` address.
+   */
   error CallerIsNotSlashingAdmin();
-  error PermitIsFailed();
+
+  /**
+   * @dev Attempt to call cooldown without allowance for `stakeToken`.
+   */
   error NotApprovedForCooldown(address owner, address spender);
 
   /**

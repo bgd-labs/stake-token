@@ -2,35 +2,39 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import {TestnetProcedures} from 'aave-v3-origin/../tests/utils/TestnetProcedures.sol';
-
-import {IPool} from 'aave-v3-origin/core/contracts/interfaces/IPool.sol';
-
-import {DataTypes} from 'aave-v3-origin/core/contracts/protocol/libraries/configuration/ReserveConfiguration.sol';
-
-import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
 
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
-import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
-import {StakeToken} from '../../src/contracts/StakeToken.sol';
-import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
 
-contract StakeTestBase is TestnetProcedures {
+import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
+import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
+
+import {MockERC20} from './mock/MockERC20.sol';
+import {MockACLManager} from './mock/MockACLManager.sol';
+import {MockAddressProvider} from './mock/MockAddressProvider.sol';
+import {MockRewardsController} from './mock/MockRewardsController.sol';
+
+import {StakeToken} from 'src/contracts/StakeToken.sol';
+
+contract StakeTestBase is Test {
   address public admin = vm.addr(0x1000);
   address public guardian = vm.addr(0x2000);
 
   address public user = vm.addr(0x3000);
   address public someone = vm.addr(0x4000);
 
-  address public proxyAdmin;
-  address public slashingAdmin = address(0x9000);
+  address public proxyAdmin = vm.addr(0x5000);
+  address public slashingAdmin = vm.addr(0x9000);
 
-  IPool public pool;
   IERC20Metadata public underlying;
-  address public aToken;
   IStakeToken public stakeToken;
+
+  address mockAddressProvider;
+  address mockACLManager;
+  address mockRewardsContoller;
 
   function setUp() public virtual {
     _setupProtocol();
@@ -39,8 +43,8 @@ contract StakeTestBase is TestnetProcedures {
 
   function _setupStakeToken(address stakeTokenUnderlying) internal {
     StakeToken stakeTokenImpl = new StakeToken(
-      IRewardsController(address(contracts.rewardsControllerProxy)),
-      contracts.poolAddressesProvider
+      IRewardsController(mockRewardsContoller),
+      IPoolAddressesProvider(mockAddressProvider)
     );
     stakeToken = IStakeToken(
       address(
@@ -63,20 +67,14 @@ contract StakeTestBase is TestnetProcedures {
   }
 
   function _setupProtocol() internal {
-    initTestEnvironment();
+    mockACLManager = address(new MockACLManager(slashingAdmin));
 
-    proxyAdmin = report.proxyAdmin;
-    pool = contracts.poolProxy;
+    console.log(slashingAdmin);
 
-    DataTypes.ReserveDataLegacy memory reserveDataWETH = contracts.poolProxy.getReserveData(
-      tokenList.weth
-    );
+    mockAddressProvider = address(new MockAddressProvider(mockACLManager));
+    mockRewardsContoller = address(new MockRewardsController());
 
-    underlying = IERC20Metadata(address(weth));
-    aToken = reserveDataWETH.aTokenAddress;
-
-    vm.prank(poolAdmin);
-    IAccessControl(address(contracts.aclManager)).grantRole('SLASHING_ADMIN', slashingAdmin);
+    underlying = new MockERC20('MockToken', 'MTK');
   }
 
   function _dealUnderlying(uint256 amount, address actor) internal {
