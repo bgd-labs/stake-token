@@ -6,9 +6,6 @@ import './utils/mock/MockTokenForExchangeRate.sol';
 
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
-import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IRewardsController} from '../src/contracts/interfaces/IRewardsController.sol';
-
 contract ExchangeRateTest is Test {
   using SafeCast for uint256;
 

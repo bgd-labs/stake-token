@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
-
 import {UpgradableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradableOwnableWithGuardian.sol';
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
@@ -11,11 +8,14 @@ import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from 'openzeppel
 import {ERC4626Upgradeable, IERC20Metadata, IERC20, Math, IERC4626} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 
+import {IAccessControl} from 'openzeppelin-contracts/contracts/access/IAccessControl.sol';
 import {IERC20 as SafeIERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
+import {IPoolAddressesProvider} from './interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
+
 import {IStakeToken} from './interfaces/IStakeToken.sol';
 
 contract StakeToken is

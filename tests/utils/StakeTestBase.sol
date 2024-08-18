@@ -3,19 +3,21 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 
-import {IPoolAddressesProvider} from 'aave-v3-origin/core/contracts/interfaces/IPoolAddressesProvider.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
 
 import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
-import {StakeToken} from 'src/contracts/StakeToken.sol';
+
 import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
+import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
 
 import {MockERC20} from './mock/MockERC20.sol';
 import {MockACLManager} from './mock/MockACLManager.sol';
 import {MockAddressProvider} from './mock/MockAddressProvider.sol';
 import {MockRewardsController} from './mock/MockRewardsController.sol';
+
+import {StakeToken} from 'src/contracts/StakeToken.sol';
 
 contract StakeTestBase is Test {
   address public admin = vm.addr(0x1000);
