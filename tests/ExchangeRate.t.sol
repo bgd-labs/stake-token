@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import './utils/MockTokenForExchangeRate.sol';
+import './utils/mock/MockTokenForExchangeRate.sol';
 
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
