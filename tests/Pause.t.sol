@@ -13,11 +13,11 @@ contract PauseTests is StakeTestBase {
 
     vm.startPrank(guardian);
 
-    stakeToken.setPause(true);
+    stakeToken.pause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), true);
 
-    stakeToken.setPause(false);
+    stakeToken.unpause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
   }
@@ -27,11 +27,11 @@ contract PauseTests is StakeTestBase {
 
     vm.startPrank(admin);
 
-    stakeToken.setPause(true);
+    stakeToken.pause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), true);
 
-    stakeToken.setPause(false);
+    stakeToken.unpause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
   }
@@ -51,7 +51,7 @@ contract PauseTests is StakeTestBase {
     vm.stopPrank();
     vm.startPrank(admin);
 
-    stakeToken.setPause(true);
+    stakeToken.pause();
 
     vm.stopPrank();
     vm.startPrank(someone);

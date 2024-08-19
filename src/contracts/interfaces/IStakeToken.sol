@@ -5,10 +5,10 @@ import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 
 interface IStakeToken is IERC4626 {
   struct CooldownSnapshot {
-    /// @notice Time to unlock funds for withdrawal
-    uint32 timestamp;
     /// @notice Amount of tokens available for withdrawal
     uint224 amount;
+    /// @notice Time to unlock funds for withdrawal
+    uint32 timestamp;
   }
 
   struct SmConfig {
@@ -24,7 +24,10 @@ interface IStakeToken is IERC4626 {
     bytes32 s;
   }
 
-  event Cooldown(address indexed user, uint256 amount, uint256 timestamp);
+  event CooldownSet(address indexed user, uint256 amount, uint256 timestamp);
+  event StakerCooldownAmountChanged(address indexed user, uint256 amount);
+  event StakerCooldownDeleted(address indexed user);
+
   event Slashed(address indexed destination, uint256 amount);
 
   event CooldownChanged(uint256 cooldown);
@@ -94,11 +97,16 @@ interface IStakeToken is IERC4626 {
   ) external returns (uint256);
 
   /**
-   * @dev Sets pause to the contract, can be called by `guardian` or `owner`.
-   * Emits a {Paused} or an {Unpaused} event.
-   * @param pause Flag indicating whether to pause or unpause
+   * @dev Pauses the contract, can be called by `guardian` or `owner`.
+   * Emits a {Paused} event.
    */
-  function setPause(bool pause) external;
+  function pause() external;
+
+  /**
+   * @dev Unpauses the contract, can be called by `guardian` or `owner`.
+   * Emits a {Unpaused} event.
+   */
+  function unpause() external;
 
   /**
    * @dev Activates the cooldown period to unstake for `msg.sender`.

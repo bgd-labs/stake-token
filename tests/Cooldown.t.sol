@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 
+import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
-
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
 contract CooldownTests is StakeTestBase {
   function test_cooldown(uint224 amountToStake, uint224 amountToRedeem) public {

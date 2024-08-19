@@ -3,9 +3,10 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 
-import {StakeTestBase} from './utils/StakeTestBase.sol';
+import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
-import {StakeToken, IStakeToken} from 'src/contracts/StakeToken.sol';
+import {StakeToken} from 'src/contracts/StakeToken.sol';
+import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract SlashingTests is StakeTestBase {
   function test_slashWithWrongCaller() external {

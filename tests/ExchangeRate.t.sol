@@ -2,7 +2,11 @@
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import './utils/mock/MockTokenForExchangeRate.sol';
+
+import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
+
+import {MockToken} from './utils/mock/MockTokenForExchangeRate.sol';
 
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
