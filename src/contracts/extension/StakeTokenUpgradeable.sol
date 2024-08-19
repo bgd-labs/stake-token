@@ -13,8 +13,8 @@ import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 abstract contract StakeTokenUpgradeable is Initializable, IStakeToken {
   using Math for uint256;
 
+  uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
   uint192 public constant INITIAL_EXCHANGE_RATE = 1e18;
-  uint192 public constant EXCHANGE_RATE_UNIT = 1e18;
 
   /// @custom:storage-location erc7201:aave.storage.StakeToken
   struct StakeTokenStorage {

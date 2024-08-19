@@ -67,7 +67,7 @@ contract StakeToken is
     address guardian,
     uint256 cooldown_,
     uint256 unstakeWindow_
-  ) external virtual initializer {
+  ) external initializer {
     __ERC20_init(name, symbol);
     __ERC20Pausable_init();
     __ERC20Permit_init(name);
@@ -78,6 +78,43 @@ contract StakeToken is
     __Ownable_With_Guardian_init(guardian);
 
     __StakeTokenUpgradable_init(cooldown_.toUint32(), unstakeWindow_.toUint32());
+  }
+
+  function depositWithPermit(
+    uint256 assets,
+    address receiver,
+    uint256 deadline,
+    SignatureParams memory sig
+  ) external returns (uint256) {
+    try
+      IERC20Permit(asset()).permit(
+        _msgSender(),
+        address(this),
+        assets,
+        deadline,
+        sig.v,
+        sig.r,
+        sig.s
+      )
+    {} catch {
+      if (IERC20(asset()).allowance(msg.sender, address(this)) < assets) {
+        revert PermitNotSucceded();
+      }
+    }
+
+    return deposit(assets, receiver);
+  }
+
+  function cooldown() external {
+    _cooldown(_msgSender());
+  }
+
+  function cooldownOnBehalfOf(address owner) external {
+    if (allowance(owner, _msgSender()) == 0) {
+      revert NotApprovedForCooldown(owner, _msgSender());
+    }
+
+    _cooldown(owner);
   }
 
   function slash(
@@ -108,43 +145,6 @@ contract StakeToken is
     emit Slashed(destination, amount);
 
     return amount;
-  }
-
-  function depositWithPermit(
-    uint256 assets,
-    address receiver,
-    uint256 deadline,
-    SignatureParams memory sig
-  ) public returns (uint256) {
-    try
-      IERC20Permit(asset()).permit(
-        _msgSender(),
-        address(this),
-        assets,
-        deadline,
-        sig.v,
-        sig.r,
-        sig.s
-      )
-    {} catch {
-      if (IERC20(asset()).allowance(msg.sender, address(this)) < assets) {
-        revert PermitNotSucceded();
-      }
-    }
-
-    return deposit(assets, receiver);
-  }
-
-  function cooldown() external {
-    _cooldown(_msgSender());
-  }
-
-  function cooldownOnBehalfOf(address owner) external {
-    if (allowance(owner, _msgSender()) == 0) {
-      revert NotApprovedForCooldown(owner, _msgSender());
-    }
-
-    _cooldown(owner);
   }
 
   function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {

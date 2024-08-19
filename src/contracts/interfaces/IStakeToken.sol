@@ -71,17 +71,6 @@ interface IStakeToken is IERC4626 {
   error NotApprovedForCooldown(address owner, address spender);
 
   /**
-   * @dev Executes a slashing of the asset of a certain amount, transferring the seized funds
-   * to destination. Decreasing the amount of underlying will automatically adjust the exchange rate.
-   * If the amount exceeds maxSlashableAmount then the second one is taken.
-   * Emits a {Slashed} event.
-   * @param destination Address where seized funds will be transferred
-   * @param amount Amount to be slashed
-   * @return amount Amount slashed
-   */
-  function slash(address destination, uint256 amount) external returns (uint256);
-
-  /**
    * @dev Makes a deposit by first issuing approve for the required number of tokens (if `asset` supports the `permit` function).
    * Emits a {Deposit} event.
    * @param assets Amount of assets to be deposited
@@ -95,18 +84,6 @@ interface IStakeToken is IERC4626 {
     uint256 deadline,
     SignatureParams memory sig
   ) external returns (uint256);
-
-  /**
-   * @dev Pauses the contract, can be called by `guardian` or `owner`.
-   * Emits a {Paused} event.
-   */
-  function pause() external;
-
-  /**
-   * @dev Unpauses the contract, can be called by `guardian` or `owner`.
-   * Emits a {Unpaused} event.
-   */
-  function unpause() external;
 
   /**
    * @dev Activates the cooldown period to unstake for `msg.sender`.
@@ -123,6 +100,29 @@ interface IStakeToken is IERC4626 {
    * @param from Address at which the `cooldown` will be activated
    */
   function cooldownOnBehalfOf(address from) external;
+
+  /**
+   * @dev Executes a slashing of the asset of a certain amount, transferring the seized funds
+   * to destination. Decreasing the amount of underlying will automatically adjust the exchange rate.
+   * If the amount exceeds maxSlashableAmount then the second one is taken.
+   * Emits a {Slashed} event.
+   * @param destination Address where seized funds will be transferred
+   * @param amount Amount to be slashed
+   * @return amount Amount slashed
+   */
+  function slash(address destination, uint256 amount) external returns (uint256);
+
+  /**
+   * @dev Pauses the contract, can be called by `guardian` or `owner`.
+   * Emits a {Paused} event.
+   */
+  function pause() external;
+
+  /**
+   * @dev Unpauses the contract, can be called by `guardian` or `owner`.
+   * Emits a {Unpaused} event.
+   */
+  function unpause() external;
 
   /**
    * @dev Sets a new `cooldown` duration.
