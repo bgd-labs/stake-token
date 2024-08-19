@@ -113,7 +113,7 @@ contract Cooldown is StakeTestBase {
 
     vm.prank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
 
     vm.startPrank(fuzzUser);
     stakeToken.redeem(sharesToRedeem, destination, fuzzUser);
@@ -147,7 +147,7 @@ contract Cooldown is StakeTestBase {
 
     vm.prank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
 
     vm.startPrank(fuzzUser);
     stakeToken.approve(user, sharesToRedeem);
@@ -185,7 +185,7 @@ contract Cooldown is StakeTestBase {
 
     vm.prank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
 
     vm.startPrank(user);
     vm.expectRevert(
@@ -212,7 +212,7 @@ contract Cooldown is StakeTestBase {
 
     vm.startPrank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
     stakeToken.withdraw(amountRedeemed, destination, fuzzUser);
     vm.stopPrank();
 
@@ -244,7 +244,7 @@ contract Cooldown is StakeTestBase {
 
     vm.prank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
 
     vm.startPrank(fuzzUser);
     stakeToken.approve(user, sharesToRedeem);
@@ -282,7 +282,7 @@ contract Cooldown is StakeTestBase {
 
     vm.startPrank(fuzzUser);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
     vm.stopPrank();
 
     vm.startPrank(user);

@@ -39,7 +39,7 @@ contract ERC20Std is StakeTestBase {
 
     vm.prank(user);
     stakeToken.cooldown();
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
     _redeem(amountRedeemed, user, destination);
 
     assertEq(stakeToken.totalAssets(), amountStaked - amountRedeemed);

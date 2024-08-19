@@ -55,7 +55,7 @@ contract InvariantHandler is CommonBase, StdCheats, StdUtils {
 
   function redeem(uint256 assets, uint256 actorIndexSeed) external useActor(actorIndexSeed) {
     IStakeToken.CooldownSnapshot memory snapshot = _stakeToken.stakersCooldowns(currentActor);
-    if (snapshot.amount == 0 || snapshot.timestamp <= block.timestamp) return;
+    if (snapshot.amount == 0 || snapshot.cooldownEnd <= block.timestamp) return;
     _stakeToken.redeem(currentActor, assets);
     ghost_sumOfStakedAssets -= snapshot.amount > assets ? assets : snapshot.amount;
   }

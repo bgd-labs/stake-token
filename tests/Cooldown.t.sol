@@ -23,10 +23,10 @@ contract Cooldown is StakeTestBase {
     vm.startPrank(fuzzUser);
     stakeToken.cooldown();
     IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.stakersCooldowns(fuzzUser);
-    assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldownSeconds());
+    assertEq(snapshotBefore.cooldownEnd, block.timestamp + stakeToken.getDefaultCooldownSeconds());
     assertEq(snapshotBefore.amount, amountToStake);
 
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
     _redeem(amountToRedeem, fuzzUser, fuzzUser);
 
     IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.stakersCooldowns(fuzzUser);
@@ -53,9 +53,9 @@ contract Cooldown is StakeTestBase {
     _stake(amountToTopUp, fuzzUser);
 
     IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.stakersCooldowns(fuzzUser);
-    assertEq(snapshotBefore.timestamp, snapshotAfter.timestamp);
+    assertEq(snapshotBefore.cooldownEnd, snapshotAfter.cooldownEnd);
     assertEq(snapshotBefore.amount, snapshotAfter.amount);
-    assertEq(snapshotAfter.timestamp, block.timestamp + stakeToken.getCooldownSeconds());
+    assertEq(snapshotAfter.cooldownEnd, block.timestamp + stakeToken.getDefaultCooldownSeconds());
     assertEq(snapshotAfter.amount, amountToStake);
   }
 
@@ -84,14 +84,14 @@ contract Cooldown is StakeTestBase {
     vm.prank(otherUser);
     stakeToken.transfer(fuzzUser, amountToStakeOther);
     IStakeToken.CooldownSnapshot memory snapshot1 = stakeToken.stakersCooldowns(fuzzUser);
-    assertEq(snapshot0.timestamp, snapshot1.timestamp, 'MISMATCH_BEFORE_COOLDOWN');
+    assertEq(snapshot0.cooldownEnd, snapshot1.cooldownEnd, 'MISMATCH_BEFORE_COOLDOWN');
     assertEq(snapshot0.amount, snapshot1.amount, 'MISMATCH_BEFORE_COOLDOWN_AMOUNT');
 
     // Sending token should not affect the amount as long as balance > amount
     vm.prank(fuzzUser);
     stakeToken.transfer(otherUser, amountToStakeOther);
     IStakeToken.CooldownSnapshot memory snapshot2 = stakeToken.stakersCooldowns(fuzzUser);
-    assertEq(snapshot0.timestamp, snapshot2.timestamp, 'MISMATCH_COOLDOWN');
+    assertEq(snapshot0.cooldownEnd, snapshot2.cooldownEnd, 'MISMATCH_COOLDOWN');
     assertEq(snapshot0.amount, snapshot2.amount, 'MISMATCH_COOLDOWN_AMOUNT');
 
     // Sending token should decrease the cooldown amount when balance <= amount
@@ -99,7 +99,7 @@ contract Cooldown is StakeTestBase {
     stakeToken.transfer(otherUser, amountToStake);
     vm.stopPrank();
     IStakeToken.CooldownSnapshot memory snapshot3 = stakeToken.stakersCooldowns(fuzzUser);
-    assertEq(snapshot3.timestamp, 0, 'MISMATCH_AFTER_COOLDOWN');
+    assertEq(snapshot3.cooldownEnd, 0, 'MISMATCH_AFTER_COOLDOWN');
     assertEq(snapshot3.amount, 0, 'MISMATCH_AFTER_COOLDOWN_AMOUNT');
   }
 
@@ -111,7 +111,7 @@ contract Cooldown is StakeTestBase {
     address destination
   ) public {
     vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
-    vm.assume(secondsAfterCooldownActivation < stakeToken.getCooldownSeconds());
+    vm.assume(secondsAfterCooldownActivation < stakeToken.getDefaultCooldownSeconds());
     vm.assume(
       fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0)
     );
@@ -121,8 +121,9 @@ contract Cooldown is StakeTestBase {
     stakeToken.cooldown();
 
     vm.warp(block.timestamp + secondsAfterCooldownActivation);
+    uint256 cooldownEnd = stakeToken.stakersCooldowns(fuzzUser).cooldownEnd;
     vm.prank(fuzzUser);
-    vm.expectRevert('INSUFFICIENT_COOLDOWN');
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.CooldownNotReady.selector, cooldownEnd));
     stakeToken.redeem(destination, amountToUnstake);
   }
 
@@ -136,7 +137,7 @@ contract Cooldown is StakeTestBase {
     vm.assume(amountToUnstake != 0 && amountToStake >= amountToUnstake);
     vm.assume(
       secondsAfterCooldownActivation >
-        stakeToken.getCooldownSeconds() + stakeToken.getUnstakeWindow()
+        stakeToken.getDefaultCooldownSeconds() + stakeToken.getWithdrawalWindow()
     );
     vm.assume(
       fuzzUser != address(proxyAdmin) && fuzzUser != address(0) && destination != address(0)
@@ -147,8 +148,9 @@ contract Cooldown is StakeTestBase {
     stakeToken.cooldown();
 
     vm.warp(block.timestamp + secondsAfterCooldownActivation);
+    IStakeToken.CooldownSnapshot memory snapshot = stakeToken.stakersCooldowns(fuzzUser);
     vm.prank(fuzzUser);
-    vm.expectRevert('UNSTAKE_WINDOW_FINISHED');
+    vm.expectRevert(abi.encodeWithSelector(IStakeToken.CooldownExpired.selector, snapshot.cooldownEnd + snapshot.withdrawalWindowSeconds));
     stakeToken.redeem(destination, amountToUnstake);
   }
 
@@ -177,7 +179,7 @@ contract Cooldown is StakeTestBase {
       fuzzUser
     );
     assertEq(snapshotAfterSecondStake.amount, amountToStake, 'STAKE_SHOULD_NOT_ALTER_COOLDOWN');
-    vm.warp(block.timestamp + stakeToken.getCooldownSeconds());
+    vm.warp(block.timestamp + stakeToken.getDefaultCooldownSeconds());
     _redeem(amountToUnstake, fuzzUser, destination);
 
     assertEq(underlying.balanceOf(destination), amountToStake, 'WRONG_AMOUNT_REDEEMED');

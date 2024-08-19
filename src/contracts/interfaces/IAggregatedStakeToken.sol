@@ -5,7 +5,7 @@ interface IAggregatedStakeToken {
   event AssetConfigUpdated(address indexed asset, uint256 emission);
   event AssetIndexUpdated(address indexed asset, uint256 index);
   event Cooldown(address indexed user, uint256 amount);
-  event CooldownSecondsChanged(uint256 cooldownSeconds);
+  event DefaultWithdrawalWindowChanged(uint256 cooldownSeconds);
   event DistributionEndChanged(uint256 endTimestamp);
   event EIP712DomainChanged();
   event ExchangeRateChanged(uint216 exchangeRate);
@@ -110,7 +110,7 @@ interface IAggregatedStakeToken {
 
   function getAdmin(uint256 role) external view returns (address);
 
-  function getCooldownSeconds() external view returns (uint256);
+  function getDefaultCooldownSeconds() external view returns (uint256);
 
   function getExchangeRate() external view returns (uint216);
 
@@ -158,7 +158,7 @@ interface IAggregatedStakeToken {
 
   function returnFunds(uint256 amount) external;
 
-  function setCooldownSeconds(uint256 cooldownSeconds) external;
+  function setDefaultCooldownSeconds(uint256 cooldownSeconds) external;
 
   function setDistributionEnd(uint256 newDistributionEnd) external;
 
