@@ -61,17 +61,17 @@ abstract contract ERC4626StakeTokenUpgradeable is
     ADDRESSES_PROVIDER = provider;
   }
 
-  function __StakeTokenUpgradable_init(
+  function __StakeTokenUpgradeable_init(
     IERC20 stakedToken,
     uint256 cooldown_,
     uint256 unstakeWindow_
   ) internal onlyInitializing {
     __ERC4626_init_unchained(stakedToken);
 
-    __StakeTokenUpgradable_init_unchained(cooldown_, unstakeWindow_);
+    __StakeTokenUpgradeable_init_unchained(cooldown_, unstakeWindow_);
   }
 
-  function __StakeTokenUpgradable_init_unchained(
+  function __StakeTokenUpgradeable_init_unchained(
     uint256 cooldown_,
     uint256 unstakeWindow_
   ) internal onlyInitializing {
@@ -90,6 +90,18 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _;
   }
 
+  function cooldown() external {
+    _cooldown(_msgSender());
+  }
+
+  function cooldownOnBehalfOf(address owner) external {
+    if (allowance(owner, _msgSender()) == 0) {
+      revert NotApprovedForCooldown(owner, _msgSender());
+    }
+
+    _cooldown(owner);
+  }
+
   function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
     return _slash(destination, amount);
   }
@@ -102,16 +114,66 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _setCooldown(newCooldown);
   }
 
-  function cooldown() external {
-    _cooldown(_msgSender());
+  function maxWithdraw(
+    address owner
+  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+    return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
   }
 
-  function cooldownOnBehalfOf(address owner) external {
-    if (allowance(owner, _msgSender()) == 0) {
-      revert NotApprovedForCooldown(owner, _msgSender());
+  function maxRedeem(
+    address owner
+  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+    CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
+
+    if (
+      block.timestamp >= cooldownSnapshot.timestamp &&
+      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindow
+    ) {
+      return cooldownSnapshot.amount;
     }
 
-    _cooldown(owner);
+    return 0;
+  }
+
+  function getMaxSlashableAssets() public view returns (uint256) {
+    uint256 currentAssets = totalAssets();
+    return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
+  }
+
+  function getExchangeRate() public view returns (uint256) {
+    return _getStakeTokenStorage()._currentExchangeRate;
+  }
+
+  function getCooldown() public view returns (uint256) {
+    return _getStakeTokenStorage()._smConfig.cooldown;
+  }
+
+  function getUnstakeWindow() public view returns (uint256) {
+    return _getStakeTokenStorage()._smConfig.unstakeWindow;
+  }
+
+  function getStakerCooldown(address user) public view returns (CooldownSnapshot memory) {
+    return _getStakeTokenStorage()._stakerCooldown[user];
+  }
+
+  function _cooldown(address from) internal virtual {
+    uint256 amount = balanceOf(from);
+
+    if (amount == 0) {
+      revert ZeroBalanceInStaking();
+    }
+
+    StakeTokenStorage storage $ = _getStakeTokenStorage();
+
+    uint32 timeToUnlock = (block.timestamp + $._smConfig.cooldown).toUint32();
+
+    $._stakerCooldown[from] = CooldownSnapshot({
+      amount: amount.toUint224(),
+      timestamp: timeToUnlock
+    });
+
+    emit CooldownSet(from, amount, timeToUnlock);
   }
 
   function _update(address from, address to, uint256 value) internal virtual override {
@@ -164,8 +226,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
     super._update(from, to, value);
   }
 
-  function _handleAction(address from, address to, uint256 value) internal {}
-
   function _slash(address destination, uint256 amount) internal virtual returns (uint256) {
     if (amount == 0) {
       revert ZeroAmountSlashing();
@@ -191,68 +251,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
     emit Slashed(destination, amount);
 
     return amount;
-  }
-
-  function getMaxSlashableAssets() public view returns (uint256) {
-    uint256 currentAssets = totalAssets();
-    return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
-  }
-
-  function maxWithdraw(
-    address owner
-  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
-    return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
-  }
-
-  function maxRedeem(
-    address owner
-  ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
-
-    if (
-      block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindow
-    ) {
-      return cooldownSnapshot.amount;
-    }
-
-    return 0;
-  }
-
-  function getExchangeRate() public view returns (uint256) {
-    return _getStakeTokenStorage()._currentExchangeRate;
-  }
-
-  function getCooldown() public view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.cooldown;
-  }
-
-  function getUnstakeWindow() public view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.unstakeWindow;
-  }
-
-  function getStakerCooldown(address user) public view returns (CooldownSnapshot memory) {
-    return _getStakeTokenStorage()._stakerCooldown[user];
-  }
-
-  function _cooldown(address from) internal virtual {
-    uint256 amount = balanceOf(from);
-
-    if (amount == 0) {
-      revert ZeroBalanceInStaking();
-    }
-
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-
-    uint32 timeToUnlock = (block.timestamp + $._smConfig.cooldown).toUint32();
-
-    $._stakerCooldown[from] = CooldownSnapshot({
-      amount: amount.toUint224(),
-      timestamp: timeToUnlock
-    });
-
-    emit CooldownSet(from, amount, timeToUnlock);
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {

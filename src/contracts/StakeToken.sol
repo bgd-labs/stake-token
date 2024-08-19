@@ -5,8 +5,6 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
-import {IAccessControl} from 'openzeppelin-contracts/contracts/access/IAccessControl.sol';
-
 import {IPoolAddressesProvider} from './interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 
@@ -15,8 +13,6 @@ import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/
 import {ERC20Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol';
 import {ERC20PermitUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
-
-import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
 
 import {ERC4626StakeTokenUpgradeable} from './extension/ERC4626StakeTokenUpgradeable.sol';
 
@@ -50,7 +46,7 @@ contract StakeToken is
     __Ownable_init(owner);
     __Ownable_With_Guardian_init(guardian);
 
-    __StakeTokenUpgradable_init(stakedToken, cooldown_, unstakeWindow_);
+    __StakeTokenUpgradeable_init(stakedToken, cooldown_, unstakeWindow_);
   }
 
   function depositWithPermit(
