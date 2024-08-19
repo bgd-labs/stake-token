@@ -9,14 +9,21 @@ import {IPoolAddressesProvider} from '../interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from '../interfaces/IRewardsController.sol';
 import {IStakeToken} from '../interfaces/IStakeToken.sol';
 
-import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
+import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
 
+import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
+
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
-abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IStakeToken {
+abstract contract ERC4626StakeTokenUpgradeable is
+  Initializable,
+  ERC4626Upgradeable,
+  UpgradeableOwnableWithGuardian,
+  IStakeToken
+{
   using SafeERC20 for IERC20;
   using SafeCast for uint256;
   using Math for uint256;
@@ -41,15 +48,17 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
     }
   }
 
+  uint256 public constant INITIAL_EXCHANGE_RATE = 1e18;
+  uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
+
   uint256 public constant MIN_ASSETS_REMAINING = 1e6;
 
-  uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
-  uint192 public constant INITIAL_EXCHANGE_RATE = 1e18;
-
   IRewardsController public immutable REWARDS_CONTROLLER;
+  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
-  constructor(IRewardsController rewardsController) {
+  constructor(IRewardsController rewardsController, IPoolAddressesProvider provider) {
     REWARDS_CONTROLLER = rewardsController;
+    ADDRESSES_PROVIDER = provider;
   }
 
   function __StakeTokenUpgradable_init(
@@ -57,12 +66,40 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
     uint256 cooldown_,
     uint256 unstakeWindow_
   ) internal onlyInitializing {
-    __ERC4626_init(stakedToken);
+    __ERC4626_init_unchained(stakedToken);
 
+    __StakeTokenUpgradable_init_unchained(cooldown_, unstakeWindow_);
+  }
+
+  function __StakeTokenUpgradable_init_unchained(
+    uint256 cooldown_,
+    uint256 unstakeWindow_
+  ) internal onlyInitializing {
     _setCooldown(cooldown_);
     _setUnstakeWindow(unstakeWindow_);
 
     _updateExchangeRate(INITIAL_EXCHANGE_RATE);
+  }
+
+  modifier onlySlashingAdmin() {
+    if (
+      !IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', _msgSender())
+    ) {
+      revert CallerIsNotSlashingAdmin();
+    }
+    _;
+  }
+
+  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
+    return _slash(destination, amount);
+  }
+
+  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
+    _setUnstakeWindow(newUnstakeWindow);
+  }
+
+  function setCooldown(uint256 newCooldown) external onlyOwner {
+    _setCooldown(newCooldown);
   }
 
   function cooldown() external {
@@ -77,7 +114,7 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
     _cooldown(owner);
   }
 
-  function _handleAction(address from, address to, uint256 value) internal {
+  function _update(address from, address to, uint256 value) internal virtual override {
     uint256 cachedTotalSupply = totalSupply();
 
     // stake & transfer
@@ -123,9 +160,13 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
         }
       }
     }
+
+    super._update(from, to, value);
   }
 
-  function _slash(address destination, uint256 amount) internal returns (uint256) {
+  function _handleAction(address from, address to, uint256 value) internal {}
+
+  function _slash(address destination, uint256 amount) internal virtual returns (uint256) {
     if (amount == 0) {
       revert ZeroAmountSlashing();
     }
@@ -143,7 +184,7 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
     uint256 currentShares = totalSupply();
     uint256 balance = convertToAssets(currentShares);
 
-    _updateExchangeRate(_getExchangeRate(balance - amount, currentShares).toUint192());
+    _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
 
     IERC20(asset()).safeTransfer(destination, amount);
 
@@ -226,12 +267,12 @@ abstract contract StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IS
     emit CooldownChanged(newCooldown);
   }
 
-  function _updateExchangeRate(uint192 newExchangeRate) internal {
+  function _updateExchangeRate(uint256 newExchangeRate) internal {
     if (newExchangeRate == 0) {
       revert ZeroExchangeRate();
     }
 
-    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
+    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate.toUint192();
 
     emit ExchangeRateChanged(newExchangeRate);
   }

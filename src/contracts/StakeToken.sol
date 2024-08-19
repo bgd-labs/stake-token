@@ -11,39 +11,25 @@ import {IPoolAddressesProvider} from './interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
+import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol';
 import {ERC20Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol';
-import {ERC20PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PausableUpgradeable.sol';
 import {ERC20PermitUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol';
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 
 import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
 
-import {StakeTokenUpgradeable} from './extension/StakeTokenUpgradeable.sol';
+import {ERC4626StakeTokenUpgradeable} from './extension/ERC4626StakeTokenUpgradeable.sol';
 
 contract StakeToken is
   Initializable,
-  ERC20PausableUpgradeable,
+  PausableUpgradeable,
   ERC20PermitUpgradeable,
-  UpgradeableOwnableWithGuardian,
-  StakeTokenUpgradeable
+  ERC4626StakeTokenUpgradeable
 {
-  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
-
-  modifier onlySlashingAdmin() {
-    if (
-      !IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', _msgSender())
-    ) {
-      revert CallerIsNotSlashingAdmin();
-    }
-    _;
-  }
-
   constructor(
     IRewardsController rewardsController,
     IPoolAddressesProvider provider
-  ) StakeTokenUpgradeable(rewardsController) {
-    ADDRESSES_PROVIDER = provider;
-
+  ) ERC4626StakeTokenUpgradeable(rewardsController, provider) {
     _disableInitializers();
   }
 
@@ -57,8 +43,9 @@ contract StakeToken is
     uint256 unstakeWindow_
   ) external initializer {
     __ERC20_init(name, symbol);
-    __ERC20Pausable_init();
     __ERC20Permit_init(name);
+
+    __Pausable_init();
 
     __Ownable_init(owner);
     __Ownable_With_Guardian_init(guardian);
@@ -82,28 +69,9 @@ contract StakeToken is
         sig.r,
         sig.s
       )
-    {} catch {
-      if (IERC20(asset()).allowance(msg.sender, address(this)) < assets) {
-        revert PermitNotSucceded();
-      }
-    }
+    {} catch {}
 
     return deposit(assets, receiver);
-  }
-
-  function slash(
-    address destination,
-    uint256 amount
-  ) external onlySlashingAdmin whenNotPaused returns (uint256) {
-    return _slash(destination, amount);
-  }
-
-  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
-    _setUnstakeWindow(newUnstakeWindow);
-  }
-
-  function setCooldown(uint256 newCooldown) external onlyOwner {
-    _setCooldown(newCooldown);
   }
 
   function pause() external onlyOwnerOrGuardian {
@@ -127,10 +95,15 @@ contract StakeToken is
     address from,
     address to,
     uint256 value
-  ) internal override(ERC20PausableUpgradeable, ERC20Upgradeable) {
-    _handleAction(from, to, value);
-
+  ) internal override(ERC20Upgradeable, ERC4626StakeTokenUpgradeable) whenNotPaused {
     super._update(from, to, value);
+  }
+
+  function _slash(
+    address destination,
+    uint256 amount
+  ) internal override whenNotPaused returns (uint256) {
+    return super._slash(destination, amount);
   }
 
   function _cooldown(address from) internal override whenNotPaused {
