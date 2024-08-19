@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 
+import {VmSafe} from 'forge-std/Vm.sol';
+
 import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
 import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
@@ -23,8 +25,11 @@ contract StakeTestBase is Test {
   address public admin = vm.addr(0x1000);
   address public guardian = vm.addr(0x2000);
 
-  address public user = vm.addr(0x3000);
-  address public someone = vm.addr(0x4000);
+  VmSafe.Wallet userWallet = vm.createWallet(0x3000);
+  VmSafe.Wallet someoneWallet = vm.createWallet(0x4000);
+
+  address public user = userWallet.addr;
+  address public someone = someoneWallet.addr;
 
   address public proxyAdmin = vm.addr(0x5000);
   address public slashingAdmin = vm.addr(0x9000);
