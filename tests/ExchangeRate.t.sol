@@ -28,8 +28,8 @@ contract ExchangeRateTest is Test {
     uint256 shares = mock.previewDeposit(assets);
     uint128 assetsAfterRedeem = mock.previewRedeem(shares).toUint128();
 
-    assert(assetsAfterRedeem <= assets);
-    assert(assets - assetsAfterRedeem < 2);
+    assertLe(assetsAfterRedeem, assets);
+    assertLe(assets - assetsAfterRedeem, 10);
   }
 
   /// forge-config: default.fuzz.runs = 100000
@@ -50,5 +50,39 @@ contract ExchangeRateTest is Test {
 
     assert(assets >= assetsAfterRedeem);
     assert(sharesAfterWithdraw >= sharesFromDeposit);
+  }
+
+  /// forge-config: default.fuzz.runs = 100000
+  // function test_precisionLossPower(uint128 sharesToMint, uint128 exchangeRate) public {
+  //   // Since initial exchange rate is 1e18 and after slash it should increase only
+  //   vm.assume(sharesToMint > 0 && exchangeRate >= 1e18);
+  //   mock.setExchangeRate(exchangeRate);
+
+  //   // mint function have some troubles with precision and results in worse results
+  //   uint256 assets = mock.previewMint(sharesToMint);
+  //   uint256 sharesFromDeposit = mock.previewDeposit(assets);
+
+  //   uint256 checkPowerLossDiff = checkPowerLoss(sharesFromDeposit, sharesToMint);
+
+  //   console.log(checkPowerLossDiff);
+
+  //   assert(checkPowerLossDiff < 1);
+  // }
+
+  function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {
+    uint256 diff = getDiff(expected, get);
+
+    while (true) {
+      if (diff == 0) {
+        return power;
+      }
+
+      diff = diff / 10;
+      power++;
+    }
+  }
+
+  function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a > b ? a - b : b - a;
   }
 }

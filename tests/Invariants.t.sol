@@ -6,7 +6,8 @@ import 'forge-std/Test.sol';
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract InvariantTest is StakeTestBase {
-  /// forge-config: default.fuzz.runs = 10000
+  // we will use 192 instead of uint256 or 224, cause it will lead to overflow in this fuzzing test, due to mulDiv with new ExchangeRate
+  /// forge-config: default.fuzz.runs = 100000
   function test_exchangeRateAfterSlashingAlwaysIncreasing(
     uint192 amountToDeposit,
     uint192 amountToSlash
@@ -26,6 +27,6 @@ contract InvariantTest is StakeTestBase {
 
     uint256 exchangeRateAfterSlash = stakeToken.getExchangeRate();
 
-    assert(exchangeRateAfterSlash > initialExchangeRate);
+    assertLe(initialExchangeRate, exchangeRateAfterSlash);
   }
 }

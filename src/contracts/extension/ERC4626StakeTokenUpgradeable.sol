@@ -32,10 +32,12 @@ abstract contract ERC4626StakeTokenUpgradeable is
   struct StakeTokenStorage {
     /// @notice User cooldown options
     mapping(address => CooldownSnapshot) _stakerCooldown;
-    /// @notice Cooldown parameters
-    SmConfig _smConfig;
     /// @notice Current exchangeRate of the stk
-    uint192 _currentExchangeRate;
+    uint256 _currentExchangeRate;
+    /// @notice Cooldown duration
+    uint32 cooldown;
+    /// @notice Time period during which funds can be withdrawn
+    uint32 unstakeWindow;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -128,7 +130,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     if (
       block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $._smConfig.unstakeWindow
+      block.timestamp - cooldownSnapshot.timestamp <= $.unstakeWindow
     ) {
       return cooldownSnapshot.amount;
     }
@@ -146,11 +148,11 @@ abstract contract ERC4626StakeTokenUpgradeable is
   }
 
   function getCooldown() public view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.cooldown;
+    return _getStakeTokenStorage().cooldown;
   }
 
   function getUnstakeWindow() public view returns (uint256) {
-    return _getStakeTokenStorage()._smConfig.unstakeWindow;
+    return _getStakeTokenStorage().unstakeWindow;
   }
 
   function getStakerCooldown(address user) public view returns (CooldownSnapshot memory) {
@@ -166,7 +168,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint32 timeToUnlock = (block.timestamp + $._smConfig.cooldown).toUint32();
+    uint32 timeToUnlock = (block.timestamp + $.cooldown).toUint32();
 
     $._stakerCooldown[from] = CooldownSnapshot({
       amount: amount.toUint224(),
@@ -254,13 +256,13 @@ abstract contract ERC4626StakeTokenUpgradeable is
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _getStakeTokenStorage()._smConfig.unstakeWindow = newUnstakeWindow.toUint32();
+    _getStakeTokenStorage().unstakeWindow = newUnstakeWindow.toUint32();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function _setCooldown(uint256 newCooldown) internal {
-    _getStakeTokenStorage()._smConfig.cooldown = newCooldown.toUint32();
+    _getStakeTokenStorage().cooldown = newCooldown.toUint32();
 
     emit CooldownChanged(newCooldown);
   }
@@ -270,7 +272,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
       revert ZeroExchangeRate();
     }
 
-    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate.toUint192();
+    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
 
     emit ExchangeRateChanged(newExchangeRate);
   }

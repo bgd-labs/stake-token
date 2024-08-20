@@ -11,13 +11,6 @@ interface IStakeToken is IERC4626 {
     uint32 timestamp;
   }
 
-  struct SmConfig {
-    /// @notice Cooldown duration
-    uint32 cooldown;
-    /// @notice Time period during which funds can be withdrawn
-    uint32 unstakeWindow;
-  }
-
   struct SignatureParams {
     uint8 v;
     bytes32 r;
