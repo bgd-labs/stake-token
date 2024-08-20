@@ -16,7 +16,7 @@ import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
 
-import {MockERC20} from './mock/MockERC20.sol';
+import {MockERC20Permit} from './mock/MockERC20Permit.sol';
 import {MockACLManager} from './mock/MockACLManager.sol';
 import {MockAddressProvider} from './mock/MockAddressProvider.sol';
 import {MockRewardsController} from './mock/MockRewardsController.sol';
@@ -25,11 +25,10 @@ contract StakeTestBase is Test {
   address public admin = vm.addr(0x1000);
   address public guardian = vm.addr(0x2000);
 
-  VmSafe.Wallet userWallet = vm.createWallet(0x3000);
-  VmSafe.Wallet someoneWallet = vm.createWallet(0x4000);
+  uint256 userPrivateKey = 0x3000;
+  address public user = vm.addr(userPrivateKey);
 
-  address public user = userWallet.addr;
-  address public someone = someoneWallet.addr;
+  address public someone = vm.addr(0x4000);
 
   address public proxyAdmin = vm.addr(0x5000);
   address public slashingAdmin = vm.addr(0x9000);
@@ -74,12 +73,10 @@ contract StakeTestBase is Test {
   function _setupProtocol() internal {
     mockACLManager = address(new MockACLManager(slashingAdmin));
 
-    console.log(slashingAdmin);
-
     mockAddressProvider = address(new MockAddressProvider(mockACLManager));
     mockRewardsContoller = address(new MockRewardsController());
 
-    underlying = new MockERC20('MockToken', 'MTK');
+    underlying = new MockERC20Permit('MockToken', 'MTK');
   }
 
   function _dealUnderlying(uint256 amount, address actor) internal {
