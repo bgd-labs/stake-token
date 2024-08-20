@@ -46,7 +46,6 @@ contract SlashingTests is StakeTestBase {
     assertEq(underlying.balanceOf(someone), 20 ether);
     assertEq(underlying.balanceOf(address(stakeToken)), 80 ether);
 
-    assertEq(stakeToken.getExchangeRate(), 1.25 ether);
     assertEq(stakeToken.convertToAssets(stakeToken.balanceOf(user)), 80 ether);
   }
 
@@ -61,7 +60,7 @@ contract SlashingTests is StakeTestBase {
 
     _deposit(100 ether, someone, someone);
 
-    assertEq(stakeToken.balanceOf(someone), 125 ether);
+    assertLe(125 ether - stakeToken.balanceOf(someone), 1);
     assertEq(stakeToken.balanceOf(user), shares);
 
     assertEq(stakeToken.totalAssets(), 180 ether);

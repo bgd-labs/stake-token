@@ -32,8 +32,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
   struct StakeTokenStorage {
     /// @notice User cooldown options
     mapping(address => CooldownSnapshot) _stakerCooldown;
-    /// @notice Current exchangeRate of the stk
-    uint256 _currentExchangeRate;
     /// @notice Cooldown duration
     uint32 cooldown;
     /// @notice Time period during which funds can be withdrawn
@@ -49,9 +47,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
       $.slot := StakeTokenStorageLocation
     }
   }
-
-  uint256 public constant INITIAL_EXCHANGE_RATE = 1e18;
-  uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
 
   uint256 public constant MIN_ASSETS_REMAINING = 1e6;
 
@@ -79,8 +74,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
   ) internal onlyInitializing {
     _setCooldown(cooldown_);
     _setUnstakeWindow(unstakeWindow_);
-
-    _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
   modifier onlySlashingAdmin() {
@@ -141,10 +134,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
-  }
-
-  function getExchangeRate() public view returns (uint256) {
-    return _getStakeTokenStorage()._currentExchangeRate;
   }
 
   function getCooldown() public view returns (uint256) {
@@ -243,11 +232,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
       amount = maxSlashable;
     }
 
-    uint256 currentShares = totalSupply();
-    uint256 balance = convertToAssets(currentShares);
-
-    _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
-
     IERC20(asset()).safeTransfer(destination, amount);
 
     emit Slashed(destination, amount);
@@ -265,36 +249,5 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _getStakeTokenStorage().cooldown = newCooldown.toUint32();
 
     emit CooldownChanged(newCooldown);
-  }
-
-  function _updateExchangeRate(uint256 newExchangeRate) internal {
-    if (newExchangeRate == 0) {
-      revert ZeroExchangeRate();
-    }
-
-    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
-
-    emit ExchangeRateChanged(newExchangeRate);
-  }
-
-  function _getExchangeRate(
-    uint256 newTotalAssets,
-    uint256 newTotalShares
-  ) internal pure returns (uint256) {
-    return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
-  }
-
-  function _convertToShares(
-    uint256 assets,
-    Math.Rounding rounding
-  ) internal view override returns (uint256) {
-    return assets.mulDiv(getExchangeRate(), EXCHANGE_RATE_UNIT, rounding);
-  }
-
-  function _convertToAssets(
-    uint256 shares,
-    Math.Rounding rounding
-  ) internal view override returns (uint256) {
-    return shares.mulDiv(EXCHANGE_RATE_UNIT, getExchangeRate(), rounding);
   }
 }

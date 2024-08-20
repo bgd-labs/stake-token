@@ -134,11 +134,6 @@ interface IStakeToken is IERC4626 {
   function setUnstakeWindow(uint256 newUnstakeWindow) external;
 
   /**
-   * @dev Returns the current exchange rate with a 1e18 precision.
-   */
-  function getExchangeRate() external view returns (uint256);
-
-  /**
    * @dev Returns current `cooldown` duration.
    */
   function getCooldown() external view returns (uint256);
