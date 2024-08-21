@@ -75,7 +75,7 @@ contract ERC4626Tests is StakeTestBase {
   function test_mint(uint192 amountOfShares) public {
     vm.assume(amountOfShares > 0);
 
-    uint256 amountToStake = stakeToken.convertToAssets(amountOfShares);
+    uint256 amountToStake = stakeToken.previewMint(amountOfShares);
     uint256 assets = _mint(amountOfShares, user, user);
 
     assertEq(assets, amountToStake);
@@ -90,7 +90,7 @@ contract ERC4626Tests is StakeTestBase {
   function test_mintToSomeone(uint192 amountOfShares) public {
     vm.assume(amountOfShares > 0);
 
-    uint256 amountToStake = stakeToken.convertToAssets(amountOfShares);
+    uint256 amountToStake = stakeToken.previewMint(amountOfShares);
     uint256 assets = _mint(amountOfShares, user, someone);
 
     assertEq(assets, amountToStake);
@@ -146,7 +146,7 @@ contract ERC4626Tests is StakeTestBase {
 
   function test_redeem(uint192 amountStaked, uint192 amountRedeemed) public {
     vm.assume(amountStaked > 0);
-    vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
+    vm.assume(amountRedeemed != 0 && amountRedeemed < amountStaked);
 
     _deposit(amountStaked, user, user);
     uint256 sharesToRedeem = stakeToken.convertToShares(amountRedeemed);
@@ -385,9 +385,28 @@ contract ERC4626Tests is StakeTestBase {
     stakeToken.withdraw(uint256(amountStaked) + 1, user, user);
   }
 
-  function test_events(uint192 amountStaked, uint192 amountRedeemed) public {
+  function test_donationDoesntChangeTotalAssets(uint192 amountStaked, uint192 donation) public {
     vm.assume(amountStaked > 0);
-    vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
+
+    _deposit(amountStaked, user, user);
+
+    uint256 totalAssets = stakeToken.totalAssets();
+
+    _dealUnderlying(donation, someone);
+
+    vm.startPrank(someone);
+
+    IERC20(underlying).transfer(address(stakeToken), donation);
+
+    vm.stopPrank();
+
+    uint256 totalAssetsAfterDonation = stakeToken.totalAssets();
+
+    assertEq(totalAssets, totalAssetsAfterDonation);
+  }
+
+  function test_events(uint192 amountStaked, uint224 sharesRedeemed) public {
+    vm.assume(stakeToken.convertToShares(amountStaked) > sharesRedeemed && sharesRedeemed > 0);
 
     _dealUnderlying(amountStaked, user);
 
@@ -404,7 +423,7 @@ contract ERC4626Tests is StakeTestBase {
     skip(stakeToken.getCooldown());
 
     vm.expectEmit(true, true, false, true);
-    emit Withdraw(user, user, user, amountRedeemed, stakeToken.convertToShares(amountRedeemed));
-    stakeToken.redeem(amountRedeemed, user, user);
+    emit Withdraw(user, user, user, stakeToken.convertToAssets(sharesRedeemed), sharesRedeemed);
+    stakeToken.redeem(sharesRedeemed, user, user);
   }
 }

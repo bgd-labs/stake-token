@@ -105,7 +105,7 @@ contract StakeTestBase is Test {
     address actor,
     address receiver
   ) internal returns (uint256) {
-    uint256 amountOfAssets = stakeToken.convertToAssets(amountOfShares);
+    uint256 amountOfAssets = stakeToken.convertToAssets(amountOfShares) + 1;
 
     _dealUnderlying(amountOfAssets, actor);
 
@@ -117,6 +117,14 @@ contract StakeTestBase is Test {
     vm.stopPrank();
 
     return assets;
+  }
+
+  function sharesMultiplier() internal pure returns (uint256) {
+    return 10 ** _decimalsOffset();
+  }
+
+  function _decimalsOffset() internal pure returns (uint256) {
+    return 3;
   }
 
   function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {

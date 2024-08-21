@@ -23,6 +23,6 @@ contract StakeTokenConfigTests is StakeTestBase {
   }
 
   function test_decimals() public view {
-    assertEq(stakeToken.decimals(), 18);
+    assertEq(stakeToken.decimals(), 18 + _decimalsOffset());
   }
 }

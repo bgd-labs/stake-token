@@ -56,7 +56,7 @@ contract SlashingTests is StakeTestBase {
   function test_stakeAfterSlash(uint192 amountToStake, uint192 amountToSlash) public {
     vm.assume(amountToStake > stakeToken.MIN_ASSETS_REMAINING());
     vm.assume(amountToSlash > 0 && amountToSlash < amountToStake);
-    vm.assume(amountToStake - stakeToken.MIN_ASSETS_REMAINING() >= amountToSlash);
+    vm.assume(amountToStake - amountToSlash >= stakeToken.MIN_ASSETS_REMAINING());
     vm.assume(uint256(amountToStake) * 2 - amountToSlash < type(uint192).max);
 
     _deposit(amountToStake, user, user);

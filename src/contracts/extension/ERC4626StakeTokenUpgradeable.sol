@@ -191,7 +191,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
     uint32 timeToUnlock = (block.timestamp + $._cooldown).toUint32();
 
     $._stakerCooldown[from] = CooldownSnapshot({
-      amount: amount.toUint192(),
+      amount: amount.toUint224(),
       timestamp: timeToUnlock
     });
 
@@ -222,7 +222,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
             emit StakerCooldownDeleted(from);
           } else {
-            uint192 amount = cooldownSnapshot.amount - value.toUint192();
+            uint224 amount = cooldownSnapshot.amount - value.toUint224();
 
             $._stakerCooldown[from].amount = amount;
 
@@ -230,7 +230,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
           }
         } else {
           // transfer
-          uint192 balanceAfter = (balanceOfFrom - value).toUint192();
+          uint224 balanceAfter = (balanceOfFrom - value).toUint224();
 
           if (balanceAfter == 0) {
             delete $._stakerCooldown[from];
@@ -282,5 +282,9 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _getStakeTokenStorage()._cooldown = newCooldown.toUint32();
 
     emit CooldownChanged(newCooldown);
+  }
+
+  function _decimalsOffset() internal pure override returns (uint8) {
+    return 3;
   }
 }

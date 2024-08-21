@@ -10,8 +10,8 @@ import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/t
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract CooldownTests is StakeTestBase {
-  function test_cooldown(uint192 amountToStake, uint192 amountToRedeem) public {
-    vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
+  function test_cooldown(uint192 amountToStake, uint192 amountToWithdraw) public {
+    vm.assume(amountToStake > amountToWithdraw && amountToWithdraw > 0);
 
     _deposit(amountToStake, user, user);
 
@@ -21,15 +21,15 @@ contract CooldownTests is StakeTestBase {
     IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldown());
-    assertEq(snapshotBefore.amount, amountToStake);
+    assertEq(snapshotBefore.amount, stakeToken.convertToShares(amountToStake));
 
     skip(stakeToken.getCooldown());
 
-    stakeToken.withdraw(amountToRedeem, user, user);
+    stakeToken.withdraw(amountToWithdraw, user, user);
 
     IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshotAfter.amount, amountToStake - amountToRedeem);
+    assertEq(snapshotAfter.amount, stakeToken.convertToShares(amountToStake - amountToWithdraw));
     assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
   }
 
@@ -55,7 +55,7 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshotBefore.amount, snapshotAfter.amount);
 
     assertEq(snapshotAfter.timestamp, block.timestamp + stakeToken.getCooldown());
-    assertEq(snapshotAfter.amount, amountToStake);
+    assertEq(snapshotAfter.amount, stakeToken.convertToShares(amountToStake));
 
     _deposit(amountToTopUp, someone, someone);
 
@@ -72,12 +72,11 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshotBefore.amount, snapshotAfterSecondTopUp.amount);
 
     assertEq(snapshotAfterSecondTopUp.timestamp, block.timestamp + stakeToken.getCooldown());
-    assertEq(snapshotAfterSecondTopUp.amount, amountToStake);
+    assertEq(snapshotAfterSecondTopUp.amount, stakeToken.convertToShares(amountToStake));
   }
 
-  function test_cooldownChangeOnTransfer(uint192 amountToStake, uint192 amountToTransfer) public {
-    vm.assume(amountToStake > 0);
-    vm.assume(amountToTransfer > 0 && amountToStake > amountToTransfer);
+  function test_cooldownChangeOnTransfer(uint192 amountToStake, uint224 sharesToTransfer) public {
+    vm.assume(stakeToken.convertToShares(amountToStake) > sharesToTransfer && sharesToTransfer > 0);
 
     _deposit(amountToStake, user, user);
 
@@ -86,14 +85,14 @@ contract CooldownTests is StakeTestBase {
 
     IStakeToken.CooldownSnapshot memory snapshot0 = stakeToken.getStakerCooldown(user);
 
-    stakeToken.transfer(someone, amountToTransfer);
+    stakeToken.transfer(someone, sharesToTransfer);
 
     IStakeToken.CooldownSnapshot memory snapshot1 = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshot0.timestamp, snapshot1.timestamp);
-    assertEq(snapshot0.amount, snapshot1.amount + amountToTransfer);
+    assertEq(snapshot0.amount, snapshot1.amount + sharesToTransfer);
 
-    stakeToken.transfer(someone, amountToStake - amountToTransfer);
+    stakeToken.transfer(someone, stakeToken.balanceOf(user));
 
     IStakeToken.CooldownSnapshot memory snapshot2 = stakeToken.getStakerCooldown(user);
 
@@ -101,9 +100,8 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshot2.amount, 0);
   }
 
-  function test_cooldownChangeOnRedeem(uint192 amountToStake, uint192 amountToRedeem) public {
-    vm.assume(amountToStake > 0);
-    vm.assume(amountToRedeem > 0 && amountToStake > amountToRedeem);
+  function test_cooldownChangeOnRedeem(uint192 amountToStake, uint224 sharesToRedeem) public {
+    vm.assume(stakeToken.convertToShares(amountToStake) > sharesToRedeem && sharesToRedeem > 0);
 
     _deposit(amountToStake, user, user);
 
@@ -114,14 +112,14 @@ contract CooldownTests is StakeTestBase {
 
     skip(stakeToken.getCooldown());
 
-    stakeToken.redeem(amountToRedeem, user, user);
+    stakeToken.redeem(sharesToRedeem, user, user);
 
     IStakeToken.CooldownSnapshot memory snapshot1 = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshot0.timestamp, snapshot1.timestamp);
-    assertEq(snapshot0.amount, snapshot1.amount + amountToRedeem);
+    assertEq(snapshot0.amount, snapshot1.amount + sharesToRedeem);
 
-    stakeToken.redeem(amountToStake - amountToRedeem, user, user);
+    stakeToken.redeem(stakeToken.balanceOf(user), user, user);
 
     IStakeToken.CooldownSnapshot memory snapshot2 = stakeToken.getStakerCooldown(user);
 
@@ -131,17 +129,17 @@ contract CooldownTests is StakeTestBase {
 
   function test_cooldownInsufficientTime(
     uint192 amountToStake,
-    uint32 AfterCooldownActivation
+    uint32 afterCooldownActivation
   ) public {
     vm.assume(amountToStake > 0);
-    vm.assume(AfterCooldownActivation < stakeToken.getCooldown());
+    vm.assume(afterCooldownActivation < stakeToken.getCooldown());
 
     _deposit(amountToStake, user, user);
 
     vm.startPrank(user);
     stakeToken.cooldown();
 
-    skip(AfterCooldownActivation);
+    skip(afterCooldownActivation);
 
     vm.expectRevert();
 
@@ -157,9 +155,9 @@ contract CooldownTests is StakeTestBase {
     stakeToken.withdraw(1, user, user);
   }
 
-  function test_cooldownWindowClosed(uint192 amountToStake, uint32 GreaterThanNeeded) public {
+  function test_cooldownWindowClosed(uint192 amountToStake, uint32 greaterThanNeeded) public {
     vm.assume(amountToStake > 0);
-    vm.assume(GreaterThanNeeded > stakeToken.getCooldown() + stakeToken.getUnstakeWindow());
+    vm.assume(greaterThanNeeded > stakeToken.getCooldown() + stakeToken.getUnstakeWindow());
 
     _deposit(amountToStake, user, user);
 
@@ -167,7 +165,7 @@ contract CooldownTests is StakeTestBase {
 
     stakeToken.cooldown();
 
-    skip(GreaterThanNeeded);
+    skip(greaterThanNeeded);
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -181,8 +179,8 @@ contract CooldownTests is StakeTestBase {
     stakeToken.withdraw(1, user, user);
   }
 
-  function test_cooldownOnBehalf(uint192 amountToStake, uint192 amountToRedeem) public {
-    vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
+  function test_cooldownOnBehalf(uint192 amountToStake, uint224 sharesToRedeem) public {
+    vm.assume(stakeToken.convertToShares(amountToStake) > sharesToRedeem && sharesToRedeem > 0);
 
     _deposit(amountToStake, user, user);
 
@@ -198,15 +196,15 @@ contract CooldownTests is StakeTestBase {
     IStakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldown());
-    assertEq(snapshotBefore.amount, amountToStake);
+    assertEq(snapshotBefore.amount, stakeToken.convertToShares(amountToStake));
 
     skip(stakeToken.getCooldown());
 
-    stakeToken.withdraw(amountToRedeem, someone, user);
+    stakeToken.redeem(sharesToRedeem, someone, user);
 
     IStakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshotAfter.amount, amountToStake - amountToRedeem);
+    assertEq(snapshotAfter.amount + sharesToRedeem, snapshotBefore.amount);
     assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
   }
 
