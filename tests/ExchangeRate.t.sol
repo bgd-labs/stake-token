@@ -115,6 +115,9 @@ contract ExchangeRateTest is StakeTestBase {
 
     assertLe(getDiff(assetsToCheck, assetsFromRedeem_1), 1);
 
+    // check, cause they have different rounding, but same convertToShares with the same assets started
+    assertLe(getDiff(sharesFromDeposit_1, sharesFromWithdrawal_1), 1000);
+
     // TODO need to think here, cause this test is failed with these values
     // assets        = 6277101735386680763835789423207666416102355444464034512863
     // assetsToSlash = 6277101735386680763619579229924836587676145011266550440097

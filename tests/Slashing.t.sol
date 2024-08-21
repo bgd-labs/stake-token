@@ -70,7 +70,7 @@ contract SlashingTests is StakeTestBase {
     _deposit(amountToStake, user, user);
 
     assertEq(underlying.balanceOf(someone), amountToSlash);
-    assertEq(underlying.balanceOf(address(stakeToken)), 2 * amountToStake - amountToSlash);
+    assertEq(underlying.balanceOf(address(stakeToken)), 2 * uint256(amountToStake) - amountToSlash);
 
     assertEq(
       stakeToken.convertToAssets(stakeToken.balanceOf(user)),
