@@ -74,7 +74,7 @@ contract SlashingTests is StakeTestBase {
 
     assertEq(
       stakeToken.convertToAssets(stakeToken.balanceOf(user)),
-      2 * amountToStake - amountToSlash
+      2 * uint256(amountToStake) - amountToSlash
     );
   }
 }

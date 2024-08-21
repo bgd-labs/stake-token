@@ -105,7 +105,7 @@ contract StakeTestBase is Test {
     address actor,
     address receiver
   ) internal returns (uint256) {
-    uint256 amountOfAssets = stakeToken.convertToAssets(amountOfShares) + 1;
+    uint256 amountOfAssets = stakeToken.previewMint(amountOfShares);
 
     _dealUnderlying(amountOfAssets, actor);
 
