@@ -34,35 +34,47 @@ contract SlashingTests is StakeTestBase {
     stakeToken.slash(someone, type(uint256).max);
   }
 
-  function test_slash() public {
-    _deposit(100 ether, user, user);
+  function test_slash(uint192 amountToStake, uint192 amountToSlash) public {
+    vm.assume(amountToStake > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(amountToSlash > 0 && amountToSlash < amountToStake);
+    vm.assume(amountToStake - stakeToken.MIN_ASSETS_REMAINING() >= amountToSlash);
+
+    _deposit(amountToStake, user, user);
 
     vm.startPrank(slashingAdmin);
 
-    stakeToken.slash(someone, 20 ether);
+    stakeToken.slash(someone, amountToSlash);
 
     vm.stopPrank();
 
-    assertEq(underlying.balanceOf(someone), 20 ether);
-    assertEq(underlying.balanceOf(address(stakeToken)), 80 ether);
+    assertEq(underlying.balanceOf(someone), amountToSlash);
+    assertEq(underlying.balanceOf(address(stakeToken)), amountToStake - amountToSlash);
 
-    assertEq(stakeToken.convertToAssets(stakeToken.balanceOf(user)), 80 ether);
+    assertEq(stakeToken.convertToAssets(stakeToken.balanceOf(user)), amountToStake - amountToSlash);
   }
 
-  function test_stakeAfterSlash() public {
-    uint256 shares = _deposit(100 ether, user, user);
+  function test_stakeAfterSlash(uint192 amountToStake, uint192 amountToSlash) public {
+    vm.assume(amountToStake > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(amountToSlash > 0 && amountToSlash < amountToStake);
+    vm.assume(amountToStake - stakeToken.MIN_ASSETS_REMAINING() >= amountToSlash);
+    vm.assume(uint256(amountToStake) * 2 - amountToSlash < type(uint192).max);
+
+    _deposit(amountToStake, user, user);
 
     vm.startPrank(slashingAdmin);
 
-    stakeToken.slash(someone, 20 ether);
+    stakeToken.slash(someone, amountToSlash);
 
     vm.stopPrank();
 
-    _deposit(100 ether, someone, someone);
+    _deposit(amountToStake, user, user);
 
-    assertLe(125 ether - stakeToken.balanceOf(someone), 1);
-    assertEq(stakeToken.balanceOf(user), shares);
+    assertEq(underlying.balanceOf(someone), amountToSlash);
+    assertEq(underlying.balanceOf(address(stakeToken)), 2 * amountToStake - amountToSlash);
 
-    assertEq(stakeToken.totalAssets(), 180 ether);
+    assertEq(
+      stakeToken.convertToAssets(stakeToken.balanceOf(user)),
+      2 * amountToStake - amountToSlash
+    );
   }
 }

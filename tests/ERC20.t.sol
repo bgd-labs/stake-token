@@ -17,7 +17,7 @@ contract ERC20Tests is StakeTestBase {
   }
 
   // mint
-  function test_mint(uint224 amount) public {
+  function test_mint(uint192 amount) public {
     vm.assume(amount > 0);
 
     _mint(amount, user, user);
@@ -27,7 +27,7 @@ contract ERC20Tests is StakeTestBase {
   }
 
   // burn
-  function test_redeem(uint224 amountStaked, uint224 amountRedeemed) public {
+  function test_redeem(uint192 amountStaked, uint192 amountRedeemed) public {
     vm.assume(amountStaked > 0);
     vm.assume(amountRedeemed != 0 && amountRedeemed <= amountStaked);
 
@@ -47,20 +47,20 @@ contract ERC20Tests is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStaked - amountRedeemed));
   }
 
-  function test_approve(uint224 amount) public {
+  function test_approve(uint192 amount) public {
     assertTrue(stakeToken.approve(user, amount));
     assertEq(stakeToken.allowance(address(this), user), amount);
   }
 
-  function test_resetApproval(uint224 amount) public {
+  function test_resetApproval(uint192 amount) public {
     assertTrue(stakeToken.approve(user, amount));
     assertTrue(stakeToken.approve(user, 0));
     assertEq(stakeToken.allowance(address(this), user), 0);
   }
 
   function test_transferWithoutCooldownInStake(
-    uint224 amountStake,
-    uint224 amountTransfer
+    uint192 amountStake,
+    uint192 amountTransfer
   ) external {
     vm.assume(amountStake > 0);
     vm.assume(amountTransfer <= stakeToken.convertToShares(amountStake));
@@ -71,11 +71,11 @@ contract ERC20Tests is StakeTestBase {
 
     stakeToken.transfer(someone, amountTransfer);
 
-    assertEq(stakeToken.balanceOf(someone), amountTransfer);
-    assertEq(stakeToken.balanceOf(user), amountStake - amountTransfer);
+    assertEq(stakeToken.balanceOf(someone), stakeToken.convertToShares(amountTransfer));
+    assertEq(stakeToken.balanceOf(user), stakeToken.convertToShares(amountStake - amountTransfer));
   }
 
-  function test_transferWithCooldownInStake(uint224 amountStake, uint224 amountTransfer) external {
+  function test_transferWithCooldownInStake(uint192 amountStake, uint192 amountTransfer) external {
     vm.assume(amountStake > 0);
     vm.assume(amountTransfer <= stakeToken.convertToShares(amountStake));
 
@@ -89,11 +89,11 @@ contract ERC20Tests is StakeTestBase {
 
     stakeToken.transfer(someone, amountTransfer);
 
-    assertEq(stakeToken.balanceOf(someone), amountTransfer);
+    assertEq(stakeToken.balanceOf(someone), stakeToken.convertToShares(amountTransfer));
     assertEq(stakeToken.balanceOf(user), amountStake - amountTransfer);
   }
 
-  function test_transferFrom(uint224 amountStake, uint224 amountTransfer) external {
+  function test_transferFrom(uint192 amountStake, uint192 amountTransfer) external {
     vm.assume(amountStake > 0);
     vm.assume(amountTransfer <= stakeToken.convertToShares(amountStake));
 
@@ -116,7 +116,7 @@ contract ERC20Tests is StakeTestBase {
     assertEq(stakeToken.balanceOf(someone), amountTransfer);
   }
 
-  function test_transferFromWithoutApprove(uint224 amountStake, uint224 amountTransfer) external {
+  function test_transferFromWithoutApprove(uint192 amountStake, uint192 amountTransfer) external {
     vm.assume(amountStake > 0);
     vm.assume(0 < amountTransfer && amountTransfer <= stakeToken.convertToShares(amountStake));
 

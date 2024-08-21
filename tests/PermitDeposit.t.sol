@@ -23,7 +23,7 @@ contract PermitDepositTests is StakeTestBase {
   bytes32 _hashedName = keccak256(bytes('MockToken'));
   bytes32 _hashedVersion = keccak256(bytes('1'));
 
-  function test_permitAndDepositSeparate(uint224 amountToStake) public {
+  function test_permitAndDepositSeparate(uint192 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     vm.startPrank(user);
@@ -60,7 +60,7 @@ contract PermitDepositTests is StakeTestBase {
     assertEq(stakeToken.balanceOf(user), shares);
   }
 
-  function test_permitDeposit(uint224 amountToStake) public {
+  function test_permitDeposit(uint192 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     vm.startPrank(user);
@@ -87,6 +87,35 @@ contract PermitDepositTests is StakeTestBase {
 
     assertEq(stakeToken.totalSupply(), shares);
     assertEq(stakeToken.balanceOf(user), shares);
+  }
+
+  function test_permitDepositInvalidSignature(uint192 amountToStake) public {
+    vm.assume(amountToStake > 1);
+
+    vm.startPrank(user);
+
+    uint256 deadline = block.timestamp + 1e6;
+    _dealUnderlying(amountToStake, user);
+
+    bytes32 digest = keccak256(
+      abi.encode(PERMIT_TYPEHASH, user, address(stakeToken), 1, 0, deadline)
+    );
+
+    bytes32 hash = toTypedDataHash(_domainSeparator(), digest);
+
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
+
+    IStakeToken.SignatureParams memory sig = IStakeToken.SignatureParams(v, r, s);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IERC20Errors.ERC20InsufficientAllowance.selector,
+        address(stakeToken),
+        0,
+        amountToStake
+      )
+    );
+    stakeToken.depositWithPermit(amountToStake, user, deadline, sig);
   }
 
   // copy from OZ

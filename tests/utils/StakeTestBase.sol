@@ -118,4 +118,22 @@ contract StakeTestBase is Test {
 
     return assets;
   }
+
+  function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {
+    uint256 diff = getDiff(expected, get);
+
+    while (true) {
+      diff = diff / 10;
+
+      if (diff == 0) {
+        return power;
+      }
+
+      power++;
+    }
+  }
+
+  function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a > b ? a - b : b - a;
+  }
 }

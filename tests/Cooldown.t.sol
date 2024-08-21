@@ -10,7 +10,7 @@ import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/t
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract CooldownTests is StakeTestBase {
-  function test_cooldown(uint224 amountToStake, uint224 amountToRedeem) public {
+  function test_cooldown(uint192 amountToStake, uint192 amountToRedeem) public {
     vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
 
     _deposit(amountToStake, user, user);
@@ -33,9 +33,11 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
   }
 
-  function test_cooldownNoIncreaseInAmount(uint224 amountToStake, uint224 amountToTopUp) public {
+  function test_cooldownNoIncreaseInAmount(uint192 amountToStake, uint192 amountToTopUp) public {
     vm.assume(
-      amountToStake > 0 && amountToTopUp > 0 && type(uint224).max - amountToStake > amountToTopUp
+      amountToStake > 0 &&
+        amountToTopUp > 0 &&
+        uint256(type(uint192).max) > 2 * uint256(amountToTopUp) + amountToStake
     );
 
     _deposit(amountToStake, user, user);
@@ -73,7 +75,7 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshotAfterSecondTopUp.amount, amountToStake);
   }
 
-  function test_cooldownChangeOnTransfer(uint224 amountToStake, uint224 amountToTransfer) public {
+  function test_cooldownChangeOnTransfer(uint192 amountToStake, uint192 amountToTransfer) public {
     vm.assume(amountToStake > 0);
     vm.assume(amountToTransfer > 0 && amountToStake > amountToTransfer);
 
@@ -99,7 +101,7 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshot2.amount, 0);
   }
 
-  function test_cooldownChangeOnRedeem(uint224 amountToStake, uint224 amountToRedeem) public {
+  function test_cooldownChangeOnRedeem(uint192 amountToStake, uint192 amountToRedeem) public {
     vm.assume(amountToStake > 0);
     vm.assume(amountToRedeem > 0 && amountToStake > amountToRedeem);
 
@@ -128,7 +130,7 @@ contract CooldownTests is StakeTestBase {
   }
 
   function test_cooldownInsufficientTime(
-    uint224 amountToStake,
+    uint192 amountToStake,
     uint32 AfterCooldownActivation
   ) public {
     vm.assume(amountToStake > 0);
@@ -155,7 +157,7 @@ contract CooldownTests is StakeTestBase {
     stakeToken.withdraw(1, user, user);
   }
 
-  function test_cooldownWindowClosed(uint224 amountToStake, uint32 GreaterThanNeeded) public {
+  function test_cooldownWindowClosed(uint192 amountToStake, uint32 GreaterThanNeeded) public {
     vm.assume(amountToStake > 0);
     vm.assume(GreaterThanNeeded > stakeToken.getCooldown() + stakeToken.getUnstakeWindow());
 
@@ -179,7 +181,7 @@ contract CooldownTests is StakeTestBase {
     stakeToken.withdraw(1, user, user);
   }
 
-  function test_cooldownOnBehalf(uint224 amountToStake, uint224 amountToRedeem) public {
+  function test_cooldownOnBehalf(uint192 amountToStake, uint192 amountToRedeem) public {
     vm.assume(amountToStake > amountToRedeem && amountToRedeem > 0);
 
     _deposit(amountToStake, user, user);
@@ -208,7 +210,7 @@ contract CooldownTests is StakeTestBase {
     assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
   }
 
-  function test_cooldownOnBehalfNotApproved(uint224 amountToStake) public {
+  function test_cooldownOnBehalfNotApproved(uint192 amountToStake) public {
     vm.assume(amountToStake > 0);
 
     _deposit(amountToStake, user, user);
