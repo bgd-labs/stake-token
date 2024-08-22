@@ -74,7 +74,7 @@ contract PermitDepositTests is StakeTestBase {
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
 
-    IStakeToken.SignatureParams memory sig = IStakeToken.SignatureParams(v, r, s);
+    IERC4626StakeToken.SignatureParams memory sig = IERC4626StakeToken.SignatureParams(v, r, s);
 
     stakeToken.depositWithPermit(amountToStake, user, deadline, sig);
 
@@ -103,7 +103,7 @@ contract PermitDepositTests is StakeTestBase {
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
 
-    IStakeToken.SignatureParams memory sig = IStakeToken.SignatureParams(v, r, s);
+    IERC4626StakeToken.SignatureParams memory sig = IERC4626StakeToken.SignatureParams(v, r, s);
 
     vm.expectRevert(
       abi.encodeWithSelector(

@@ -21,7 +21,7 @@ contract SlashingTests is StakeTestBase {
   function test_slash_shouldRevertWithAmountZero() public {
     vm.startPrank(admin);
 
-    vm.expectRevert(IStakeToken.ZeroAmountSlashing.selector);
+    vm.expectRevert(IERC4626StakeToken.ZeroAmountSlashing.selector);
     stakeToken.slash(user, 0);
   }
 
@@ -32,7 +32,7 @@ contract SlashingTests is StakeTestBase {
 
     vm.startPrank(admin);
 
-    vm.expectRevert(IStakeToken.ZeroFundsAvailable.selector);
+    vm.expectRevert(IERC4626StakeToken.ZeroFundsAvailable.selector);
     stakeToken.slash(someone, type(uint256).max);
   }
 

@@ -27,7 +27,7 @@ contract StakeTestBase is Test {
   address public proxyAdmin = vm.addr(0x5000);
 
   IERC20Metadata public underlying;
-  IStakeToken public stakeToken;
+  IERC4626StakeToken public stakeToken;
 
   address public mockRewardsController;
 
@@ -38,7 +38,7 @@ contract StakeTestBase is Test {
 
   function _setupStakeToken(address stakeTokenUnderlying) internal {
     StakeToken stakeTokenImpl = new StakeToken(IRewardsController(mockRewardsController));
-    stakeToken = IStakeToken(
+    stakeToken = IERC4626StakeToken(
       address(
         new TransparentUpgradeableProxy(
           address(stakeTokenImpl),
