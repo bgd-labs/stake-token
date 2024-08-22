@@ -177,11 +177,13 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
     uint256 cachedTotalSupply = totalSupply();
 
     // stake & transfer
+    // `handleAction` to update rewards for user `to`
     if (to != address(0)) {
       REWARDS_CONTROLLER.handleAction(to, cachedTotalSupply, balanceOf(to));
     }
 
     // redeem & transfer
+    // `handleAction` to update rewards for user `from`
     if (from != address(0) && from != to) {
       uint256 balanceOfFrom = balanceOf(from);
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
@@ -189,12 +191,17 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
       StakeTokenStorage storage $ = _getStakeTokenStorage();
       CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[from];
 
+      // if cooldown was activated and user is trying to transfer/redeem tokens
+      // we don't take into account that cooldown could be already outdated
       if (cooldownSnapshot.timestamp != 0) {
         if (to == address(0)) {
-          // redeem
+          // `from` redeems tokens here
+          // reduce amount available for redeem in the future
           cooldownSnapshot.amount -= value.toUint224();
         } else {
-          // transfer
+          // `from` transfers tokens here
+          // if balance of user decrease less than the amount of tokens in cooldown, than his `cooldownSnapshot.amount` should be reduced too
+          // we don't pay attention if balanceAfter is greater than users `cooldownSnapshot.amount`, cause it's not the same tokens, which were cooldowned
           uint224 balanceAfter = (balanceOfFrom - value).toUint224();
           if (balanceAfter <= cooldownSnapshot.amount) {
             cooldownSnapshot.amount = balanceAfter;
@@ -202,11 +209,16 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
         }
 
         if (cooldownSnapshot.amount == 0) {
-          cooldownSnapshot.timestamp = 0;
-        }
-        $._stakerCooldown[from] = cooldownSnapshot;
+          // if user spend all balance or already redeem whole amount
+          delete $._stakerCooldown[from];
 
-        // emit StakerCooldownAmountChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
+          emit StakerCooldownChanged(from, 0, 0);
+        } else if ($._stakerCooldown[from].amount != cooldownSnapshot.amount) {
+          // just reduce amount if not whole balance or amount are redeemed/transferred
+          $._stakerCooldown[from].amount = cooldownSnapshot.amount;
+
+          emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
+        }
       }
     }
 

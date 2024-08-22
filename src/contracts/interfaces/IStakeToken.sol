@@ -18,19 +18,13 @@ interface IStakeToken is IERC4626 {
   }
 
   event CooldownSet(address indexed user, uint256 amount, uint256 timestamp);
-  event StakerCooldownAmountChanged(address indexed user, uint256 amount);
-  event StakerCooldownDeleted(address indexed user);
+  event StakerCooldownChanged(address indexed user, uint256 amount, uint256 timestamp);
 
   event Slashed(address indexed destination, uint256 amount);
 
   event CooldownChanged(uint256 cooldown);
   event UnstakeWindowChanged(uint256 unstakeWindow);
   event ExchangeRateChanged(uint256 exchangeRate);
-
-  /**
-   * @dev Attempted to set zero `exchangeRate`.
-   */
-  error ZeroExchangeRate();
 
   /**
    * @dev Attempted to call cooldown without locked liquidity.
@@ -46,16 +40,6 @@ interface IStakeToken is IERC4626 {
    * @dev Attempted to slash with insufficient funds in staking.
    */
   error ZeroFundsAvailable();
-
-  /**
-   * @dev Attempt to make permit, which wasn't succeded.
-   */
-  error PermitNotSucceded();
-
-  /**
-   * @dev Attempt to call slash not from `slashingAdmin` address.
-   */
-  error CallerIsNotSlashingAdmin();
 
   /**
    * @dev Attempt to call cooldown without allowance for `stakeToken`.
