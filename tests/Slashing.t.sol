@@ -9,11 +9,16 @@ import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.so
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract SlashingTests is StakeTestBase {
-  function test_slashWithWrongCaller() external {
-    vm.startPrank(user);
+  function test_slashNotByAdmin(address anyone) external {
+    vm.assume(anyone != admin);
+
+    vm.startPrank(anyone);
 
     vm.expectRevert(
-      abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(user))
+      abi.encodeWithSelector(
+        OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+        address(anyone)
+      )
     );
     stakeToken.slash(user, type(uint256).max);
   }

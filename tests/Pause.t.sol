@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
@@ -18,6 +19,22 @@ contract PauseTests is StakeTestBase {
     stakeToken.unpause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
+  }
+
+  function test_setPauseNotByAdmin(address anyone) external {
+    vm.assume(anyone != admin);
+
+    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
+
+    vm.startPrank(anyone);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+        address(anyone)
+      )
+    );
+    stakeToken.pause();
   }
 
   function test_shouldRevertWhenPauseIsActive() external {
