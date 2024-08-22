@@ -192,31 +192,21 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
       if (cooldownSnapshot.timestamp != 0) {
         if (to == address(0)) {
           // redeem
-          if (cooldownSnapshot.amount == value) {
-            delete $._stakerCooldown[from];
-
-            emit StakerCooldownDeleted(from);
-          } else {
-            uint224 amount = cooldownSnapshot.amount - value.toUint224();
-
-            $._stakerCooldown[from].amount = amount;
-
-            emit StakerCooldownAmountChanged(from, amount);
-          }
+          cooldownSnapshot.amount -= value.toUint224();
         } else {
           // transfer
           uint224 balanceAfter = (balanceOfFrom - value).toUint224();
-
-          if (balanceAfter == 0) {
-            delete $._stakerCooldown[from];
-
-            emit StakerCooldownDeleted(from);
-          } else if (balanceAfter < cooldownSnapshot.amount) {
-            $._stakerCooldown[from].amount = balanceAfter;
-
-            emit StakerCooldownAmountChanged(from, balanceAfter);
+          if (balanceAfter <= cooldownSnapshot.amount) {
+            cooldownSnapshot.amount = balanceAfter;
           }
         }
+
+        if (cooldownSnapshot.amount == 0) {
+          cooldownSnapshot.timestamp = 0;
+        }
+        $._stakerCooldown[from] = cooldownSnapshot;
+
+        emit StakerCooldownAmountChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
       }
     }
 
