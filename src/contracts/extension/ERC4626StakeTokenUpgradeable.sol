@@ -3,13 +3,9 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
-import {IAccessControl} from 'openzeppelin-contracts/contracts/access/IAccessControl.sol';
 
-import {IPoolAddressesProvider} from '../interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from '../interfaces/IRewardsController.sol';
 import {IStakeToken} from '../interfaces/IStakeToken.sol';
-
-import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
 
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
@@ -18,12 +14,7 @@ import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
-abstract contract ERC4626StakeTokenUpgradeable is
-  Initializable,
-  ERC4626Upgradeable,
-  UpgradeableOwnableWithGuardian,
-  IStakeToken
-{
+abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IStakeToken {
   using SafeERC20 for IERC20;
   using SafeCast for uint256;
   using Math for uint256;
@@ -53,11 +44,9 @@ abstract contract ERC4626StakeTokenUpgradeable is
   uint256 public constant MIN_ASSETS_REMAINING = 1e6;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
-  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
-  constructor(IRewardsController rewardsController, IPoolAddressesProvider provider) {
+  constructor(IRewardsController rewardsController) {
     REWARDS_CONTROLLER = rewardsController;
-    ADDRESSES_PROVIDER = provider;
   }
 
   function __StakeTokenUpgradeable_init(
@@ -78,15 +67,6 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _setUnstakeWindow(unstakeWindow_);
   }
 
-  modifier onlySlashingAdmin() {
-    if (
-      !IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', _msgSender())
-    ) {
-      revert CallerIsNotSlashingAdmin();
-    }
-    _;
-  }
-
   function cooldown() external {
     _cooldown(_msgSender());
   }
@@ -99,17 +79,14 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _cooldown(owner);
   }
 
-  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
-    return _slash(destination, amount);
-  }
+  ///// @dev Methods requiring mandatory access control, because of it kept undefined
+  function slash(address destination, uint256 amount) external virtual returns (uint256);
 
-  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
-    _setUnstakeWindow(newUnstakeWindow);
-  }
+  function setUnstakeWindow(uint256 newUnstakeWindow) external virtual;
 
-  function setCooldown(uint256 newCooldown) external onlyOwner {
-    _setCooldown(newCooldown);
-  }
+  function setCooldown(uint256 newCooldown) external virtual;
+
+  //////////////////
 
   function maxWithdraw(
     address owner

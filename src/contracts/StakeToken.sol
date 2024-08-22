@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 import {IPoolAddressesProvider} from './interfaces/IPoolAddressesProvider.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
@@ -20,12 +21,12 @@ contract StakeToken is
   Initializable,
   PausableUpgradeable,
   ERC20PermitUpgradeable,
-  ERC4626StakeTokenUpgradeable
+  ERC4626StakeTokenUpgradeable,
+  OwnableUpgradeable
 {
   constructor(
-    IRewardsController rewardsController,
-    IPoolAddressesProvider provider
-  ) ERC4626StakeTokenUpgradeable(rewardsController, provider) {
+    IRewardsController rewardsController
+  ) ERC4626StakeTokenUpgradeable(rewardsController) {
     _disableInitializers();
   }
 
@@ -34,7 +35,6 @@ contract StakeToken is
     string calldata name,
     string calldata symbol,
     address owner,
-    address guardian,
     uint256 cooldown_,
     uint256 unstakeWindow_
   ) external initializer {
@@ -44,7 +44,6 @@ contract StakeToken is
     __Pausable_init();
 
     __Ownable_init(owner);
-    __Ownable_With_Guardian_init(guardian);
 
     __StakeTokenUpgradeable_init(stakedToken, cooldown_, unstakeWindow_);
   }
@@ -70,12 +69,27 @@ contract StakeToken is
     return deposit(assets, receiver);
   }
 
-  function pause() external onlyOwnerOrGuardian {
+  function pause() external onlyOwner {
     _pause();
   }
 
-  function unpause() external onlyOwnerOrGuardian {
+  function unpause() external onlyOwner {
     _unpause();
+  }
+
+  function slash(
+    address destination,
+    uint256 amount
+  ) external override onlyOwner returns (uint256) {
+    return _slash(destination, amount);
+  }
+
+  function setUnstakeWindow(uint256 newUnstakeWindow) external override onlyOwner {
+    _setUnstakeWindow(newUnstakeWindow);
+  }
+
+  function setCooldown(uint256 newCooldown) external override onlyOwner {
+    _setCooldown(newCooldown);
   }
 
   function decimals()
