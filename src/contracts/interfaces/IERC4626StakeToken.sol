@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 
-interface IStakeToken is IERC4626 {
+interface IERC4626StakeToken is IERC4626 {
   struct CooldownSnapshot {
     /// @notice Amount of shares available to redeem
     uint224 amount;

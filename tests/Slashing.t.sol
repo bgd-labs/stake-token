@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 

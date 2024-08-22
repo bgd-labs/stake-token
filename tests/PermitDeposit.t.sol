@@ -7,7 +7,7 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol';
 import {IERC20Errors} from 'openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
 
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 

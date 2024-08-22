@@ -10,7 +10,7 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
 import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
 import {MockERC20Permit} from './mock/MockERC20Permit.sol';

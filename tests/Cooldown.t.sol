@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 

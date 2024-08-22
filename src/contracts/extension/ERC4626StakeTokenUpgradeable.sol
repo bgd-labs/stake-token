@@ -12,9 +12,13 @@ import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
 import {IRewardsController} from '../interfaces/IRewardsController.sol';
-import {IStakeToken} from '../interfaces/IStakeToken.sol';
+import {IERC4626StakeToken} from '../interfaces/IERC4626StakeToken.sol';
 
-abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IStakeToken {
+abstract contract ERC4626StakeTokenUpgradeable is
+  Initializable,
+  ERC4626Upgradeable,
+  IERC4626StakeToken
+{
   using SafeERC20 for IERC20;
   using SafeCast for uint256;
   using Math for uint256;
@@ -67,10 +71,12 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
     _setUnstakeWindow(unstakeWindow_);
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function cooldown() external {
     _cooldown(_msgSender());
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function cooldownOnBehalfOf(address owner) external {
     if (allowance(owner, _msgSender()) == 0) {
       revert NotApprovedForCooldown(owner, _msgSender());
@@ -80,20 +86,26 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
   }
 
   ///// @dev Methods requiring mandatory access control, because of it kept undefined
+
+  /// @inheritdoc IERC4626StakeToken
   function slash(address destination, uint256 amount) external virtual returns (uint256);
 
+  /// @inheritdoc IERC4626StakeToken
   function setUnstakeWindow(uint256 newUnstakeWindow) external virtual;
 
+  /// @inheritdoc IERC4626StakeToken
   function setCooldown(uint256 newCooldown) external virtual;
 
-  //////////////////
+  ///////////////////////////////////////////////////////////////////////////////////
 
+  /// @inheritdoc IERC4626
   function maxWithdraw(
     address owner
   ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
     return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
   }
 
+  /// @inheritdoc IERC4626
   function maxRedeem(
     address owner
   ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
@@ -110,23 +122,28 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
     return 0;
   }
 
+  /// @inheritdoc IERC4626
   function totalAssets() public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
     return _getStakeTokenStorage()._totalAssets;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getCooldown() public view returns (uint256) {
     return _getStakeTokenStorage()._cooldown;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getUnstakeWindow() public view returns (uint256) {
     return _getStakeTokenStorage()._unstakeWindow;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getStakerCooldown(address user) public view returns (CooldownSnapshot memory) {
     return _getStakeTokenStorage()._stakerCooldown[user];
   }

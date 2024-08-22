@@ -12,6 +12,7 @@ import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import {IERC20Permit} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
+import {IERC4626StakeToken} from './interfaces/IERC4626StakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 import {ERC4626StakeTokenUpgradeable} from './extension/ERC4626StakeTokenUpgradeable.sol';
 
@@ -46,6 +47,7 @@ contract StakeToken is
     __StakeTokenUpgradeable_init(stakedToken, cooldown_, unstakeWindow_);
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function depositWithPermit(
     uint256 assets,
     address receiver,
@@ -67,14 +69,17 @@ contract StakeToken is
     return deposit(assets, receiver);
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function pause() external onlyOwner {
     _pause();
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function unpause() external onlyOwner {
     _unpause();
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function slash(
     address destination,
     uint256 amount
@@ -82,10 +87,12 @@ contract StakeToken is
     return _slash(destination, amount);
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function setUnstakeWindow(uint256 newUnstakeWindow) external override onlyOwner {
     _setUnstakeWindow(newUnstakeWindow);
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function setCooldown(uint256 newCooldown) external override onlyOwner {
     _setCooldown(newCooldown);
   }
