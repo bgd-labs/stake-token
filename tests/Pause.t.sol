@@ -8,20 +8,6 @@ import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract PauseTests is StakeTestBase {
-  function test_setPauseByGuardian() external {
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
-
-    vm.startPrank(guardian);
-
-    stakeToken.pause();
-
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), true);
-
-    stakeToken.unpause();
-
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
-  }
-
   function test_setPauseByAdmin() external {
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
 
@@ -84,7 +70,7 @@ contract PauseTests is StakeTestBase {
     stakeToken.transfer(someone, 1);
 
     vm.stopPrank();
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
     stakeToken.slash(someone, 1);

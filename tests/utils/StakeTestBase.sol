@@ -17,12 +17,10 @@ import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-
 import {StakeToken} from 'src/contracts/StakeToken.sol';
 
 import {MockERC20Permit} from './mock/MockERC20Permit.sol';
-import {MockACLManager} from './mock/MockACLManager.sol';
 import {MockRewardsController} from './mock/MockRewardsController.sol';
 
 contract StakeTestBase is Test {
   address public admin = vm.addr(0x1000);
-  address public guardian = vm.addr(0x2000);
 
   uint256 public userPrivateKey = 0x3000;
   address public user = vm.addr(userPrivateKey);
@@ -30,12 +28,10 @@ contract StakeTestBase is Test {
   address public someone = vm.addr(0x4000);
 
   address public proxyAdmin = vm.addr(0x5000);
-  address public slashingAdmin = vm.addr(0x9000);
 
   IERC20Metadata public underlying;
   IStakeToken public stakeToken;
 
-  address public mockACLManager;
   address public mockRewardsController;
 
   function setUp() public virtual {
@@ -56,7 +52,6 @@ contract StakeTestBase is Test {
             'Stake Test',
             'stkTest',
             admin,
-            guardian,
             15 days,
             2 days
           )
@@ -66,8 +61,6 @@ contract StakeTestBase is Test {
   }
 
   function _setupProtocol() internal {
-    mockACLManager = address(new MockACLManager(slashingAdmin));
-
     mockRewardsController = address(new MockRewardsController());
 
     underlying = new MockERC20Permit('MockToken', 'MTK');

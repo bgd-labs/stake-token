@@ -26,7 +26,6 @@ interface IStakeToken is IERC4626 {
   event CooldownChanged(uint256 cooldown);
   event UnstakeWindowChanged(uint256 unstakeWindow);
   event ExchangeRateChanged(uint256 exchangeRate);
-  event SlashingAdminChanged(address newAdmin);
 
   /**
    * @dev Attempted to set zero `exchangeRate`.

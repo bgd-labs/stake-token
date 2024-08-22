@@ -20,7 +20,7 @@ contract InvariantTest is StakeTestBase {
 
     uint256 defaultExchangeRate = stakeToken.previewDeposit(1);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, amountToSlash);
 

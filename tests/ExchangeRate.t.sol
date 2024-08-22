@@ -23,7 +23,7 @@ contract ExchangeRateTest is StakeTestBase {
 
     _deposit(assets, user, user);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, assetsToSlash);
 
@@ -99,7 +99,7 @@ contract ExchangeRateTest is StakeTestBase {
 
     _deposit(assets, user, user);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, assetsToSlash);
 

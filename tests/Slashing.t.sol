@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
 
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
+
 import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
@@ -12,12 +14,14 @@ contract SlashingTests is StakeTestBase {
   function test_slashWithWrongCaller() external {
     vm.startPrank(user);
 
-    vm.expectRevert(IStakeToken.CallerIsNotSlashingAdmin.selector);
+    vm.expectRevert(
+      abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(user))
+    );
     stakeToken.slash(user, type(uint256).max);
   }
 
   function test_slash_shouldRevertWithAmountZero() public {
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     vm.expectRevert(IStakeToken.ZeroAmountSlashing.selector);
     stakeToken.slash(user, 0);
@@ -28,7 +32,7 @@ contract SlashingTests is StakeTestBase {
 
     _deposit(amount, user, user);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     vm.expectRevert(IStakeToken.ZeroFundsAvailable.selector);
     stakeToken.slash(someone, type(uint256).max);
@@ -41,7 +45,7 @@ contract SlashingTests is StakeTestBase {
 
     _deposit(amountToStake, user, user);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, amountToSlash);
 
@@ -61,7 +65,7 @@ contract SlashingTests is StakeTestBase {
 
     _deposit(amountToStake, user, user);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, amountToSlash);
 
