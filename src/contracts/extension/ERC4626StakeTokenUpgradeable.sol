@@ -225,15 +225,13 @@ abstract contract ERC4626StakeTokenUpgradeable is
           }
         }
 
-        if (cooldownSnapshot.amount == 0) {
-          // if user spend all balance or already redeem whole amount
-          delete $._stakerCooldown[from];
-
-          emit StakerCooldownChanged(from, 0, 0);
-        } else if ($._stakerCooldown[from].amount != cooldownSnapshot.amount) {
-          // just reduce amount if not whole balance or amount are redeemed/transferred
-          $._stakerCooldown[from].amount = cooldownSnapshot.amount;
-
+        // reduce an amount under cooldown if something was spent
+        if ($._stakerCooldown[from].amount != cooldownSnapshot.amount) {
+          if (cooldownSnapshot.amount == 0) {
+            // if user spend all balance or already redeem whole amount
+            cooldownSnapshot.timestamp = 0;
+          }
+          $._stakerCooldown[from] = cooldownSnapshot;
           emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
         }
       }
