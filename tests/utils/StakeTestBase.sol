@@ -5,16 +5,13 @@ import 'forge-std/Test.sol';
 
 import {VmSafe} from 'forge-std/Vm.sol';
 
-import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
-
-import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
-import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
-
 import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
+import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
 import {MockERC20Permit} from './mock/MockERC20Permit.sol';
 import {MockRewardsController} from './mock/MockRewardsController.sol';

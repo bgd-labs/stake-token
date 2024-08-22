@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 
+import {StakeToken} from 'src/contracts/StakeToken.sol';
 import {IStakeToken} from 'src/contracts/interfaces/IStakeToken.sol';
 
-import {StakeToken} from 'src/contracts/StakeToken.sol';
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract SlashingTests is StakeTestBase {

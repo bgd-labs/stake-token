@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
-import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
-
-import {IRewardsController} from '../interfaces/IRewardsController.sol';
-import {IStakeToken} from '../interfaces/IStakeToken.sol';
-
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
+
+import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
+
+import {IRewardsController} from '../interfaces/IRewardsController.sol';
+import {IStakeToken} from '../interfaces/IStakeToken.sol';
 
 abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradeable, IStakeToken {
   using SafeERC20 for IERC20;
@@ -206,7 +206,7 @@ abstract contract ERC4626StakeTokenUpgradeable is Initializable, ERC4626Upgradea
         }
         $._stakerCooldown[from] = cooldownSnapshot;
 
-        emit StakerCooldownAmountChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
+        // emit StakerCooldownAmountChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
       }
     }
 

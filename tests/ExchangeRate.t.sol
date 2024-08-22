@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-
-import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
-
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
+
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
