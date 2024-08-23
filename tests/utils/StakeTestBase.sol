@@ -10,7 +10,6 @@ import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/exten
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
 
 import {StakeToken} from 'src/contracts/StakeToken.sol';
-import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
 import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
 import {MockERC20Permit} from './mock/MockERC20Permit.sol';
@@ -27,7 +26,7 @@ contract StakeTestBase is Test {
   address public proxyAdmin = vm.addr(0x5000);
 
   IERC20Metadata public underlying;
-  IERC4626StakeToken public stakeToken;
+  StakeToken public stakeToken;
 
   address public mockRewardsController;
 
@@ -38,7 +37,7 @@ contract StakeTestBase is Test {
 
   function _setupStakeToken(address stakeTokenUnderlying) internal {
     StakeToken stakeTokenImpl = new StakeToken(IRewardsController(mockRewardsController));
-    stakeToken = IERC4626StakeToken(
+    stakeToken = StakeToken(
       address(
         new TransparentUpgradeableProxy(
           address(stakeTokenImpl),
@@ -111,19 +110,19 @@ contract StakeTestBase is Test {
     return 3;
   }
 
-  function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {
-    uint256 diff = getDiff(expected, get);
+  // function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {
+  //   uint256 diff = getDiff(expected, get);
 
-    while (true) {
-      diff = diff / 10;
+  //   while (true) {
+  //     diff = diff / 10;
 
-      if (diff == 0) {
-        return power;
-      }
+  //     if (diff == 0) {
+  //       return power;
+  //     }
 
-      power++;
-    }
-  }
+  //     power++;
+  //   }
+  // }
 
   function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
     return a > b ? a - b : b - a;

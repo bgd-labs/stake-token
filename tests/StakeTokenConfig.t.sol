@@ -23,4 +23,22 @@ contract StakeTokenConfigTests is StakeTestBase {
   function test_decimals() public view {
     assertEq(stakeToken.decimals(), 18 + _decimalsOffset());
   }
+
+  function test_transferOwnership(address anyone) public {
+    vm.assume(anyone != address(0));
+
+    vm.startPrank(admin);
+
+    stakeToken.transferOwnership(anyone);
+
+    assertEq(stakeToken.owner(), anyone);
+  }
+
+  function test_renounceOwnership() public {
+    vm.startPrank(admin);
+
+    stakeToken.renounceOwnership();
+
+    assertEq(stakeToken.owner(), address(0));
+  }
 }

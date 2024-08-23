@@ -37,6 +37,8 @@ contract PermitDepositTests is StakeTestBase {
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
 
+    assertEq(IERC20Permit(address(underlying)).nonces(user), 0);
+
     IERC20Permit(address(underlying)).permit(
       user,
       address(stakeToken),
@@ -46,6 +48,8 @@ contract PermitDepositTests is StakeTestBase {
       r,
       s
     );
+
+    assertEq(IERC20Permit(address(underlying)).nonces(user), 1);
 
     stakeToken.deposit(amountToStake, user);
 
@@ -76,7 +80,11 @@ contract PermitDepositTests is StakeTestBase {
 
     IERC4626StakeToken.SignatureParams memory sig = IERC4626StakeToken.SignatureParams(v, r, s);
 
+    assertEq(IERC20Permit(address(underlying)).nonces(user), 0);
+
     stakeToken.depositWithPermit(amountToStake, user, deadline, sig);
+
+    assertEq(IERC20Permit(address(underlying)).nonces(user), 1);
 
     uint256 shares = stakeToken.previewDeposit(amountToStake);
 
