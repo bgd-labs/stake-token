@@ -25,6 +25,10 @@ An up-to-date address can be fetched from the respective [address-book pool libr
 
 The `StakeToken` is not natively integrated into the aave protocol and therefore cannot use multiple sources of additional incentives. Additional incentives included in the `static-a-tokens` are disabled when using the `StakeTokens`.
 
+Since the `StakeToken` implies a decrease in `totalAssets()` over time (loss of funds), irreversible losses associated with the accuracy of calculations could occur over time.
+
+Losses do not exceed 1 wei if calculated relative to assets, but they can be more significant when using functions related to calculations through shares (due to OZ roundings). It is recommended to manually check and find more profitable ways to deposit/withdraw liquidity. However, in most cases, the difference should not exceed any significant amount.
+
 ### Inheritance
 
 The `StakeToken` is based on [`open-zeppelin-upgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable) contracts.
