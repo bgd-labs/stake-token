@@ -12,29 +12,29 @@ The `StakeToken` contains an EIP-4626 generic token vault for all non-rebase tok
 - Withdrawal of funds from the storage can be carried out only after activation of cooldown after a certain time.
 - The `StakeToken` is designed to cover small `Bad Debt`'s in a semi-automatic mode, but can withdraw almost all funds up to the `getMaxSlashableAssets()` amount in emergencies.
 - Providing liquidity in the `StakeToken` includes the risk of slashing and is therefore paid for with additional rewards through `REWARDS_CONTROLLER`.
-- **Permit-transactions support.** To enable interfaces to offer gas-less transactions to deposit with permit.
+- **Permit-transactions support.** To enable interfaces to offer gas-less transactions to deposit with a permit.
 - **Upgradable by the Aave governance.** Similar to other contracts of the Aave ecosystem, the Level 1 executor (short executor) will be able to add new features to the deployed instances of the `stakeTokens`.
 
 See [IERC4626StakeToken.sol](src/contracts/interfaces/IERC4626StakeToken.sol) for detailed method documentation.
 
 ## Deployed Addresses
 
-An up to date address can be fetched from the respective [address-book pool library](https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Ethereum.sol).
+An up-to-date address can be fetched from the respective [address-book pool library](https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Ethereum.sol).
 
 ## Limitations
 
-The `StakeToken` is not natively integrated into the aave protocol and therefore cannot use multiple sources of additional incentives. Additional incentives that are included in the `static-a-tokens` are disabled when using the `StakeTokens`.
+The `StakeToken` is not natively integrated into the aave protocol and therefore cannot use multiple sources of additional incentives. Additional incentives included in the `static-a-tokens` are disabled when using the `StakeTokens`.
 
 ### Inheritance
 
 The `StakeToken` is based on [`open-zeppelin-upgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable) contracts.
 
-The `StakeToken` is seperated in 2 different contracts, where `ERC4626StakeTokenUpgradeable` inherits `ERC4626Upgradeable`.
+The `StakeToken` is separated into 2 different contracts, where `ERC4626StakeTokenUpgradeable` inherits `ERC4626Upgradeable`.
 
 - `ERC4626StakeTokenUpgradeable` is an abstract contract implementing the [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) methods for an underlying asset. It provides basic functionality for the `StakeToken` without any access control or pausability.
-- `StataTokenV2` is the main contract stritching things together, while adding `Pausability`, `Rescuable`, `Permit` and the actual initialization.
+- `StataTokenV2` is the main contract stitching things together, while adding `Pausability`, `Rescuable`, `Permit`, and the actual initialization.
 
-#### ERC20PermitUpgradeable
+#### depositWithPermit
 
 [`ERC20PermitUpgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/9a47a37c4b8ce2ac465e8656f31d32ac6fe26eaa/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol) has been added to the `StakeToken`, which added the ability to make a deposit using a valid signature and 1 tx via `permit()`.
 
