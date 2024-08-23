@@ -15,7 +15,7 @@ The `StakeToken` contains an EIP-4626 generic token vault for all non-rebase tok
 - **Permit-transactions support.** To enable interfaces to offer gas-less transactions to deposit with a permit.
 - **Upgradable by the Aave governance.** Similar to other contracts of the Aave ecosystem, the Level 1 executor (short executor) will be able to add new features to the deployed instances of the `stakeTokens`.
 
-See [IERC4626StakeToken.sol](src/contracts/interfaces/IERC4626StakeToken.sol) for detailed method documentation.
+See [`IERC4626StakeToken.sol`](src/contracts/interfaces/IERC4626StakeToken.sol) for detailed method documentation.
 
 ## Deployed Addresses
 
@@ -32,7 +32,7 @@ The `StakeToken` is based on [`open-zeppelin-upgradeable`](https://github.com/Op
 The `StakeToken` is separated into 2 different contracts, where `ERC4626StakeTokenUpgradeable` inherits `ERC4626Upgradeable`.
 
 - `ERC4626StakeTokenUpgradeable` is an abstract contract implementing the [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) methods for an underlying asset. It provides basic functionality for the `StakeToken` without any access control or pausability.
-- `StataTokenV2` is the main contract stitching things together, while adding `Pausability`, `Rescuable`, `Permit`, and the actual initialization.
+- `StataTokenV2` is the main contract stitching things together, while adding `Pausable`, `Rescuable`, `Permit`, and the actual initialization.
 
 #### depositWithPermit
 
@@ -43,7 +43,7 @@ The `StakeToken` is separated into 2 different contracts, where `ERC4626StakeTok
 [`Rescuable`](https://github.com/bgd-labs/solidity-utils/blob/main/src/contracts/utils/Rescuable.sol) has been applied to
 the `StakeToken` which will allow the `owner()` of the corresponding `StakeToken` to rescue tokens on the contract.
 
-#### Pausability
+#### Pausable
 
 The `StakeToken` implements the [`PausableUpgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/9a47a37c4b8ce2ac465e8656f31d32ac6fe26eaa/contracts/utils/PausableUpgradeable.sol) allowing `owner()` to pause the vault in case of an emergency.
 As long as the vault is paused, any non-view actions (deposit/redeem/slash) are impossible.

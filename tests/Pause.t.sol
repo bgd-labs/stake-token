@@ -22,7 +22,7 @@ contract PauseTests is StakeTestBase {
   }
 
   function test_setPauseNotByAdmin(address anyone) external {
-    vm.assume(anyone != admin);
+    vm.assume(anyone != admin && anyone != proxyAdmin);
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
 

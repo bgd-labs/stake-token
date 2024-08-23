@@ -49,7 +49,7 @@ contract CooldownTests is StakeTestBase {
   }
 
   function test_rescueFromNotAdmin(address anyone) public {
-    vm.assume(anyone != admin);
+    vm.assume(anyone != admin && anyone != proxyAdmin);
     _dealUnderlying(1 ether, someone);
 
     vm.startPrank(someone);

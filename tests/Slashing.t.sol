@@ -10,7 +10,7 @@ import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract SlashingTests is StakeTestBase {
   function test_slashNotByAdmin(address anyone) external {
-    vm.assume(anyone != admin);
+    vm.assume(anyone != admin && anyone != proxyAdmin);
 
     vm.startPrank(anyone);
 
