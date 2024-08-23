@@ -18,6 +18,14 @@ import {IERC4626StakeToken} from './interfaces/IERC4626StakeToken.sol';
 import {IRewardsController} from './interfaces/IRewardsController.sol';
 import {ERC4626StakeTokenUpgradeable} from './extension/ERC4626StakeTokenUpgradeable.sol';
 
+/**
+ * @title StakeToken
+ * @notice StakeToken is an `ERC-4626` contract that aims to supply assets as debt repayment in the event of a `Bad Debt`.
+ * Stakers will be paid rewards through `REWARDS_CONTROLLER` for providing underlying assets. In a situation where a `Bad Debt`
+ * exceeds a threshold value, the `slash()` function will be called, which will take the part of the assets
+ * necessary for repayment from this vault and transfer them to the desired address.
+ * @author BGD labs
+ */
 contract StakeToken is
   Initializable,
   PausableUpgradeable,

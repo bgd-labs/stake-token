@@ -218,7 +218,8 @@ abstract contract ERC4626StakeTokenUpgradeable is
         } else {
           // `from` transfers tokens here
           // if balance of user decrease less than the amount of tokens in cooldown, than his `cooldownSnapshot.amount` should be reduced too
-          // we don't pay attention if balanceAfter is greater than users `cooldownSnapshot.amount`, cause it's not the same tokens, which were cooldowned
+          // we don't pay attention if balanceAfter is greater than users `cooldownSnapshot.amount`, because we assume these are "other" tokens
+          // tokens that have been cooldowned are always at the bottom of the balance
           uint224 balanceAfter = (balanceOfFrom - value).toUint224();
           if (balanceAfter <= cooldownSnapshot.amount) {
             cooldownSnapshot.amount = balanceAfter;
