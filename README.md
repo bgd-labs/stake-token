@@ -36,7 +36,7 @@ The `StakeToken` is based on [`open-zeppelin-upgradeable`](https://github.com/Op
 The `StakeToken` is separated into 2 different contracts, where `ERC4626StakeTokenUpgradeable` inherits `ERC4626Upgradeable`.
 
 - `ERC4626StakeTokenUpgradeable` is an abstract contract implementing the [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) methods for an underlying asset. It provides basic functionality for the `StakeToken` without any access control or pausability.
-- `StataTokenV2` is the main contract stitching things together, while adding `Pausable`, `Rescuable`, `Permit`, and the actual initialization.
+- `StakeToken` is the main contract stitching things together, while adding `Pausable`, `Rescuable`, `Permit`, and the actual initialization.
 
 #### depositWithPermit
 
