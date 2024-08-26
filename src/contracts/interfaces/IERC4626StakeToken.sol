@@ -8,7 +8,7 @@ interface IERC4626StakeToken is IERC4626 {
     /// @notice Amount of shares available to redeem
     uint224 amount;
     /// @notice Time to unlock funds for withdrawal
-    uint32 timestamp;
+    uint32 endOfCooldown;
   }
 
   struct SignatureParams {
@@ -17,8 +17,8 @@ interface IERC4626StakeToken is IERC4626 {
     bytes32 s;
   }
 
-  event CooldownSet(address indexed user, uint256 amount, uint256 timestamp);
-  event StakerCooldownChanged(address indexed user, uint256 amount, uint256 timestamp);
+  event CooldownSet(address indexed user, uint256 amount, uint256 endOfCooldown);
+  event StakerCooldownChanged(address indexed user, uint256 amount, uint256 endOfCooldown);
 
   event Slashed(address indexed destination, uint256 amount);
 

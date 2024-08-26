@@ -18,7 +18,7 @@ contract CooldownTests is StakeTestBase {
     stakeToken.cooldown();
     IERC4626StakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldown());
+    assertEq(snapshotBefore.endOfCooldown, block.timestamp + stakeToken.getCooldown());
     assertEq(snapshotBefore.amount, stakeToken.convertToShares(amountToStake));
 
     skip(stakeToken.getCooldown());
@@ -28,7 +28,7 @@ contract CooldownTests is StakeTestBase {
     IERC4626StakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshotAfter.amount, stakeToken.convertToShares(amountToStake - amountToWithdraw));
-    assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
+    assertEq(snapshotAfter.endOfCooldown, snapshotBefore.endOfCooldown);
   }
 
   function test_cooldownNoIncreaseInAmount(uint192 amountToStake, uint192 amountToTopUp) public {
@@ -49,10 +49,10 @@ contract CooldownTests is StakeTestBase {
 
     IERC4626StakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshotBefore.timestamp, snapshotAfter.timestamp);
+    assertEq(snapshotBefore.endOfCooldown, snapshotAfter.endOfCooldown);
     assertEq(snapshotBefore.amount, snapshotAfter.amount);
 
-    assertEq(snapshotAfter.timestamp, block.timestamp + stakeToken.getCooldown());
+    assertEq(snapshotAfter.endOfCooldown, block.timestamp + stakeToken.getCooldown());
     assertEq(snapshotAfter.amount, stakeToken.convertToShares(amountToStake));
 
     _deposit(amountToTopUp, someone, someone);
@@ -65,10 +65,10 @@ contract CooldownTests is StakeTestBase {
     IERC4626StakeToken.CooldownSnapshot memory snapshotAfterSecondTopUp = stakeToken
       .getStakerCooldown(user);
 
-    assertEq(snapshotBefore.timestamp, snapshotAfterSecondTopUp.timestamp);
+    assertEq(snapshotBefore.endOfCooldown, snapshotAfterSecondTopUp.endOfCooldown);
     assertEq(snapshotBefore.amount, snapshotAfterSecondTopUp.amount);
 
-    assertEq(snapshotAfterSecondTopUp.timestamp, block.timestamp + stakeToken.getCooldown());
+    assertEq(snapshotAfterSecondTopUp.endOfCooldown, block.timestamp + stakeToken.getCooldown());
     assertEq(snapshotAfterSecondTopUp.amount, stakeToken.convertToShares(amountToStake));
   }
 
@@ -86,14 +86,14 @@ contract CooldownTests is StakeTestBase {
 
     IERC4626StakeToken.CooldownSnapshot memory snapshot1 = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshot0.timestamp, snapshot1.timestamp);
+    assertEq(snapshot0.endOfCooldown, snapshot1.endOfCooldown);
     assertEq(snapshot0.amount, snapshot1.amount + sharesToTransfer);
 
     stakeToken.transfer(someone, stakeToken.balanceOf(user));
 
     IERC4626StakeToken.CooldownSnapshot memory snapshot2 = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshot2.timestamp, 0);
+    assertEq(snapshot2.endOfCooldown, 0);
     assertEq(snapshot2.amount, 0);
   }
 
@@ -113,14 +113,14 @@ contract CooldownTests is StakeTestBase {
 
     IERC4626StakeToken.CooldownSnapshot memory snapshot1 = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshot0.timestamp, snapshot1.timestamp);
+    assertEq(snapshot0.endOfCooldown, snapshot1.endOfCooldown);
     assertEq(snapshot0.amount, snapshot1.amount + sharesToRedeem);
 
     stakeToken.redeem(stakeToken.balanceOf(user), user, user);
 
     IERC4626StakeToken.CooldownSnapshot memory snapshot2 = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshot2.timestamp, 0);
+    assertEq(snapshot2.endOfCooldown, 0);
     assertEq(snapshot2.amount, 0);
   }
 
@@ -192,7 +192,7 @@ contract CooldownTests is StakeTestBase {
 
     IERC4626StakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
 
-    assertEq(snapshotBefore.timestamp, block.timestamp + stakeToken.getCooldown());
+    assertEq(snapshotBefore.endOfCooldown, block.timestamp + stakeToken.getCooldown());
     assertEq(snapshotBefore.amount, stakeToken.convertToShares(amountToStake));
 
     skip(stakeToken.getCooldown());
@@ -202,7 +202,7 @@ contract CooldownTests is StakeTestBase {
     IERC4626StakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
 
     assertEq(snapshotAfter.amount + sharesToRedeem, snapshotBefore.amount);
-    assertEq(snapshotAfter.timestamp, snapshotBefore.timestamp);
+    assertEq(snapshotAfter.endOfCooldown, snapshotBefore.endOfCooldown);
   }
 
   function test_cooldownOnBehalfNotApproved(uint192 amountToStake) public {

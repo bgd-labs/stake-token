@@ -119,8 +119,8 @@ abstract contract ERC4626StakeTokenUpgradeable is
     CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
 
     if (
-      block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $._unstakeWindow
+      block.timestamp >= cooldownSnapshot.endOfCooldown &&
+      block.timestamp - cooldownSnapshot.endOfCooldown <= $._unstakeWindow
     ) {
       return cooldownSnapshot.amount;
     }
@@ -190,7 +190,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     $._stakerCooldown[from] = CooldownSnapshot({
       amount: amount.toUint224(),
-      timestamp: timeToUnlock
+      endOfCooldown: timeToUnlock
     });
 
     emit CooldownSet(from, amount, timeToUnlock);
@@ -216,7 +216,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
       // if cooldown was activated and user is trying to transfer/redeem tokens
       // we don't take into account that cooldown could be already outdated
-      if (cooldownSnapshot.timestamp != 0) {
+      if (cooldownSnapshot.endOfCooldown != 0) {
         if (to == address(0)) {
           // `from` redeems tokens here
           // reduce amount available for redeem in the future
@@ -236,10 +236,10 @@ abstract contract ERC4626StakeTokenUpgradeable is
         if ($._stakerCooldown[from].amount != cooldownSnapshot.amount) {
           if (cooldownSnapshot.amount == 0) {
             // if user spend all balance or already redeem whole amount
-            cooldownSnapshot.timestamp = 0;
+            cooldownSnapshot.endOfCooldown = 0;
           }
           $._stakerCooldown[from] = cooldownSnapshot;
-          emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
+          emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.endOfCooldown);
         }
       }
     }
