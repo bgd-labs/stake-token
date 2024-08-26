@@ -1,27 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol';
 
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract PauseTests is StakeTestBase {
-  function test_setPauseByGuardian() external {
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
-
-    vm.startPrank(guardian);
-
-    stakeToken.pause();
-
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), true);
-
-    stakeToken.unpause();
-
-    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
-  }
-
   function test_setPauseByAdmin() external {
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
 
@@ -34,6 +19,22 @@ contract PauseTests is StakeTestBase {
     stakeToken.unpause();
 
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
+  }
+
+  function test_setPauseNotByAdmin(address anyone) external {
+    vm.assume(anyone != admin && anyone != proxyAdmin);
+
+    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
+
+    vm.startPrank(anyone);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+        address(anyone)
+      )
+    );
+    stakeToken.pause();
   }
 
   function test_shouldRevertWhenPauseIsActive() external {
@@ -84,7 +85,7 @@ contract PauseTests is StakeTestBase {
     stakeToken.transfer(someone, 1);
 
     vm.stopPrank();
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
     stakeToken.slash(someone, 1);

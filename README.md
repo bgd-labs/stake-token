@@ -1,64 +1,77 @@
-# Stake token
+# StakeToken - Vault
 
-New version of the Aave Safety Module stk tokens.
+The new version of the Aave Safety Module stk tokens, intended for the Umbrella project.
 
-## Summary of Changes
+## About
 
-The `StakeToken` is a token deployed on Ethereum, with the main utility of participating in the Aave safety module.
+The `StakeToken` contains an EIP-4626 generic token vault for all non-rebase tokens (especially targeting `static-a-tokens`).
 
-There are currently two proxy contracts which utilize a `StakeToken`:
+## Features
 
-- [stkAAVE](https://etherscan.io/token/0x4da27a545c0c5b758a6ba100e3a049001de870f5) with the [StakedAaveV3 implementation](https://etherscan.io/address/0xaa9faa887bce5182c39f68ac46c43f36723c395b#code)
-- [stkABPT](https://etherscan.io/address/0xa1116930326D21fB917d5A27F1E9943A9595fb47#code) with the [StakedTokenV3 implementation](https://etherscan.io/address/0x9921c8cea5815364d0f8350e6cbe9042a92448c9#code)
+- **Full [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) compatibility.**
+- Withdrawal of funds from the storage can be carried out only after activation of cooldown after a certain time.
+- The `StakeToken` is designed to cover small `Bad Debt`'s in a semi-automatic mode, but can withdraw almost all funds up to the `getMaxSlashableAssets()` amount in emergencies.
+- Providing liquidity in the `StakeToken` includes the risk of slashing and is therefore paid for with additional rewards through `REWARDS_CONTROLLER`.
+- **Permit-transactions support.** To enable interfaces to offer gas-less transactions to deposit with a permit.
+- **Upgradable by the Aave governance.** Similar to other contracts of the Aave ecosystem, the Level 1 executor (short executor) will be able to add new features to the deployed instances of the `stakeTokens`.
 
-The implementation can be found [here](https://github.com/bgd-labs/aave-stk-gov-v3)
-Together with all the standard ERC20 functionalities, the current implementation includes extra logic for:
+See [`IERC4626StakeToken.sol`](src/contracts/interfaces/IERC4626StakeToken.sol) for detailed method documentation.
 
-- entering and exiting the safety module
-- management & accounting for safety module rewards
-- management & accounting of voting and proposition power
-- slashing mechanics for slashing in the case of shortfall events
+## Deployed Addresses
 
-The new iteration of the generic `StakeToken` is intended for new Deployments **only**.
-While it does not alter any core mechanics, the new iteration cleans up numerous historical artifacts.
+An up-to-date address can be fetched from the respective [address-book pool library](https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Ethereum.sol).
 
-The main goals here are:
+## Limitations
 
-- simpler inheritance chain
-- cleaner storage layout
-- updated/modernized libraries
+The `StakeToken` is not natively integrated into the aave protocol and therefore cannot use multiple sources of additional incentives. Additional incentives included in the `static-a-tokens` are disabled when using the `StakeTokens`.
 
-## Development
+Since the `StakeToken` implies a decrease in `totalAssets()` over time (loss of funds), irreversible losses associated with the accuracy of calculations could occur over time.
 
-This project uses [Foundry](https://getfoundry.sh). See the [book](https://book.getfoundry.sh/getting-started/installation.html) for detailed instructions on how to install and use Foundry.
-The template ships with sensible default so you can use default `foundry` commands without resorting to `MakeFile`.
+Losses do not exceed 1 wei if calculated relative to assets, but they can be more significant when using functions related to calculations through shares (due to OZ roundings). It is recommended to manually check and find more profitable ways to deposit/withdraw liquidity. However, in most cases, the difference should not exceed any significant amount.
+
+### Inheritance
+
+The `StakeToken` is based on [`open-zeppelin-upgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable) contracts.
+
+The `StakeToken` is separated into 2 different contracts, where `ERC4626StakeTokenUpgradeable` inherits `ERC4626Upgradeable`.
+
+- `ERC4626StakeTokenUpgradeable` is an abstract contract implementing the [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) methods for an underlying asset. It provides basic functionality for the `StakeToken` without any access control or pausability.
+- `StataTokenV2` is the main contract stitching things together, while adding `Pausable`, `Rescuable`, `Permit`, and the actual initialization.
+
+#### depositWithPermit
+
+[`ERC20PermitUpgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/9a47a37c4b8ce2ac465e8656f31d32ac6fe26eaa/contracts/token/ERC20/extensions/ERC20PermitUpgradeable.sol) has been added to the `StakeToken`, which added the ability to make a deposit using a valid signature and 1 tx via `permit()`.
+
+#### Rescuable
+
+[`Rescuable`](https://github.com/bgd-labs/solidity-utils/blob/main/src/contracts/utils/Rescuable.sol) has been applied to
+the `StakeToken` which will allow the `owner()` of the corresponding `StakeToken` to rescue tokens on the contract.
+
+#### Pausable
+
+The `StakeToken` implements the [`PausableUpgradeable`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/9a47a37c4b8ce2ac465e8656f31d32ac6fe26eaa/contracts/utils/PausableUpgradeable.sol) allowing `owner()` to pause the vault in case of an emergency.
+As long as the vault is paused, any non-view actions (deposit/redeem/slash) are impossible.
+
+## Dependencies
+
+- Foundry, [how-to install](https://book.getfoundry.sh/getting-started/installation) (we recommend also update to the last version with `foundryup`)
+- Lcov
+  - Optional, only needed for coverage testing
+  - For Ubuntu, you can install via `apt install lcov`
+  - For Mac, you can install via `brew install lcov`
 
 ### Setup
 
 ```sh
 cp .env.example .env
+
 forge install
+
+# optional, to install prettier
+bun install
 ```
 
-### Test
+### Tests
 
-```sh
-forge test
-```
-
-## Advanced features
-
-### Diffing
-
-For contracts upgrading implementations it's quite important to diff the implementation code to spot potential issues and ensure only the intended changes are included.
-Therefore the `Makefile` includes some commands to streamline the diffing process.
-
-#### Download
-
-You can `download` the current contract code of a deployed contract via `make download chain=polygon address=0x00`. This will download the contract source for specified address to `src/etherscan/chain_address`. This command works for all chains with a etherscan compatible block explorer.
-
-#### Git diff
-
-You can `git-diff` a downloaded contract against your src via `make git-diff before=./etherscan/chain_address after=./src out=filename`. This command will diff the two folders via git patience algorithm and write the output to `diffs/filename.md`.
-
-**Caveat**: If the onchain implementation was verified using flatten, for generating the diff you need to flatten the new contract via `forge flatten` and supply the flattened file instead fo the whole `./src` folder.
+- To run the full test suite: `make test`
+- To re-generate the coverage report: `make coverage`

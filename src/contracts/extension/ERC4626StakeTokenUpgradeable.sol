@@ -1,28 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
-import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
-import {IAccessControl} from 'openzeppelin-contracts/contracts/access/IAccessControl.sol';
-
-import {IPoolAddressesProvider} from '../interfaces/IPoolAddressesProvider.sol';
-import {IRewardsController} from '../interfaces/IRewardsController.sol';
-import {IStakeToken} from '../interfaces/IStakeToken.sol';
-
-import {UpgradeableOwnableWithGuardian} from 'solidity-utils/contracts/access-control/UpgradeableOwnableWithGuardian.sol';
-
 import {ERC4626Upgradeable} from 'openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol';
 import {Initializable} from 'openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol';
+
+import {IERC20} from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 
+import {IRewardsController} from '../interfaces/IRewardsController.sol';
+import {IERC4626StakeToken} from '../interfaces/IERC4626StakeToken.sol';
+
+/**
+ * @title ERC4626StakeTokenUpgradeable
+ * @notice Stake smart contract, which allows covering bad debt at the expense of stakers. In return, stakers receive rewards.
+ * @dev ERC20 extension, so ERC20 initialization should be done by the children contract/s
+ * @author BGD labs
+ */
 abstract contract ERC4626StakeTokenUpgradeable is
   Initializable,
   ERC4626Upgradeable,
-  UpgradeableOwnableWithGuardian,
-  IStakeToken
+  IERC4626StakeToken
 {
   using SafeERC20 for IERC20;
   using SafeCast for uint256;
@@ -32,12 +33,12 @@ abstract contract ERC4626StakeTokenUpgradeable is
   struct StakeTokenStorage {
     /// @notice User cooldown options
     mapping(address => CooldownSnapshot) _stakerCooldown;
-    /// @notice Current exchangeRate of the stk
-    uint256 _currentExchangeRate;
     /// @notice Cooldown duration
-    uint32 cooldown;
+    uint32 _cooldown;
     /// @notice Time period during which funds can be withdrawn
-    uint32 unstakeWindow;
+    uint32 _unstakeWindow;
+    /// @notice Virtual accounting of assets
+    uint192 _totalAssets;
   }
 
   // keccak256(abi.encode(uint256(keccak256("aave.storage.StakeToken")) - 1)) & ~bytes32(uint256(0xff))
@@ -50,17 +51,12 @@ abstract contract ERC4626StakeTokenUpgradeable is
     }
   }
 
-  uint256 public constant INITIAL_EXCHANGE_RATE = 1e18;
-  uint256 public constant EXCHANGE_RATE_UNIT = 1e18;
-
   uint256 public constant MIN_ASSETS_REMAINING = 1e6;
 
   IRewardsController public immutable REWARDS_CONTROLLER;
-  IPoolAddressesProvider public immutable ADDRESSES_PROVIDER;
 
-  constructor(IRewardsController rewardsController, IPoolAddressesProvider provider) {
+  constructor(IRewardsController rewardsController) {
     REWARDS_CONTROLLER = rewardsController;
-    ADDRESSES_PROVIDER = provider;
   }
 
   function __StakeTokenUpgradeable_init(
@@ -79,23 +75,14 @@ abstract contract ERC4626StakeTokenUpgradeable is
   ) internal onlyInitializing {
     _setCooldown(cooldown_);
     _setUnstakeWindow(unstakeWindow_);
-
-    _updateExchangeRate(INITIAL_EXCHANGE_RATE);
   }
 
-  modifier onlySlashingAdmin() {
-    if (
-      !IAccessControl(ADDRESSES_PROVIDER.getACLManager()).hasRole('SLASHING_ADMIN', _msgSender())
-    ) {
-      revert CallerIsNotSlashingAdmin();
-    }
-    _;
-  }
-
+  /// @inheritdoc IERC4626StakeToken
   function cooldown() external {
     _cooldown(_msgSender());
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function cooldownOnBehalfOf(address owner) external {
     if (allowance(owner, _msgSender()) == 0) {
       revert NotApprovedForCooldown(owner, _msgSender());
@@ -104,24 +91,27 @@ abstract contract ERC4626StakeTokenUpgradeable is
     _cooldown(owner);
   }
 
-  function slash(address destination, uint256 amount) external onlySlashingAdmin returns (uint256) {
-    return _slash(destination, amount);
-  }
+  ///// @dev Methods requiring mandatory access control, because of it kept undefined
 
-  function setUnstakeWindow(uint256 newUnstakeWindow) external onlyOwner {
-    _setUnstakeWindow(newUnstakeWindow);
-  }
+  /// @inheritdoc IERC4626StakeToken
+  function slash(address destination, uint256 amount) external virtual returns (uint256);
 
-  function setCooldown(uint256 newCooldown) external onlyOwner {
-    _setCooldown(newCooldown);
-  }
+  /// @inheritdoc IERC4626StakeToken
+  function setUnstakeWindow(uint256 newUnstakeWindow) external virtual;
 
+  /// @inheritdoc IERC4626StakeToken
+  function setCooldown(uint256 newCooldown) external virtual;
+
+  ///////////////////////////////////////////////////////////////////////////////////
+
+  /// @inheritdoc IERC4626
   function maxWithdraw(
     address owner
   ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
     return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
   }
 
+  /// @inheritdoc IERC4626
   function maxRedeem(
     address owner
   ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
@@ -130,7 +120,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     if (
       block.timestamp >= cooldownSnapshot.timestamp &&
-      block.timestamp - cooldownSnapshot.timestamp <= $.unstakeWindow
+      block.timestamp - cooldownSnapshot.timestamp <= $._unstakeWindow
     ) {
       return cooldownSnapshot.amount;
     }
@@ -138,25 +128,53 @@ abstract contract ERC4626StakeTokenUpgradeable is
     return 0;
   }
 
+  /// @inheritdoc IERC4626
+  function totalAssets() public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+    return _getStakeTokenStorage()._totalAssets;
+  }
+
+  /// @inheritdoc IERC4626StakeToken
   function getMaxSlashableAssets() public view returns (uint256) {
     uint256 currentAssets = totalAssets();
     return MIN_ASSETS_REMAINING > currentAssets ? 0 : currentAssets - MIN_ASSETS_REMAINING;
   }
 
-  function getExchangeRate() public view returns (uint256) {
-    return _getStakeTokenStorage()._currentExchangeRate;
-  }
-
+  /// @inheritdoc IERC4626StakeToken
   function getCooldown() public view returns (uint256) {
-    return _getStakeTokenStorage().cooldown;
+    return _getStakeTokenStorage()._cooldown;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getUnstakeWindow() public view returns (uint256) {
-    return _getStakeTokenStorage().unstakeWindow;
+    return _getStakeTokenStorage()._unstakeWindow;
   }
 
+  /// @inheritdoc IERC4626StakeToken
   function getStakerCooldown(address user) public view returns (CooldownSnapshot memory) {
     return _getStakeTokenStorage()._stakerCooldown[user];
+  }
+
+  function _deposit(
+    address caller,
+    address receiver,
+    uint256 assets,
+    uint256 shares
+  ) internal override {
+    _getStakeTokenStorage()._totalAssets += assets.toUint192();
+
+    super._deposit(caller, receiver, assets, shares);
+  }
+
+  function _withdraw(
+    address caller,
+    address receiver,
+    address owner,
+    uint256 assets,
+    uint256 shares
+  ) internal override {
+    _getStakeTokenStorage()._totalAssets -= assets.toUint192();
+
+    super._withdraw(caller, receiver, owner, assets, shares);
   }
 
   function _cooldown(address from) internal virtual {
@@ -168,7 +186,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint32 timeToUnlock = (block.timestamp + $.cooldown).toUint32();
+    uint32 timeToUnlock = (block.timestamp + $._cooldown).toUint32();
 
     $._stakerCooldown[from] = CooldownSnapshot({
       amount: amount.toUint224(),
@@ -182,11 +200,13 @@ abstract contract ERC4626StakeTokenUpgradeable is
     uint256 cachedTotalSupply = totalSupply();
 
     // stake & transfer
+    // `handleAction` to update rewards for user `to`
     if (to != address(0)) {
       REWARDS_CONTROLLER.handleAction(to, cachedTotalSupply, balanceOf(to));
     }
 
     // redeem & transfer
+    // `handleAction` to update rewards for user `from`
     if (from != address(0) && from != to) {
       uint256 balanceOfFrom = balanceOf(from);
       REWARDS_CONTROLLER.handleAction(from, cachedTotalSupply, balanceOfFrom);
@@ -194,33 +214,32 @@ abstract contract ERC4626StakeTokenUpgradeable is
       StakeTokenStorage storage $ = _getStakeTokenStorage();
       CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[from];
 
+      // if cooldown was activated and user is trying to transfer/redeem tokens
+      // we don't take into account that cooldown could be already outdated
       if (cooldownSnapshot.timestamp != 0) {
         if (to == address(0)) {
-          // redeem
-          if (cooldownSnapshot.amount == value) {
-            delete $._stakerCooldown[from];
-
-            emit StakerCooldownDeleted(from);
-          } else {
-            uint224 amount = cooldownSnapshot.amount - value.toUint224();
-
-            $._stakerCooldown[from].amount = amount;
-
-            emit StakerCooldownAmountChanged(from, amount);
-          }
+          // `from` redeems tokens here
+          // reduce amount available for redeem in the future
+          cooldownSnapshot.amount -= value.toUint224();
         } else {
-          // transfer
+          // `from` transfers tokens here
+          // if balance of user decrease less than the amount of tokens in cooldown, than his `cooldownSnapshot.amount` should be reduced too
+          // we don't pay attention if balanceAfter is greater than users `cooldownSnapshot.amount`, because we assume these are "other" tokens
+          // tokens that have been cooldowned are always at the bottom of the balance
           uint224 balanceAfter = (balanceOfFrom - value).toUint224();
-
-          if (balanceAfter == 0) {
-            delete $._stakerCooldown[from];
-
-            emit StakerCooldownDeleted(from);
-          } else if (balanceAfter < cooldownSnapshot.amount) {
-            $._stakerCooldown[from].amount = balanceAfter;
-
-            emit StakerCooldownAmountChanged(from, balanceAfter);
+          if (balanceAfter <= cooldownSnapshot.amount) {
+            cooldownSnapshot.amount = balanceAfter;
           }
+        }
+
+        // reduce an amount under cooldown if something was spent
+        if ($._stakerCooldown[from].amount != cooldownSnapshot.amount) {
+          if (cooldownSnapshot.amount == 0) {
+            // if user spend all balance or already redeem whole amount
+            cooldownSnapshot.timestamp = 0;
+          }
+          $._stakerCooldown[from] = cooldownSnapshot;
+          emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.timestamp);
         }
       }
     }
@@ -243,10 +262,7 @@ abstract contract ERC4626StakeTokenUpgradeable is
       amount = maxSlashable;
     }
 
-    uint256 currentShares = totalSupply();
-    uint256 balance = convertToAssets(currentShares);
-
-    _updateExchangeRate(_getExchangeRate(balance - amount, currentShares));
+    _getStakeTokenStorage()._totalAssets -= amount.toUint192();
 
     IERC20(asset()).safeTransfer(destination, amount);
 
@@ -256,45 +272,18 @@ abstract contract ERC4626StakeTokenUpgradeable is
   }
 
   function _setUnstakeWindow(uint256 newUnstakeWindow) internal {
-    _getStakeTokenStorage().unstakeWindow = newUnstakeWindow.toUint32();
+    _getStakeTokenStorage()._unstakeWindow = newUnstakeWindow.toUint32();
 
     emit UnstakeWindowChanged(newUnstakeWindow);
   }
 
   function _setCooldown(uint256 newCooldown) internal {
-    _getStakeTokenStorage().cooldown = newCooldown.toUint32();
+    _getStakeTokenStorage()._cooldown = newCooldown.toUint32();
 
     emit CooldownChanged(newCooldown);
   }
 
-  function _updateExchangeRate(uint256 newExchangeRate) internal {
-    if (newExchangeRate == 0) {
-      revert ZeroExchangeRate();
-    }
-
-    _getStakeTokenStorage()._currentExchangeRate = newExchangeRate;
-
-    emit ExchangeRateChanged(newExchangeRate);
-  }
-
-  function _getExchangeRate(
-    uint256 newTotalAssets,
-    uint256 newTotalShares
-  ) internal pure returns (uint256) {
-    return newTotalShares.mulDiv(EXCHANGE_RATE_UNIT, newTotalAssets, Math.Rounding.Ceil);
-  }
-
-  function _convertToShares(
-    uint256 assets,
-    Math.Rounding rounding
-  ) internal view override returns (uint256) {
-    return assets.mulDiv(getExchangeRate(), EXCHANGE_RATE_UNIT, rounding);
-  }
-
-  function _convertToAssets(
-    uint256 shares,
-    Math.Rounding rounding
-  ) internal view override returns (uint256) {
-    return shares.mulDiv(EXCHANGE_RATE_UNIT, getExchangeRate(), rounding);
+  function _decimalsOffset() internal pure override returns (uint8) {
+    return 3;
   }
 }

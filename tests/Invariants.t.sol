@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
 contract InvariantTest is StakeTestBase {
-  // we will use 192 instead of uint256 or 224, cause it will lead to overflow in this fuzzing test, due to mulDiv with new ExchangeRate
   /// forge-config: default.fuzz.runs = 100000
   function test_exchangeRateAfterSlashingAlwaysIncreasing(
     uint192 amountToDeposit,
@@ -19,14 +16,14 @@ contract InvariantTest is StakeTestBase {
 
     _deposit(amountToDeposit, user, user);
 
-    uint256 initialExchangeRate = stakeToken.getExchangeRate();
+    uint256 defaultExchangeRate = stakeToken.previewDeposit(1);
 
-    vm.startPrank(slashingAdmin);
+    vm.startPrank(admin);
 
     stakeToken.slash(someone, amountToSlash);
 
-    uint256 exchangeRateAfterSlash = stakeToken.getExchangeRate();
+    uint256 newExchangeRate = stakeToken.previewDeposit(1);
 
-    assertLe(initialExchangeRate, exchangeRateAfterSlash);
+    assertLe(defaultExchangeRate, newExchangeRate);
   }
 }

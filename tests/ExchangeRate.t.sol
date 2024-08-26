@@ -1,88 +1,114 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-
-import {IPoolAddressesProvider} from 'src/contracts/interfaces/IPoolAddressesProvider.sol';
-import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
-
-import {MockToken} from './utils/mock/MockTokenForExchangeRate.sol';
-
 import {SafeCast} from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
-contract ExchangeRateTest is Test {
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
+
+import {StakeTestBase} from './utils/StakeTestBase.sol';
+
+contract ExchangeRateTest is StakeTestBase {
   using SafeCast for uint256;
 
-  MockToken public mock;
-
-  function setUp() public {
-    mock = new MockToken(IRewardsController(address(0)), IPoolAddressesProvider(address(0)));
-  }
-
   /// forge-config: default.fuzz.runs = 100000
-  function test_precisionLossStartingWithAssets(uint128 assets, uint128 exchangeRate) public {
-    // Since initial exchange rate is 1e18 and after slash it should increase only
-    vm.assume(assets > 0 && exchangeRate >= 1e18);
-    mock.setExchangeRate(exchangeRate);
+  function test_precisionLossWithSlash(uint192 assets, uint192 assetsToSlash) public {
+    vm.assume(assets > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(assetsToSlash > 0 && assetsToSlash < assets);
+    vm.assume(assets - stakeToken.MIN_ASSETS_REMAINING() >= assetsToSlash);
 
-    uint256 shares = mock.previewDeposit(assets);
-    uint128 assetsAfterRedeem = mock.previewRedeem(shares).toUint128();
+    uint256 shares = stakeToken.previewDeposit(assets);
+
+    _deposit(assets, user, user);
+
+    vm.startPrank(admin);
+
+    stakeToken.slash(someone, assetsToSlash);
+
+    vm.stopPrank();
+
+    uint192 assetsAfterRedeem = stakeToken.previewRedeem(shares).toUint192();
 
     assertLe(assetsAfterRedeem, assets);
-    assertLe(assets - assetsAfterRedeem, 10);
+
+    assertLe(getDiff(assetsAfterRedeem, assets - assetsToSlash), 1);
   }
 
   /// forge-config: default.fuzz.runs = 100000
-  function test_precisionLossStartingWithShares(uint128 sharesToMint, uint128 exchangeRate) public {
-    // Since initial exchange rate is 1e18 and after slash it should increase only
-    vm.assume(sharesToMint > 0 && exchangeRate >= 1e18);
-    mock.setExchangeRate(exchangeRate);
+  function test_precisionLossStartingWithAssets(
+    uint192 assetsToStake,
+    uint192 assetsToCheck
+  ) public {
+    vm.assume(assetsToStake > assetsToCheck && assetsToCheck > 0);
 
-    // mint function have some troubles with precision and results in worse results
-    uint256 assets = mock.previewMint(sharesToMint);
-    uint256 sharesFromDeposit = mock.previewDeposit(assets);
+    _deposit(assetsToStake, user, user);
 
-    assert(sharesFromDeposit >= sharesToMint);
+    uint256 sharesFromDeposit = stakeToken.previewDeposit(assetsToCheck);
+    uint256 assetsFromMint = stakeToken.previewMint(sharesFromDeposit);
 
-    // withdraw have the same problems
-    uint256 sharesAfterWithdraw = mock.previewWithdraw(assets);
-    uint256 assetsAfterRedeem = mock.previewRedeem(sharesFromDeposit);
+    assertLe(getDiff(assetsToCheck, assetsFromMint), 1);
 
-    assert(assets >= assetsAfterRedeem);
-    assert(sharesAfterWithdraw >= sharesFromDeposit);
+    uint256 sharesFromWithdrawal = stakeToken.previewWithdraw(assetsToCheck);
+    uint256 assetsFromRedeem = stakeToken.previewRedeem(sharesFromWithdrawal);
+
+    assertLe(getDiff(assetsToCheck, assetsFromRedeem), 1);
   }
 
   /// forge-config: default.fuzz.runs = 100000
-  // function test_precisionLossPower(uint128 sharesToMint, uint128 exchangeRate) public {
-  //   // Since initial exchange rate is 1e18 and after slash it should increase only
-  //   vm.assume(sharesToMint > 0 && exchangeRate >= 1e18);
-  //   mock.setExchangeRate(exchangeRate);
+  function test_precisionLossStartingWithShares(
+    uint192 assetsToStake,
+    uint224 sharesToCheck
+  ) public {
+    vm.assume(
+      assetsToStake > stakeToken.convertToAssets(sharesToCheck) &&
+        sharesToCheck > sharesMultiplier()
+    );
 
-  //   // mint function have some troubles with precision and results in worse results
-  //   uint256 assets = mock.previewMint(sharesToMint);
-  //   uint256 sharesFromDeposit = mock.previewDeposit(assets);
+    _deposit(assetsToStake, user, user);
 
-  //   uint256 checkPowerLossDiff = checkPowerLoss(sharesFromDeposit, sharesToMint);
+    uint256 assetsFromMint = stakeToken.previewMint(sharesToCheck);
+    uint256 sharesFromDeposit = stakeToken.previewDeposit(assetsFromMint);
 
-  //   console.log(checkPowerLossDiff);
+    assertLe(getDiff(sharesToCheck, sharesFromDeposit), 1000);
 
-  //   assert(checkPowerLossDiff < 1);
-  // }
+    uint256 assetsFromRedeem = stakeToken.previewRedeem(sharesToCheck);
+    uint256 sharesFromWithdrawal = stakeToken.previewWithdraw(assetsFromRedeem);
 
-  function checkPowerLoss(uint256 expected, uint256 get) internal pure returns (uint256 power) {
-    uint256 diff = getDiff(expected, get);
-
-    while (true) {
-      if (diff == 0) {
-        return power;
-      }
-
-      diff = diff / 10;
-      power++;
-    }
+    assertLe(getDiff(sharesToCheck, sharesFromWithdrawal), 1000);
   }
 
-  function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
-    return a > b ? a - b : b - a;
+  /// forge-config: default.fuzz.runs = 100000
+  function test_precisionLossCombinedTest(
+    uint192 assets,
+    uint192 assetsToSlash,
+    uint192 assetsToCheck
+  ) public {
+    vm.assume(1e20 > assets && assets > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(assetsToSlash > 0 && assetsToSlash < assets);
+    vm.assume(assets - stakeToken.MIN_ASSETS_REMAINING() >= assetsToSlash);
+
+    vm.assume(assets > assetsToCheck && assetsToCheck > 0);
+
+    stakeToken.previewDeposit(assets);
+
+    _deposit(assets, user, user);
+
+    vm.startPrank(admin);
+
+    stakeToken.slash(someone, assetsToSlash);
+
+    vm.stopPrank();
+
+    uint256 sharesFromDeposit_1 = stakeToken.previewDeposit(assetsToCheck);
+    uint256 assetsFromMint_1 = stakeToken.previewMint(sharesFromDeposit_1);
+
+    assertLe(getDiff(assetsToCheck, assetsFromMint_1), 1);
+
+    uint256 sharesFromWithdrawal_1 = stakeToken.previewWithdraw(assetsToCheck);
+    uint256 assetsFromRedeem_1 = stakeToken.previewRedeem(sharesFromWithdrawal_1);
+
+    assertLe(getDiff(assetsToCheck, assetsFromRedeem_1), 1);
+
+    // check, cause they have different rounding, but same convertToShares with the same assets started
+    assertLe(getDiff(sharesFromDeposit_1, sharesFromWithdrawal_1), 1000);
   }
 }

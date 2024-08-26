@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol';
 
-interface IStakeToken is IERC4626 {
+interface IERC4626StakeToken is IERC4626 {
   struct CooldownSnapshot {
-    /// @notice Amount of tokens available for withdrawal
+    /// @notice Amount of shares available to redeem
     uint224 amount;
     /// @notice Time to unlock funds for withdrawal
     uint32 timestamp;
@@ -18,20 +18,13 @@ interface IStakeToken is IERC4626 {
   }
 
   event CooldownSet(address indexed user, uint256 amount, uint256 timestamp);
-  event StakerCooldownAmountChanged(address indexed user, uint256 amount);
-  event StakerCooldownDeleted(address indexed user);
+  event StakerCooldownChanged(address indexed user, uint256 amount, uint256 timestamp);
 
   event Slashed(address indexed destination, uint256 amount);
 
   event CooldownChanged(uint256 cooldown);
   event UnstakeWindowChanged(uint256 unstakeWindow);
   event ExchangeRateChanged(uint256 exchangeRate);
-  event SlashingAdminChanged(address newAdmin);
-
-  /**
-   * @dev Attempted to set zero `exchangeRate`.
-   */
-  error ZeroExchangeRate();
 
   /**
    * @dev Attempted to call cooldown without locked liquidity.
@@ -47,16 +40,6 @@ interface IStakeToken is IERC4626 {
    * @dev Attempted to slash with insufficient funds in staking.
    */
   error ZeroFundsAvailable();
-
-  /**
-   * @dev Attempt to make permit, which wasn't succeded.
-   */
-  error PermitNotSucceded();
-
-  /**
-   * @dev Attempt to call slash not from `slashingAdmin` address.
-   */
-  error CallerIsNotSlashingAdmin();
 
   /**
    * @dev Attempt to call cooldown without allowance for `stakeToken`.
@@ -132,11 +115,6 @@ interface IStakeToken is IERC4626 {
    * @param newUnstakeWindow Amount of seconds users have to withdraw after `cooldown`
    */
   function setUnstakeWindow(uint256 newUnstakeWindow) external;
-
-  /**
-   * @dev Returns the current exchange rate with a 1e18 precision.
-   */
-  function getExchangeRate() external view returns (uint256);
 
   /**
    * @dev Returns current `cooldown` duration.
