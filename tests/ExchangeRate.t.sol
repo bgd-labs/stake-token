@@ -82,7 +82,7 @@ contract ExchangeRateTest is StakeTestBase {
     uint192 assetsToSlash,
     uint192 assetsToCheck
   ) public {
-    vm.assume(1e20 > assets && assets > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(assets > stakeToken.MIN_ASSETS_REMAINING());
     vm.assume(assetsToSlash > 0 && assetsToSlash < assets);
     vm.assume(assets - stakeToken.MIN_ASSETS_REMAINING() >= assetsToSlash);
 
