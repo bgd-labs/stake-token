@@ -13,7 +13,7 @@ contract ReceiveEther {
   }
 }
 
-contract CooldownTests is StakeTestBase {
+contract RescuableTests is StakeTestBase {
   function test_checkWhoCanRescue() public view {
     assertEq(stakeToken.whoCanRescue(), admin);
   }
