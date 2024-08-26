@@ -9,7 +9,7 @@ The `StakeToken` contains an EIP-4626 generic token vault for all non-rebase tok
 ## Features
 
 - **Full [EIP-4626](https://eips.ethereum.org/EIPS/eip-4626) compatibility.**
-- Withdrawal of funds from the storage can be carried out only after activation of cooldown after a certain time.
+- Withdrawal of funds from the vault can be carried out only after activation of cooldown after a certain time.
 - The `StakeToken` is designed to cover small `Bad Debt`'s in a semi-automatic mode, but can withdraw almost all funds up to the `getMaxSlashableAssets()` amount in emergencies.
 - Providing liquidity in the `StakeToken` includes the risk of slashing and is therefore paid for with additional rewards through `REWARDS_CONTROLLER`.
 - **Permit-transactions support.** To enable interfaces to offer gas-less transactions to deposit with a permit.
