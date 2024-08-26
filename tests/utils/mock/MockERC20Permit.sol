@@ -9,4 +9,12 @@ contract MockERC20Permit is ERC20, ERC20Permit {
     string memory name_,
     string memory symbol_
   ) ERC20(name_, symbol_) ERC20Permit(name_) {}
+
+  function mint(address to, uint value) external {
+    _mint(to, value);
+  }
+
+  function burn(address from, uint value) external {
+    _burn(from, value);
+  }
 }

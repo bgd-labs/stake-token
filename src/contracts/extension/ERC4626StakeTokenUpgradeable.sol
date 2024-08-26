@@ -282,8 +282,4 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     emit CooldownChanged(newCooldown);
   }
-
-  function _decimalsOffset() internal pure override returns (uint8) {
-    return 3;
-  }
 }

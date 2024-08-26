@@ -107,7 +107,7 @@ contract StakeTestBase is Test {
   }
 
   function _decimalsOffset() internal pure returns (uint256) {
-    return 3;
+    return 0;
   }
 
   function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
