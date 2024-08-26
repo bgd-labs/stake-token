@@ -1,6 +1,6 @@
 # StakeToken - Vault
 
-New version of the Aave Safety Module stk tokens. This is an updated version intended for the Umbrella project.
+The new version of the Aave Safety Module stk tokens, intended for the Umbrella project.
 
 ## About
 
