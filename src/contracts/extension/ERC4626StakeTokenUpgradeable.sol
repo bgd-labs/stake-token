@@ -14,6 +14,12 @@ import {Math} from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import {IRewardsController} from '../interfaces/IRewardsController.sol';
 import {IERC4626StakeToken} from '../interfaces/IERC4626StakeToken.sol';
 
+/**
+ * @title ERC4626StakeTokenUpgradeable
+ * @notice Stake smart contract, which allows covering bad debt at the expense of stakers. In return, stakers receive rewards.
+ * @dev ERC20 extension, so ERC20 initialization should be done by the children contract/s
+ * @author BGD labs
+ */
 abstract contract ERC4626StakeTokenUpgradeable is
   Initializable,
   ERC4626Upgradeable,
