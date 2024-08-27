@@ -6,9 +6,11 @@ import {IERC4626} from 'openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 interface IERC4626StakeToken is IERC4626 {
   struct CooldownSnapshot {
     /// @notice Amount of shares available to redeem
-    uint224 amount;
+    uint192 amount;
     /// @notice Time to unlock funds for withdrawal
     uint32 endOfCooldown;
+    /// @notice Time to withdraw funds after end of cooldown
+    uint32 withdrawalWindow;
   }
 
   struct SignatureParams {
@@ -17,8 +19,18 @@ interface IERC4626StakeToken is IERC4626 {
     bytes32 s;
   }
 
-  event CooldownSet(address indexed user, uint256 amount, uint256 endOfCooldown);
-  event StakerCooldownChanged(address indexed user, uint256 amount, uint256 endOfCooldown);
+  event CooldownSet(
+    address indexed user,
+    uint256 amount,
+    uint256 endOfCooldown,
+    uint256 unstakeWindow
+  );
+  event StakerCooldownChanged(
+    address indexed user,
+    uint256 amount,
+    uint256 endOfCooldown,
+    uint256 unstakeWindow
+  );
 
   event Slashed(address indexed destination, uint256 amount);
 

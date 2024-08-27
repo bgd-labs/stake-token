@@ -115,12 +115,11 @@ abstract contract ERC4626StakeTokenUpgradeable is
   function maxRedeem(
     address owner
   ) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
-    StakeTokenStorage storage $ = _getStakeTokenStorage();
-    CooldownSnapshot memory cooldownSnapshot = $._stakerCooldown[owner];
+    CooldownSnapshot memory cooldownSnapshot = _getStakeTokenStorage()._stakerCooldown[owner];
 
     if (
       block.timestamp >= cooldownSnapshot.endOfCooldown &&
-      block.timestamp - cooldownSnapshot.endOfCooldown <= $._unstakeWindow
+      block.timestamp - cooldownSnapshot.endOfCooldown <= cooldownSnapshot.withdrawalWindow
     ) {
       return cooldownSnapshot.amount;
     }
@@ -186,14 +185,20 @@ abstract contract ERC4626StakeTokenUpgradeable is
 
     StakeTokenStorage storage $ = _getStakeTokenStorage();
 
-    uint32 timeToUnlock = (block.timestamp + $._cooldown).toUint32();
-
-    $._stakerCooldown[from] = CooldownSnapshot({
-      amount: amount.toUint224(),
-      endOfCooldown: timeToUnlock
+    CooldownSnapshot memory cooldownSnapshot = CooldownSnapshot({
+      amount: amount.toUint192(),
+      endOfCooldown: (block.timestamp + $._cooldown).toUint32(),
+      withdrawalWindow: $._unstakeWindow
     });
 
-    emit CooldownSet(from, amount, timeToUnlock);
+    $._stakerCooldown[from] = cooldownSnapshot;
+
+    emit CooldownSet(
+      from,
+      amount,
+      cooldownSnapshot.endOfCooldown,
+      cooldownSnapshot.withdrawalWindow
+    );
   }
 
   function _update(address from, address to, uint256 value) internal virtual override {
@@ -220,13 +225,13 @@ abstract contract ERC4626StakeTokenUpgradeable is
         if (to == address(0)) {
           // `from` redeems tokens here
           // reduce amount available for redeem in the future
-          cooldownSnapshot.amount -= value.toUint224();
+          cooldownSnapshot.amount -= value.toUint192();
         } else {
           // `from` transfers tokens here
           // if balance of user decrease less than the amount of tokens in cooldown, than his `cooldownSnapshot.amount` should be reduced too
           // we don't pay attention if balanceAfter is greater than users `cooldownSnapshot.amount`, because we assume these are "other" tokens
           // tokens that have been cooldowned are always at the bottom of the balance
-          uint224 balanceAfter = (balanceOfFrom - value).toUint224();
+          uint192 balanceAfter = (balanceOfFrom - value).toUint192();
           if (balanceAfter <= cooldownSnapshot.amount) {
             cooldownSnapshot.amount = balanceAfter;
           }
@@ -237,9 +242,15 @@ abstract contract ERC4626StakeTokenUpgradeable is
           if (cooldownSnapshot.amount == 0) {
             // if user spend all balance or already redeem whole amount
             cooldownSnapshot.endOfCooldown = 0;
+            cooldownSnapshot.withdrawalWindow = 0;
           }
           $._stakerCooldown[from] = cooldownSnapshot;
-          emit StakerCooldownChanged(from, cooldownSnapshot.amount, cooldownSnapshot.endOfCooldown);
+          emit StakerCooldownChanged(
+            from,
+            cooldownSnapshot.amount,
+            cooldownSnapshot.endOfCooldown,
+            cooldownSnapshot.withdrawalWindow
+          );
         }
       }
     }
