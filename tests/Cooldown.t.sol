@@ -224,4 +224,35 @@ contract CooldownTests is StakeTestBase {
     vm.expectRevert(abi.encodeWithSelector(IERC4626StakeToken.ZeroBalanceInStaking.selector));
     stakeToken.cooldown();
   }
+
+  function test_changeWindowAndEndOfCooldownAfter() public {
+    _deposit(1 ether, user, user);
+
+    vm.startPrank(user);
+
+    stakeToken.cooldown();
+
+    IERC4626StakeToken.CooldownSnapshot memory snapshotBefore = stakeToken.getStakerCooldown(user);
+
+    vm.stopPrank();
+    vm.startPrank(admin);
+
+    uint256 oldWindow = stakeToken.getCooldown();
+
+    stakeToken.setCooldown(stakeToken.getCooldown() * 2);
+    stakeToken.setUnstakeWindow(stakeToken.getUnstakeWindow() * 2);
+
+    IERC4626StakeToken.CooldownSnapshot memory snapshotAfter = stakeToken.getStakerCooldown(user);
+
+    assertEq(snapshotBefore.amount, snapshotAfter.amount);
+    assertEq(snapshotBefore.endOfCooldown, snapshotAfter.endOfCooldown);
+    assertEq(snapshotBefore.withdrawalWindow, snapshotAfter.withdrawalWindow);
+
+    skip(oldWindow);
+
+    vm.stopPrank();
+    vm.startPrank(user);
+
+    stakeToken.redeem(0.5 ether, user, user);
+  }
 }
