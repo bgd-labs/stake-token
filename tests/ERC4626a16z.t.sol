@@ -9,8 +9,8 @@ import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-
 import {StakeToken} from 'src/contracts/StakeToken.sol';
 import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
-import {MockRewardsController} from '../utils/mock/MockRewardsController.sol';
-import {MockERC20Permit} from '../utils/mock/MockERC20Permit.sol';
+import {MockRewardsController} from './utils/mock/MockRewardsController.sol';
+import {MockERC20Permit} from './utils/mock/MockERC20Permit.sol';
 
 interface ISlashable {
   function slash(address to, uint256 amount) external;
@@ -66,7 +66,7 @@ contract ERC4626StdTest is ERC4626Test {
 
       uint loss = uint(-1 * init.yield);
 
-      vm.assume(loss + MIN_ASSETS_REMAINING() < totalShares); // avoid overflow in conversion
+      vm.assume(loss + MIN_ASSETS_REMAINING() < totalShares);
 
       vm.startPrank(whoCanSlash());
       try ISlashable(_vault_).slash(address(0xdead), loss) {} catch {
