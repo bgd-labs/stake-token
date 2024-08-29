@@ -1,81 +1,93 @@
-// SPDX-License-Identifier: agpl-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-import {StakeToken} from '../src/contracts/StakeToken.sol';
-import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
-import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
-import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
-import {IERC20Errors} from 'openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol';
+import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
 import {PausableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol';
+
 import {StakeTestBase} from './utils/StakeTestBase.sol';
-import {ActionsLibrary, IStakeToken} from './utils/ActionsLibrary.sol';
 
-contract Pause is StakeTestBase {
-  using ActionsLibrary for IStakeToken;
-
-  function test_setPaused() external {
+contract PauseTests is StakeTestBase {
+  function test_setPauseByAdmin() external {
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
-    _setPaused(true);
+
+    vm.startPrank(admin);
+
+    stakeToken.pause();
+
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), true);
-    _setPaused(false);
+
+    stakeToken.unpause();
+
     assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
   }
 
-  function test_cooldown_should_revert() external {
-    _setPaused(true);
+  function test_setPauseNotByAdmin(address anyone) external {
+    vm.assume(anyone != admin && anyone != proxyAdmin);
+
+    assertEq(PausableUpgradeable(address(stakeToken)).paused(), false);
+
+    vm.startPrank(anyone);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+        address(anyone)
+      )
+    );
+    stakeToken.pause();
+  }
+
+  function test_shouldRevertWhenPauseIsActive() external {
+    _deposit(1e18, user, user);
+    _dealUnderlying(1e18, user);
+
+    vm.startPrank(user);
+
+    stakeToken.cooldown();
+    stakeToken.approve(someone, 1000);
+    underlying.approve(address(stakeToken), 1e18);
+
+    skip(stakeToken.getCooldown());
+
+    vm.stopPrank();
+    vm.startPrank(admin);
+
+    stakeToken.pause();
+
+    vm.stopPrank();
+    vm.startPrank(someone);
+
+    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+    stakeToken.cooldownOnBehalfOf(user);
+
+    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+    stakeToken.transferFrom(user, someone, 1);
+
+    vm.stopPrank();
+    vm.startPrank(user);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
     stakeToken.cooldown();
-  }
-
-  function test_stake_should_revert() external {
-    _setPaused(true);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    stakeToken.deposit(0, user);
-  }
-
-  function test_stakeWithPermit_should_revert() external {
-    _setPaused(true);
+    stakeToken.deposit(1, user);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    vm.prank(user);
-    stakeToken.stakeWithPermit(0, 0, 0, bytes32(0), bytes32(0));
-  }
-
-  function test_redeem_should_revert() external {
-    _setPaused(true);
-    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    vm.prank(user);
-    stakeToken.redeem(user, 1 ether);
-  }
-
-  function test_redeemOnBehalf_should_revert() external {
-    _setPaused(true);
-    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    vm.prank(user);
-    stakeToken.redeemOnBehalf(user, user, 1 ether);
-  }
-
-  function test_slash_should_revert() external {
-    _setPaused(true);
-    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-
-    stakeToken.helper_slash(vm, slashingAdmin, user, 1 ether);
-  }
-
-  function test_transfer_should_revert() external {
-    _stake(1 ether, user);
-    _setPaused(true);
+    stakeToken.mint(1, user);
 
     vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-    vm.prank(user);
-    stakeToken.transfer(user, 1 ether);
-  }
+    stakeToken.redeem(1, user, user);
 
-  function _setPaused(bool paused) internal {
-    vm.prank(admin);
-    stakeToken.setPaused(paused);
+    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+    stakeToken.withdraw(1, user, user);
+
+    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+    stakeToken.transfer(someone, 1);
+
+    vm.stopPrank();
+    vm.startPrank(admin);
+
+    vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+    stakeToken.slash(someone, 1);
   }
 }

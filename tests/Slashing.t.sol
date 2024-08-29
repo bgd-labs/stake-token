@@ -1,64 +1,87 @@
-// SPDX-License-Identifier: agpl-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import 'forge-std/Test.sol';
-import {StakeToken, IStakeToken} from '../src/contracts/StakeToken.sol';
-import {ERC20} from 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
-import {ProxyAdmin} from 'openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol';
-import {TransparentUpgradeableProxy} from 'openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 import {OwnableUpgradeable} from 'openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol';
+
+import {StakeToken} from 'src/contracts/StakeToken.sol';
+import {IERC4626StakeToken} from 'src/contracts/interfaces/IERC4626StakeToken.sol';
+
 import {StakeTestBase} from './utils/StakeTestBase.sol';
 
-contract Slashing is StakeTestBase {
-  function test_slash_shouldRevertWithWrongCaller(address caller) external {
-    vm.assume(caller != address(proxyAdmin) && caller != slashingAdmin);
-    address destination = vm.addr(100);
+contract SlashingTests is StakeTestBase {
+  function test_slashNotByAdmin(address anyone) external {
+    vm.assume(anyone != admin && anyone != proxyAdmin);
 
-    vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(IStakeToken.OnlySlashingAdmin.selector, caller));
-    stakeToken.slash(destination, type(uint256).max);
+    vm.startPrank(anyone);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+        address(anyone)
+      )
+    );
+    stakeToken.slash(user, type(uint256).max);
   }
 
   function test_slash_shouldRevertWithAmountZero() public {
-    address destination = vm.addr(100);
+    vm.startPrank(admin);
 
-    vm.startPrank(slashingAdmin);
-    vm.expectRevert(abi.encodeWithSelector(IStakeToken.ZeroAmount.selector));
-    stakeToken.slash(destination, 0);
+    vm.expectRevert(IERC4626StakeToken.ZeroAmountSlashing.selector);
+    stakeToken.slash(user, 0);
   }
 
   function test_slash_shouldRevertWithFundsLteMinimum(uint256 amount) public {
-    vm.assume(amount != 0 && amount <= stakeToken.MIN_ASSETS_REMAINING());
-    address destination = vm.addr(100);
-    _stake(amount, user);
+    vm.assume(amount > 0 && amount <= stakeToken.MIN_ASSETS_REMAINING());
 
-    vm.startPrank(slashingAdmin);
-    vm.expectRevert(abi.encodeWithSelector(IStakeToken.NoFundsAvailable.selector));
-    stakeToken.slash(destination, type(uint256).max);
+    _deposit(amount, user, user);
+
+    vm.startPrank(admin);
+
+    vm.expectRevert(IERC4626StakeToken.ZeroFundsAvailable.selector);
+    stakeToken.slash(someone, type(uint256).max);
   }
 
-  /**
-   * Slashing 20% of funds should change the exchangeRate accordingly
-   */
-  function test_slash2000bps() public {
-    address destination = vm.addr(100);
-    _stake(100 ether, user);
-    _slash(destination, 20 ether);
+  function test_slash(uint192 amountToStake, uint192 amountToSlash) public {
+    vm.assume(amountToStake > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(amountToSlash > 0 && amountToSlash < amountToStake);
+    vm.assume(amountToStake - stakeToken.MIN_ASSETS_REMAINING() >= amountToSlash);
 
-    assertEq(underlying.balanceOf(destination), 20 ether);
-    assertEq(stakeToken.getExchangeRate(), 1.25 ether);
+    _deposit(amountToStake, user, user);
+
+    vm.startPrank(admin);
+
+    stakeToken.slash(someone, amountToSlash);
+
+    vm.stopPrank();
+
+    assertEq(underlying.balanceOf(someone), amountToSlash);
+    assertEq(underlying.balanceOf(address(stakeToken)), amountToStake - amountToSlash);
+
+    assertEq(stakeToken.convertToAssets(stakeToken.balanceOf(user)), amountToStake - amountToSlash);
   }
 
-  /**
-   * Staking after slash should properly incorporate the exchangeRate and adjust the stake token received
-   */
-  function test_stakeAfterSlash() public {
-    address destination = vm.addr(100);
-    _stake(100 ether, user);
-    _slash(destination, 20 ether);
+  function test_stakeAfterSlash(uint192 amountToStake, uint192 amountToSlash) public {
+    vm.assume(amountToStake > stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(amountToSlash > 0 && amountToSlash < amountToStake);
+    vm.assume(amountToStake - amountToSlash >= stakeToken.MIN_ASSETS_REMAINING());
+    vm.assume(uint256(amountToStake) * 2 - amountToSlash < type(uint192).max);
 
-    address newUser = vm.addr(1000);
-    _stake(100 ether, newUser);
-    assertEq(stakeToken.balanceOf(newUser), 125 ether);
+    _deposit(amountToStake, user, user);
+
+    vm.startPrank(admin);
+
+    stakeToken.slash(someone, amountToSlash);
+
+    vm.stopPrank();
+
+    _deposit(amountToStake, user, user);
+
+    assertEq(underlying.balanceOf(someone), amountToSlash);
+    assertEq(underlying.balanceOf(address(stakeToken)), 2 * uint256(amountToStake) - amountToSlash);
+
+    assertEq(
+      stakeToken.convertToAssets(stakeToken.balanceOf(user)),
+      2 * uint256(amountToStake) - amountToSlash
+    );
   }
 }

@@ -1,32 +1,34 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
 import 'forge-std/Test.sol';
-import {TestnetProcedures} from 'aave-v3-origin/../tests/utils/TestnetProcedures.sol';
-import {IPool} from 'aave-v3-origin/core/contracts/interfaces/IPool.sol';
-import {DataTypes} from 'aave-v3-origin/core/contracts/protocol/libraries/configuration/ReserveConfiguration.sol';
-import {IERC20Metadata} from 'aave-v3-origin/periphery/contracts/static-a-token/StaticATokenLM.sol';
-import {IAccessControl} from 'aave-v3-origin/core/contracts/dependencies/openzeppelin/contracts/IAccessControl.sol';
+
+import {VmSafe} from 'forge-std/Vm.sol';
+
+import {IERC20Metadata} from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+
 import {TransparentUpgradeableProxy} from 'solidity-utils/contracts/transparent-proxy/TransparentUpgradeableProxy.sol';
-import {IStakeToken} from '../../src/contracts/interfaces/IStakeToken.sol';
-import {StakeToken} from '../../src/contracts/StakeToken.sol';
-import {IRewardsController} from '../../src/contracts/interfaces/IRewardsController.sol';
-import {ActionsLibrary} from './ActionsLibrary.sol';
 
-/**
- * Token agnostic stake base helper setting up a aave protocol & stake token with an erc20 underlying
- */
-contract StakeTestBase is TestnetProcedures {
-  using ActionsLibrary for IStakeToken;
+import {StakeToken} from 'src/contracts/StakeToken.sol';
+import {IRewardsController} from 'src/contracts/interfaces/IRewardsController.sol';
 
-  address public admin = vm.addr(0xA11CE);
-  address public user = vm.addr(0xB0B);
-  address public proxyAdmin;
-  address public slashingAdmin = address(0x9000);
-  IPool public pool;
+import {MockERC20Permit} from './mock/MockERC20Permit.sol';
+import {MockRewardsController} from './mock/MockRewardsController.sol';
+
+contract StakeTestBase is Test {
+  address public admin = vm.addr(0x1000);
+
+  uint256 public userPrivateKey = 0x3000;
+  address public user = vm.addr(userPrivateKey);
+
+  address public someone = vm.addr(0x4000);
+
+  address public proxyAdmin = vm.addr(0x5000);
+
   IERC20Metadata public underlying;
-  address public aToken;
-  IStakeToken public stakeToken;
+  StakeToken public stakeToken;
+
+  address public mockRewardsController;
 
   function setUp() public virtual {
     _setupProtocol();
@@ -34,11 +36,8 @@ contract StakeTestBase is TestnetProcedures {
   }
 
   function _setupStakeToken(address stakeTokenUnderlying) internal {
-    StakeToken stakeTokenImpl = new StakeToken(
-      IRewardsController(address(contracts.rewardsControllerProxy)),
-      contracts.poolAddressesProvider
-    );
-    stakeToken = IStakeToken(
+    StakeToken stakeTokenImpl = new StakeToken(IRewardsController(mockRewardsController));
+    stakeToken = StakeToken(
       address(
         new TransparentUpgradeableProxy(
           address(stakeTokenImpl),
@@ -58,39 +57,60 @@ contract StakeTestBase is TestnetProcedures {
   }
 
   function _setupProtocol() internal {
-    initTestEnvironment();
-    proxyAdmin = report.proxyAdmin;
-    pool = contracts.poolProxy;
-    DataTypes.ReserveDataLegacy memory reserveDataWETH = contracts.poolProxy.getReserveData(
-      tokenList.weth
-    );
-    underlying = IERC20Metadata(address(weth));
-    aToken = reserveDataWETH.aTokenAddress;
+    mockRewardsController = address(new MockRewardsController());
 
-    vm.prank(poolAdmin);
-    IAccessControl(address(contracts.aclManager)).grantRole('SLASHING_ADMIN', slashingAdmin);
+    underlying = new MockERC20Permit('MockToken', 'MTK');
   }
 
   function _dealUnderlying(uint256 amount, address actor) internal {
     deal(address(underlying), actor, amount);
   }
 
-  function _stake(uint256 amount, address actor) internal {
-    _stake(amount, actor, actor);
-  }
+  function _deposit(
+    uint256 amountOfAsset,
+    address actor,
+    address receiver
+  ) internal returns (uint256) {
+    _dealUnderlying(amountOfAsset, actor);
 
-  function _stake(uint256 amount, address actor, address receiver) internal {
-    _dealUnderlying(amount, actor);
-    stakeToken.helper_deposit(vm, amount, actor, receiver);
-  }
-
-  function _redeem(uint256 amount, address actor, address destination) internal {
     vm.startPrank(actor);
-    stakeToken.redeem(destination, amount);
+
+    IERC20Metadata(stakeToken.asset()).approve(address(stakeToken), amountOfAsset);
+    uint256 shares = stakeToken.deposit(amountOfAsset, receiver);
+
     vm.stopPrank();
+
+    return shares;
   }
 
-  function _slash(address destination, uint256 amount) internal {
-    stakeToken.helper_slash(vm, slashingAdmin, destination, amount);
+  function _mint(
+    uint256 amountOfShares,
+    address actor,
+    address receiver
+  ) internal returns (uint256) {
+    uint256 amountOfAssets = stakeToken.previewMint(amountOfShares);
+
+    _dealUnderlying(amountOfAssets, actor);
+
+    vm.startPrank(actor);
+
+    IERC20Metadata(stakeToken.asset()).approve(address(stakeToken), amountOfAssets);
+    uint256 assets = stakeToken.mint(amountOfShares, receiver);
+
+    vm.stopPrank();
+
+    return assets;
+  }
+
+  function sharesMultiplier() internal pure returns (uint256) {
+    return 10 ** _decimalsOffset();
+  }
+
+  function _decimalsOffset() internal pure returns (uint256) {
+    return 0;
+  }
+
+  function getDiff(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a > b ? a - b : b - a;
   }
 }
