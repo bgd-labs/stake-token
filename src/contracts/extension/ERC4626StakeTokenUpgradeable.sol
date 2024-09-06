@@ -159,9 +159,9 @@ abstract contract ERC4626StakeTokenUpgradeable is
     uint256 assets,
     uint256 shares
   ) internal override {
-    _getStakeTokenStorage()._totalAssets += assets.toUint192();
-
     super._deposit(caller, receiver, assets, shares);
+
+    _getStakeTokenStorage()._totalAssets += assets.toUint192();
   }
 
   function _withdraw(
@@ -171,9 +171,9 @@ abstract contract ERC4626StakeTokenUpgradeable is
     uint256 assets,
     uint256 shares
   ) internal override {
-    _getStakeTokenStorage()._totalAssets -= assets.toUint192();
-
     super._withdraw(caller, receiver, owner, assets, shares);
+
+    _getStakeTokenStorage()._totalAssets -= assets.toUint192();
   }
 
   function _cooldown(address from) internal virtual {
