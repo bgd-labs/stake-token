@@ -26,4 +26,45 @@ contract InvariantTest is StakeTestBase {
 
     assertLe(defaultExchangeRate, newExchangeRate);
   }
+
+  function test_dataShouldBeNotUpdatedDuringDeposit() external {
+    _deposit(1 ether, user, user);
+
+    assertEq(mockRewardsController.lastTotalAssets(), 0);
+    assertEq(mockRewardsController.lastTotalSupply(), 0);
+
+    uint256 totalAssets = stakeToken.totalAssets();
+    uint256 totalSupply = stakeToken.totalSupply();
+
+    assertNotEq(totalAssets, 0);
+    assertNotEq(totalSupply, 0);
+
+    _deposit(1 ether, user, user);
+
+    assertEq(mockRewardsController.lastTotalAssets(), totalAssets);
+    assertEq(mockRewardsController.lastTotalSupply(), totalSupply);
+
+    assertNotEq(totalAssets, stakeToken.totalAssets());
+    assertNotEq(totalSupply, stakeToken.totalSupply());
+  }
+
+  function test_dataShouldBeNotUpdatedDuringWithdraw() external {
+    _deposit(1 ether, user, user);
+
+    uint256 newtotalAssets = stakeToken.totalAssets();
+    uint256 newtotalSupply = stakeToken.totalSupply();
+
+    vm.startPrank(user);
+    stakeToken.cooldown();
+
+    skip(stakeToken.getCooldown());
+
+    stakeToken.withdraw(0.5 ether, user, user);
+
+    assertEq(mockRewardsController.lastTotalAssets(), newtotalAssets);
+    assertEq(mockRewardsController.lastTotalSupply(), newtotalSupply);
+
+    assertNotEq(newtotalAssets, stakeToken.totalAssets());
+    assertNotEq(newtotalSupply, stakeToken.totalSupply());
+  }
 }

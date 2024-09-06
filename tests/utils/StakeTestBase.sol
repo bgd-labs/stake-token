@@ -28,7 +28,7 @@ contract StakeTestBase is Test {
   IERC20Metadata public underlying;
   StakeToken public stakeToken;
 
-  address public mockRewardsController;
+  MockRewardsController public mockRewardsController;
 
   function setUp() public virtual {
     _setupProtocol();
@@ -36,7 +36,7 @@ contract StakeTestBase is Test {
   }
 
   function _setupStakeToken(address stakeTokenUnderlying) internal {
-    StakeToken stakeTokenImpl = new StakeToken(IRewardsController(mockRewardsController));
+    StakeToken stakeTokenImpl = new StakeToken(IRewardsController(address(mockRewardsController)));
     stakeToken = StakeToken(
       address(
         new TransparentUpgradeableProxy(
@@ -57,7 +57,7 @@ contract StakeTestBase is Test {
   }
 
   function _setupProtocol() internal {
-    mockRewardsController = address(new MockRewardsController());
+    mockRewardsController = new MockRewardsController();
 
     underlying = new MockERC20Permit('MockToken', 'MTK');
   }
