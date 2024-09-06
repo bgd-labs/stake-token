@@ -273,6 +273,8 @@ abstract contract ERC4626StakeTokenUpgradeable is
       amount = maxSlashable;
     }
 
+    REWARDS_CONTROLLER.handleAction(address(0), totalSupply(), 0);
+
     _getStakeTokenStorage()._totalAssets -= amount.toUint192();
 
     IERC20(asset()).safeTransfer(destination, amount);
