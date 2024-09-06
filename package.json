@@ -1,6 +1,6 @@
 {
-  "name": "stake-token",
-  "version": "1.0.0",
+  "name": "stake-token-v2",
+  "version": "2.0.0",
   "scripts": {
     "lint": "prettier ./",
     "lint:fix": "npm run lint -- --write"
@@ -10,7 +10,7 @@
     "url": "git+https://github.com/bgd-labs/stake-token.git"
   },
   "keywords": [],
-  "author": "BGD labs",
+  "author": "BGD Labs",
   "license": "BUSL-1.1",
   "bugs": {
     "url": "https://github.com/bgd-labs/stake-token/issues"
